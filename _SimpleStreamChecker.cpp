@@ -104,10 +104,10 @@ SimpleStreamChecker::SimpleStreamChecker()
     : IIfopen(nullptr), IIfclose(nullptr) {
     // Initialize the bug types.
     DoubleCloseBugType.reset(
-        new BugType(this, "Double fclose", "Unix Stream API Error"));
+        new BugType(this, "Double fclose", "custom error type"));
 
     LeakBugType.reset(
-        new BugType(this, "Resource Leak", "Unix Stream API Error"));
+        new BugType(this, "Resource Leak", "custom error type"));
     // Sinks are higher importance bugs as well as calls to assert() or exit(0).
     LeakBugType->setSuppressOnSink(true);
 }
@@ -218,7 +218,9 @@ void SimpleStreamChecker::reportLeaks(ArrayRef<SymbolRef> LeakedStreams,
     for (SymbolRef LeakedStream : LeakedStreams) {
         BugReport *R = new BugReport(
             *LeakBugType,
-            "Opened file is never closed; potential resource leak", ErrNode);
+            "you're such an idiot I can't believe you overlooked this \
+            you leaked the file handle like shit",
+            ErrNode);
         R->markInteresting(LeakedStream);
         C.emitReport(R);
     }
@@ -242,6 +244,7 @@ bool SimpleStreamChecker::guaranteedNotToCloseFile(
 // we cannot reason about it anymore.
 ProgramStateRef SimpleStreamChecker::checkPointerEscape(
     ProgramStateRef State, const InvalidatedSymbols &Escaped,
+
     const CallEvent *Call, PointerEscapeKind Kind) const {
     // If we know that the call cannot close a file, there is nothing to do.
     if (Kind == PSK_DirectEscapeOnCall && guaranteedNotToCloseFile(*Call)) {
@@ -268,7 +271,6 @@ void SimpleStreamChecker::initIdentifierInfo(ASTContext &Ctx) const {
     IIfclose = &Ctx.Idents.get("fclose");
 }
 
-// TODO
-// void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
-    // mgr.registerChecker<SimpleStreamChecker>();
-// }
+void ento::registerSimpleStreamChecker(CheckerManager &mgr) {
+    mgr.registerChecker<SimpleStreamChecker>();
+}

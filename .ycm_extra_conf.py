@@ -20,6 +20,8 @@
 import os
 import ycm_core
 
+llvm_root = '/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm_root'
+
 # These are the compilation flags that will be used in case there's no
 # compilation database set (by default, one is not set).
 # CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
@@ -38,10 +40,10 @@ flags = [
 '/usr/local/include',
 
 '-isystem',
-'/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm_root/llvm/tools/clang/include',
+llvm_root + '/llvm/tools/clang/include',
 
 '-isystem',
-'/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm_root/llvm/include/',
+llvm_root + '/llvm/include/',
 
 '-I',
 '.',
@@ -53,7 +55,7 @@ flags = [
 #
 # Most projects will NOT need to set this to anything; you can just change the
 # 'flags' list of compilation flags.
-compilation_database_folder = ''
+compilation_database_folder = llvm_root + "/build/debug"
 
 if os.path.exists( compilation_database_folder ):
   database = ycm_core.CompilationDatabase( compilation_database_folder )
