@@ -171,6 +171,7 @@ static bool isLeaked(SymbolRef Sym, const StreamState &SS, bool IsSymDead,
 
 void SimpleStreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                            CheckerContext &C) const {
+
     ProgramStateRef State = C.getState();
 
     SymbolVector LeakedStreams;
