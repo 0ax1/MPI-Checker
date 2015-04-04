@@ -8,6 +8,10 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
+  BasicMPIChecker.cpp
+  ReactorChecker.cpp
+  SimpleStreamChecker.cpp
+  DoesContainsWorkChecker.cpp
   AllocationDiagnostics.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
@@ -60,7 +64,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   RetainCountChecker.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
-  _SimpleStreamChecker.cpp
   StackAddrEscapeChecker.cpp
   StreamChecker.cpp
   TaintTesterChecker.cpp
