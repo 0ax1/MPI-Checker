@@ -97,12 +97,14 @@ void MessageChecker::checkPostCall(const CallEvent &callEvent,
 
     // MPI_Send called
     if (callEvent.getCalleeIdentifier() == IdentInfo_MPI_Send) {
-        SymbolRef tag = callEvent.getArgSVal(4).getAsSymbol();
-        auto tag2 =
-            callEvent.getArgSVal(4).getAs<loc::ConcreteInt>().getValue();
+        // SymbolRef tag = callEvent.getArgSVal(4).getAsSymbol();
 
-        std::cout << "symbolRef: " << tag << std::endl;
-        progStateR = progStateR->set<StateMap>(tag, Message::getSent());
+        auto tag2 = callEvent.getArgSVal(4).getAs<loc::ConcreteInt>();
+
+        // std::cout << tag2.getValue().getExtValue() << std::endl;
+
+        // std::cout << "symbolRef: " << tag << std::endl;
+        // progStateR = progStateR->set<StateMap>(tag2, Message::getSent());
 
         // std::cout <<  << std::endl;
 
@@ -118,8 +120,17 @@ void MessageChecker::checkPostCall(const CallEvent &callEvent,
     // MPI_Recv called
     else if (callEvent.getCalleeIdentifier() == IdentInfo_MPI_Recv) {
         SymbolRef tag = callEvent.getArgSVal(4).getAsSymbol();
-        // std::cout << tag << std::endl;
+
         const Message *message = progStateR->get<StateMap>(tag);
+
+        SmallString<100> buf;
+        llvm::raw_svector_ostream os(buf);
+
+        // print concrete argument value
+        Optional<nonloc::ConcreteInt> IntVal =
+            callEvent.getArgSVal(4).getAs<nonloc::ConcreteInt>();
+        int64_t i = IntVal.getValue().getValue().getSExtValue();
+        std::cout << i << std::endl;
 
         // is nullptr if element is not contained in map
         if (message == nullptr) {
