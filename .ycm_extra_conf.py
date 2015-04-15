@@ -20,7 +20,7 @@
 import os
 import ycm_core
 
-llvm_root = '/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm_root'
+llvm_root = '/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm'
 
 # These are the compilation flags that will be used in case there's no
 # compilation database set (by default, one is not set).
@@ -40,10 +40,13 @@ flags = [
 '/usr/local/include',
 
 '-isystem',
-llvm_root + '/llvm/tools/clang/include',
+llvm_root + '/repo/tools/clang/include',
 
 '-isystem',
-llvm_root + '/llvm/include/',
+llvm_root + '/repo/include/',
+
+'-system',
+llvm_root + 'lib/Support'
 
 '-I',
 '.',
@@ -55,7 +58,8 @@ llvm_root + '/llvm/include/',
 #
 # Most projects will NOT need to set this to anything; you can just change the
 # 'flags' list of compilation flags.
-compilation_database_folder = llvm_root + "/build/debug"
+compilation_database_folder = llvm_root + '/build/debug'
+# compilation_database_folder = ''
 
 if os.path.exists( compilation_database_folder ):
   database = ycm_core.CompilationDatabase( compilation_database_folder )
