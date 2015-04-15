@@ -11,37 +11,26 @@
 #include "Container.hpp"
 #include "Typedefs.hpp"
 
-// checker bool: is optimistic?
-// pointer escape (add state escaped?)
-// call event is global function
-// message state is nullptr if unknown
-// -> why if is checking for nullptr first
-// type of SVal can be asked
-
 using namespace clang;
 using namespace ento;
 
 // argument schema enums ––––––––––––––––––––––––––––––––––––––
 // scope enums, but keep weak typing
-
 namespace MPIPointToPoint {
 // valid for all point to point functions
 enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 }
 //–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-class Message {
+class MPIFunctionCall {
 private:
 public:
-    // states are const
-    const enum class State { kSent, kRecvd } state_;
-
+    // capture mpi function call with arguments
     const CallEventRef<> callEvent_;
 
-    Message(const CallEventRef<> event, State initialState)
-        : state_{initialState}, callEvent_{event} {}
+    MPIFunctionCall(const CallEventRef<> event) : callEvent_{event} {}
 
-    bool operator==(const Message &message) const {
+    bool operator==(const MPIFunctionCall &message) const {
         // check if all call-event args are equal
         if (callEvent_->getNumArgs() == message.callEvent_->getNumArgs()) {
             for (size_t i = 0; i < callEvent_->getNumArgs(); ++i) {
@@ -52,36 +41,39 @@ public:
                 }
             }
         }
-        // different arg number
+        // has different arg count
         else {
-            return false;
-        }
-
-        // check message state
-        if (state_ != message.state_) {
             return false;
         }
 
         return true;
     }
 
-    bool operator<(const Message &message) const {
+    bool operator<(const MPIFunctionCall &message) const {
         return callEvent_->getNumArgs() < message.callEvent_->getNumArgs();
     }
 
-    // useful to check if nodes are in the same execution state
+    // to enable analyzer to check if nodes are in the same execution state
     void Profile(llvm::FoldingSetNodeID &foldingNodeId) const {
-        // the data structure (here int) used to descrive the state
-        foldingNodeId.AddBoolean(static_cast<bool>(state_));
         foldingNodeId.AddPointer(&callEvent_);
     }
 };
 
-// to capture custom state type in the cfg with a list
-REGISTER_SET_WITH_PROGRAMSTATE(StateList, Message)
+// TODO track rank
 
-// class which messagechecker inherits from specifies checker type
-class MessageChecker : public Checker<check::PostCall> {
+// capture mpi function calls in control flow graph
+// operations are removed from cfg when completed
+REGISTER_SET_WITH_PROGRAMSTATE(MPIFnCallList, MPIFunctionCall)
+REGISTER_TRAIT_WITH_PROGRAMSTATE(InsideRankBranch, bool)
+// REGISTER_TRAIT_WITH_PROGRAMSTATE(MPIRank, SVal)
+// register if current in if stmt
+
+// template inheritance arguments set callback functions
+class MessageChecker
+    : public Checker<check::PreCall, check::DeadSymbols,
+    check::PreStmt<ReturnStmt>> {
+public:
+    // to enable classification of mpi-functions during analysis
     static std::vector<IdentifierInfo *> mpiSendTypes;
     static std::vector<IdentifierInfo *> mpiRecvTypes;
 
@@ -92,13 +84,13 @@ class MessageChecker : public Checker<check::PostCall> {
     static std::vector<IdentifierInfo *> mpiPointToCollTypes;
     static std::vector<IdentifierInfo *> mpiCollToPointTypes;
     static std::vector<IdentifierInfo *> mpiCollToCollTypes;
+    //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-    // II -> identifier info
     mutable IdentifierInfo *IdentInfo_MPI_Send, *IdentInfo_MPI_Recv,
         *IdentInfo_MPI_Isend, *IdentInfo_MPI_Irecv, *IdentInfo_MPI_Issend,
         *IdentInfo_MPI_Ssend, *IdentInfo_MPI_Bsend, *IdentInfo_MPI_Rsend;
 
-    // inform clang about new kind of bug types
+    // custom bug types
     std::unique_ptr<BugType> DuplicateSendBugType;
     std::unique_ptr<BugType> UnmatchedRecvBugType;
 
@@ -107,13 +99,19 @@ class MessageChecker : public Checker<check::PostCall> {
     void reportDuplicateSend(const CallEvent &, CheckerContext &) const;
     void reportUnmatchedRecv(const CallEvent &, CheckerContext &) const;
 
-    bool isIdenticalCallInList(const CallEvent &, StateListTy) const;
+    bool isIdenticalCallInList(const CallEvent &, MPIFnCallListTy) const;
     bool areCommArgsConst(const CallEvent &) const;
 
     void checkForMatchingSend(const CallEvent &, CheckerContext &) const;
     bool hasMatchingSend(const CallEvent &, CheckerContext &) const;
     bool isSendRecvPairMatching(const CallEvent &, const CallEvent &) const;
 
+    void checkPreCall(const CallEvent &, CheckerContext &) const;
+    void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
+    void checkDeadSymbols(SymbolReaper &, CheckerContext &) const;
+
+
+    // to inspect properties of mpi functions
     bool isSendType(const CallEvent &) const;
     bool isRecvType(const CallEvent &) const;
     bool isBlockingType(const CallEvent &) const;
@@ -123,11 +121,20 @@ class MessageChecker : public Checker<check::PostCall> {
     bool isCollToPointType(const CallEvent &) const;
     bool isCollToCollType(const CallEvent &) const;
 
-public:
-    MessageChecker();
-    void checkPostCall(const CallEvent &, CheckerContext &) const;
+    MessageChecker()
+        :  // inspecting the state of initialization is based
+           // on MPI_Send identifier pointer (see initIdentifierInfo)
+          IdentInfo_MPI_Send(nullptr) {
+        // initialize bug types
+        DuplicateSendBugType.reset(
+            new BugType(this, "duplicate send", "MPI Error"));
+
+        UnmatchedRecvBugType.reset(
+            new BugType(this, "unmatched receive", "MPI Error"));
+    };
 };
 
+// classification containers –––––––––––––––––––––––––––––––––––––––––––
 std::vector<IdentifierInfo *> MessageChecker::mpiSendTypes;
 std::vector<IdentifierInfo *> MessageChecker::mpiRecvTypes;
 
@@ -138,22 +145,14 @@ std::vector<IdentifierInfo *> MessageChecker::mpiPointToPointTypes;
 std::vector<IdentifierInfo *> MessageChecker::mpiPointToCollTypes;
 std::vector<IdentifierInfo *> MessageChecker::mpiCollToPointTypes;
 std::vector<IdentifierInfo *> MessageChecker::mpiCollToCollTypes;
-
-MessageChecker::MessageChecker()
-    : IdentInfo_MPI_Send(0), IdentInfo_MPI_Recv(0) {
-    // Initialize the bug types.
-    DuplicateSendBugType.reset(
-        new BugType(this, "duplicate send", "MPI Error"));
-
-    UnmatchedRecvBugType.reset(
-        new BugType(this, "unmatched receive", "MPI Error"));
-}
+// –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 void MessageChecker::initIdentifierInfo(ASTContext &context) const {
-    // only init identifiers once
+    // guard to check if identifiers are intialized
     if (IdentInfo_MPI_Send) return;
 
     // init function identifiers
+    // and copy them into the correct classification containers
     IdentInfo_MPI_Send = &context.Idents.get("MPI_Send");
     mpiSendTypes.push_back(IdentInfo_MPI_Send);
     mpiPointToPointTypes.push_back(IdentInfo_MPI_Send);
@@ -236,9 +235,9 @@ bool MessageChecker::isCollToCollType(const CallEvent &callEvent) const {
 
 // ty = type
 bool MessageChecker::isIdenticalCallInList(const CallEvent &callEvent,
-                                           StateListTy list) const {
+                                           MPIFnCallListTy list) const {
     // check for identical call
-    for (const Message &mess : list) {
+    for (const MPIFunctionCall &mess : list) {
         // if calls have the same identifier -
         // implies they have the same number of args
         if (mess.callEvent_->getCalleeIdentifier() ==
@@ -252,9 +251,7 @@ bool MessageChecker::isIdenticalCallInList(const CallEvent &callEvent,
                 }
             }
             // end if identical call was found
-            if (identical) {
-                return true;
-            }
+            if (identical) return true;
         }
     }
     return false;
@@ -340,6 +337,11 @@ bool MessageChecker::isSendRecvPairMatching(const CallEvent &send,
     return matchSuccesful;
 }
 
+void MessageChecker::checkPreStmt(const ReturnStmt *S,
+                                  CheckerContext &C) const {
+    std::cout << "pre return" << std::endl;
+}
+
 /**
  * Checks if there's a matching send for a recv.
  * Works with point to point pairs.
@@ -350,12 +352,12 @@ bool MessageChecker::isSendRecvPairMatching(const CallEvent &send,
 void MessageChecker::checkForMatchingSend(const CallEvent &recvEvent,
                                           CheckerContext &context) const {
     ProgramStateRef progStateR = context.getState();
-    StateListTy list = progStateR->get<StateList>();
+    MPIFnCallListTy list = progStateR->get<MPIFnCallList>();
 
     // defensive checking -> only false if there's surely no match
-    bool hasMatchingSend{true};
+    bool hasMatchingSend{false};
 
-    for (const Message &mess : list) {
+    for (const MPIFunctionCall &mess : list) {
         // if point-to-point send operation
         if (isSendType(*mess.callEvent_) &&
             isPointToPointType(*mess.callEvent_)) {
@@ -365,7 +367,7 @@ void MessageChecker::checkForMatchingSend(const CallEvent &recvEvent,
 
         if (hasMatchingSend) {
             // remove matching send to omit double match for other receives
-            progStateR = progStateR->remove<StateList>(mess);
+            progStateR = progStateR->remove<MPIFnCallList>(mess);
             context.addTransition(progStateR);
             break;
         }
@@ -375,11 +377,16 @@ void MessageChecker::checkForMatchingSend(const CallEvent &recvEvent,
     if (!hasMatchingSend) reportUnmatchedRecv(recvEvent, context);
 }
 
-void MessageChecker::checkPostCall(const CallEvent &callEvent,
-                                   CheckerContext &context) const {
+// TODO implement
+void MessageChecker::checkDeadSymbols(SymbolReaper &SR,
+                                      CheckerContext &C) const {
+}
+
+void MessageChecker::checkPreCall(const CallEvent &callEvent,
+                                  CheckerContext &context) const {
     initIdentifierInfo(context.getASTContext());
     ProgramStateRef progStateR = context.getState();
-    StateListTy list = progStateR->get<StateList>();
+    MPIFnCallListTy list = progStateR->get<MPIFnCallList>();
 
     // send-operation called
     if (isSendType(callEvent)) {
@@ -389,17 +396,24 @@ void MessageChecker::checkPostCall(const CallEvent &callEvent,
         }
 
         // add message to program-state
-        progStateR = progStateR->add<StateList>(Message(
-            callEvent.cloneWithState(progStateR), Message::State::kSent));
+        progStateR = progStateR->add<MPIFnCallList>(
+            MPIFunctionCall(callEvent.cloneWithState(progStateR)));
         context.addTransition(progStateR);
     }
 
     // recv-operation called
     else if (isRecvType(callEvent)) {
+        // TODO
+        // collect mpi calls if inside if/else block
+
+        // context.inTopFrame()
+        // context.getAnalysisManager()
+
         if (isPointToPointType(callEvent)) {
             checkForMatchingSend(callEvent, context);
         }
         // blocking receive should not be added to state
+        // doch falls in if stmt
     }
 
     if (isNonBlockingType(callEvent)) {
@@ -417,9 +431,9 @@ void MessageChecker::reportUnmatchedRecv(const CallEvent &callEvent,
                                          "unmatched receive - no "
                                          "corresponding send",
                                          ErrNode);
-    // highlight source code position where the bug occured
+    // highlight source code position
     bugReport->addRange(callEvent.getSourceRange());
-    // fire report
+    // report
     context.emitReport(bugReport);
 }
 
@@ -430,9 +444,9 @@ void MessageChecker::reportDuplicateSend(const CallEvent &callEvent,
     if (!ErrNode) return;
     BugReport *bugReport =
         new BugReport(*DuplicateSendBugType, "duplicate send", ErrNode);
-    // highlight source code position where the bug occured
+    // highlight source code position
     bugReport->addRange(callEvent.getSourceRange());
-    // fire report
+    // report
     context.emitReport(bugReport);
 }
 
