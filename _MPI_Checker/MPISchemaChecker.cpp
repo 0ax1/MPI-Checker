@@ -10,10 +10,19 @@
 
 #include "Container.hpp"
 
+// callback functions a checker can register for
 // http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html
-// checkEndFunction
-// checkEndAnalysis
-// checkEndOfTranslationUnit
+
+// dump-color legend
+// Red           - CastColor
+// Green         - TypeColor
+// Bold Green    - DeclKindNameColor, UndeserializedColor
+// Yellow        - AddressColor, LocationColor
+// Blue          - CommentColor, NullColor, IndentColor
+// Bold Blue     - AttrColor
+// Bold Magenta  - StmtColor
+// Cyan          - ValueKindColor, ObjectKindColor
+// Bold Cyan     - ValueColor, DeclNameColor
 
 using namespace clang;
 using namespace ento;
@@ -28,6 +37,26 @@ enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 namespace MPI_Comm_rank {
 enum { kComm, kRank };
 }
+
+class ASTVisitor : public RecursiveASTVisitor<ASTVisitor> {
+public:
+    bool VisitDecl(Decl *declaration) {
+        declaration->dumpColor();
+        // The return value indicates whether we want the visitation to proceed.
+        // Return false to stop the traversal of the AST.
+        return true;
+    }
+
+    bool VisitExpr(const Expr *expression) {
+        expression->dumpColor();
+        return true;
+    }
+
+    bool VisitDeclRefExpr(DeclRefExpr *expression) {
+        expression->dumpColor();
+        return true;
+    }
+};
 //–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 /**
@@ -93,22 +122,15 @@ struct RankVar {
 // operations are customly removed from cfg when completed
 REGISTER_SET_WITH_PROGRAMSTATE(MPIFnCallSet, MPIFunctionCall)
 
-// TODO
-// REGISTER_TRAIT_WITH_PROGRAMSTATE(InsideRankBranch, bool)
-
 // track rank variables set by MPI_Comm_rank
 REGISTER_SET_WITH_PROGRAMSTATE(RankVarsSet, RankVar)
-
-// REGISTER_TRAIT_WITH_PROGRAMSTATE(MPIRank, SVal)
-// register if current in if-stmt
 
 // template inheritance arguments set callback functions
 class MPISchemaChecker
     // IfStmt not triggered with pre/post-stmt
     : public Checker<check::PreCall, check::PostCall, check::DeadSymbols,
-                     check::BranchCondition, check::PostStmt<DeclStmt>,
-                     check::Location, check::EndFunction, check::EndAnalysis,
-                     check::Bind> {
+                     check::BranchCondition, check::EndFunction,
+                     check::EndAnalysis> {
 public:
     // to enable classification of mpi-functions during analysis
     std::vector<IdentifierInfo *> mpiSendTypes;
@@ -143,25 +165,17 @@ public:
 
     void checkForMatchingSend(const CallEvent &, CheckerContext &) const;
     bool hasMatchingSend(const CallEvent &, CheckerContext &) const;
-    bool isSendRecvPairMatching(const CallEvent &, const CallEvent &) const;
+    bool isSendRecvPairMatching(const CallEvent &, const CallEvent &,
+                                CheckerContext &) const;
 
     void checkPreCall(const CallEvent &, CheckerContext &) const;
     void checkPostCall(const CallEvent &, CheckerContext &) const;
-    void checkPostStmt(const ReturnStmt *, CheckerContext &) const;
-    void checkPostStmt(const DeclStmt *, CheckerContext &) const;
     void checkEndFunction(CheckerContext &) const;
     void checkEndAnalysis(ExplodedGraph &, BugReporter &, ExprEngine &) const;
-    void checkBind(SVal, SVal, const Stmt *, CheckerContext &) const;
 
     void checkBranchCondition(const Stmt *, CheckerContext &) const;
 
-    ProgramStateRef checkPointerEscape(ProgramStateRef,
-                                       const InvalidatedSymbols &,
-                                       const CallEvent *,
-                                       PointerEscapeKind) const;
-
     void checkDeadSymbols(SymbolReaper &, CheckerContext &) const;
-    void checkLocation(SVal, bool, const Stmt *, CheckerContext &) const;
 
     // to inspect properties of mpi functions
     bool isSendType(const CallEvent &) const;
@@ -325,7 +339,6 @@ bool MPISchemaChecker::isCollToCollType(const CallEvent &callEvent) const {
 }
 
 void MPISchemaChecker::memRegionInfo(const MemRegion *memRegion) const {
-
     llvm::SmallString<100> buf;
     llvm::raw_svector_ostream os(buf);
 
@@ -468,10 +481,11 @@ bool MPISchemaChecker::areCommArgsConst(const CallEvent &callEvent) const {
  * @return
  */
 bool MPISchemaChecker::isSendRecvPairMatching(const CallEvent &send,
-                                              const CallEvent &recv) const {
+                                              const CallEvent &recv,
+                                              CheckerContext &ctx) const {
     bool areSendArgsConst{areCommArgsConst(send)};
     // send/recv must be both const or dynamic
-    // if (areSendArgsConst != areCommArgsConst(recv)) return false;
+    if (areSendArgsConst != areCommArgsConst(recv)) return false;
 
     bool matchSuccesful{false};
     if (isSendType(send) && isRecvType(recv)) {
@@ -483,9 +497,53 @@ bool MPISchemaChecker::isSendRecvPairMatching(const CallEvent &send,
             std::cout << "const" << std::endl;
         } else {
             // TODO implement dyn matching
-            rankMatches = send.getArgSVal(MPIPointToPoint::kRank) ==
-                          recv.getArgSVal(MPIPointToPoint::kRank);
-            std::cout << "dyn" << std::endl;
+            rankMatches = true;  // change
+
+            auto s = send.getArgSVal(MPIPointToPoint::kRank).getAs<NonLoc>();
+            s.getValue().dump();
+            std::cout << std::endl;
+
+            // SValBuilder &svb{ctx.getSValBuilder()};
+            // llvm::APSInt a{1};
+            // SVal ss = svb.makeIntLocVal(a);
+            // ss.dump();
+
+            const Expr *ss = send.getArgExpr(MPIPointToPoint::kRank);
+
+            if (const BinaryOperator *b = dyn_cast<BinaryOperator>(ss)) {
+                if (b->isAdditiveOp()) {
+                    // works
+                    const Expr *e = b->getRHS();
+                    e->dumpColor();
+                    auto b = dyn_cast<IntegerLiteral>(e);
+                    b->dumpColor();
+
+                    llvm::SmallString<100> buf;
+                    llvm::raw_svector_ostream os(buf);
+
+                    llvm::APInt apsInt = b->getValue();
+                    // prints: "../../mpi_symmetric.c:43:421"
+                    b->getLocation().dump(ctx.getSourceManager());
+
+                    os << apsInt;
+                    std::cout << os.str().str() << std::endl;
+
+                    // beim binary operator lässt sich der operator
+                    // durch den opcode feststellen
+                    // ... falls im recv additive wird im recv nach subtractive
+                    // gesucht
+
+                    // llvm::APInt api;
+                    // api.setBit(0);
+                    // apsInt.getSignedMaxValue(0);
+
+                    // std::cout << areEqual << std::endl;
+                }
+            }
+            // rankMatches = send.getArgSVal(MPIPointToPoint::kRank) ==
+            // recv.getArgSVal(MPIPointToPoint::kRank) ||
+            // complement == send.getArgSVal(MPIPointToPoint::kRank);
+            // std::cout << "dyn" << std::endl;
         }
 
         matchSuccesful = send.getArgSVal(MPIPointToPoint::kCount) ==
@@ -512,26 +570,6 @@ bool MPISchemaChecker::isSendRecvPairMatching(const CallEvent &send,
     return matchSuccesful;
 }
 
-// void MPISchemaChecker::checkPostStmt(const ReturnStmt *S,
-// CheckerContext &C) const {
-// std::cout << "pre return" << std::endl;
-// }
-
-void MPISchemaChecker::checkPostStmt(const ReturnStmt *S,
-                                     CheckerContext &C) const {}
-
-/* We specifically ignore loop conditions, because they're typically
- not error checks.  */
-// void VisitWhileStmt(WhileStmt *S) {
-// return this->Visit(S->getBody());
-// }
-// void VisitForStmt(ForStmt *S) {
-// return this->Visit(S->getBody());
-// }
-// void VisitDoStmt(DoStmt *S) {
-// return this->Visit(S->getBody());
-// }
-
 /**
  * Checks if there's a matching send for a recv.
  * Works with point to point pairs.
@@ -551,8 +589,8 @@ void MPISchemaChecker::checkForMatchingSend(const CallEvent &recvEvent,
         // if point-to-point send operation
         if (isSendType(*mpiFunctionCall.callEvent_) &&
             isPointToPointType(*mpiFunctionCall.callEvent_)) {
-            hasMatchingSend =
-                isSendRecvPairMatching(*mpiFunctionCall.callEvent_, recvEvent);
+            hasMatchingSend = isSendRecvPairMatching(
+                *mpiFunctionCall.callEvent_, recvEvent, context);
         }
 
         if (hasMatchingSend) {
@@ -614,10 +652,15 @@ void MPISchemaChecker::checkPostCall(const CallEvent &callEvent,
                                      CheckerContext &context) const {
     dynamicIdentifierInit(context);
 
-    // callEvent.dump();
-
     // track rank variables
     if (callEvent.getCalleeIdentifier() == IdentInfo_MPI_Comm_rank) {
+        // callEvent.getOriginExpr()->viewAST(); // open ast in graphviz
+        callEvent.getOriginExpr()->dumpColor();  // dump to terminal with colors
+        // callEvent.dump();
+        // use rec ast visitor
+        ASTVisitor ncv;
+        ncv.VisitExpr(callEvent.getArgExpr(1));
+
         ProgramStateRef progStateRef = context.getState();
         SVal rankVarSVal = callEvent.getArgSVal(MPI_Comm_rank::kRank);
 
@@ -635,138 +678,16 @@ void MPISchemaChecker::checkPostCall(const CallEvent &callEvent,
     }
 }
 
-class FindNamedClassVisitor
-    : public RecursiveASTVisitor<FindNamedClassVisitor> {
-public:
-    bool VisitDecl(Decl *declaration) {
-        // For debugging, dumping the AST nodes will show which nodes are
-        // already
-        // being visited.
-        declaration->dump();
-
-        // The return value indicates whether we want the visitation to proceed.
-        // Return false to stop the traversal of the AST.
-        return true;
-    }
-
-    bool VisitExpr(Expr *expression) {
-        // For debugging, dumping the AST nodes will show which nodes are
-        // already
-        // being visited.
-        expression->dump();
-
-        // The return value indicates whether we want the visitation to proceed.
-        // Return false to stop the traversal of the AST.
-        return true;
-    }
-
-    bool VisitDeclRefExpr(DeclRefExpr *expression) {
-        // For debugging, dumping the AST nodes will show which nodes are
-        // already
-        // being visited.
-        expression->dump();
-
-        // The return value indicates whether we want the visitation to proceed.
-        // Return false to stop the traversal of the AST.
-        return true;
-    }
-};
-
 void MPISchemaChecker::checkBranchCondition(const Stmt *condition,
                                             CheckerContext &ctx) const {
     // condition->dumpColor();
     if (const BinaryOperator *b = dyn_cast<BinaryOperator>(condition)) {
         if (b->isComparisonOp()) {
-            Expr *LHS = b->getLHS();
-            SVal val = ctx.getSVal(LHS);
-
-            const MemRegion *MR = val.getAsRegion();
-            if (MR) {
-                memRegionInfo(MR);
-            } else {
-                std::cout << "nullptr region" << std::endl;
-            }
-
-            // SVal val = ctx.getSVal(Val.getAsRegion());
-
-            // FindNamedClassVisitor ncv;
-            // ncv.VisitExpr(LHS);
-
-            // ProgramStateRef progStateRef = ctx.getState();
-
-            // if (progStateRef->contains<RankVarsSet>(Val)) {
-            // std::cout << "found in branch" << std::endl;
-            // }
         }
     }
 }
 
 void MPISchemaChecker::checkEndFunction(CheckerContext &context) const {
-    // context.getPredecessor()->getLocationContext()->dumpStack
-    // context.set
-    // auto &con = context.getASTContext();
-}
-
-void MPISchemaChecker::checkBind(SVal Loc, SVal val, const Stmt *statement,
-                                 CheckerContext &context) const {
-    ProgramStateRef progStateRef = context.getState();
-    // if (progStateRef->contains<RankVarsSet>(Loc)) {
-    // std::cout << "reassigned" << std::endl;
-    // }
-
-    // statement->dumpColor();
-    if (const BinaryOperator *b = dyn_cast<BinaryOperator>(statement)) {
-        if (b->isComparisonOp()) {
-            std::cout << "binary comp" << std::endl;
-        }
-    }
-    // if (const auto *b = dyn_cast<VarDecl>(statement)) {
-    // std::cout << "declrefexpr" << std::endl;
-    // }
-
-    // statement->dump();
-    // ProgramStateRef progStateRef = context.getState();
-    // if (const DeclStmt *declS = dyn_cast<DeclStmt>(statement)) {
-
-    // for (const auto &x : declS->decls()) {
-    // if (const auto v = dyn_cast<VarDecl>(x)->i) {
-    // std::cout << v->getName().str() << std::endl;
-
-    // auto s = v->getInit();
-    // v->getInit()->getSourceBitField
-    // Expr *ex = v->getInit();
-    // ex->hasAnyTypeDependentArguments
-    // }
-    // }
-    // if (progStateRef->contains<RankVarsSet>(v)) {
-    // std::cout << "rank var bound" << std::endl;
-    // context.addTransition(progStateRef);
-    // }
-    // }
-
-    // if (const BinaryOperator *b = dyn_cast<BinaryOperator>(statement)) {
-    // std::cout << "binary" << std::endl;
-    // SVal rhsSVal = progStateRef->getSVal(b->getRHS(),
-    // context.getLocationContext());
-
-    // std::cout << "assign" << std::endl;
-
-    // if (progStateRef->contains<RankVarsSet>(rhsSVal)) {
-    // std::cout << "rank var bound" << std::endl;
-    // // context.addTransition(progStateRef);
-    // }
-    // }
-}
-
-void MPISchemaChecker::checkPostStmt(const DeclStmt *DS,
-                                     CheckerContext &C) const {
-    // std::cout << "post" << std::endl;
-    // if (const UnaryOperator * u = dyn_cast<UnaryOperator>(DS)) {
-    // std::cout << "unary" << std::endl;
-    // }
-    // if (const BinaryOperator * u = dyn_cast<BinaryOperator>(DS)) {
-    // std::cout << "binary" << std::endl;
-    // }
 }
 
 void MPISchemaChecker::checkEndAnalysis(ExplodedGraph &explodedGraph,
@@ -803,13 +724,6 @@ void MPISchemaChecker::reportDuplicateSend(const CallEvent &callEvent,
     bugReport->addRange(callEvent.getSourceRange());
     // report
     context.emitReport(bugReport);
-}
-
-void MPISchemaChecker::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
-                                     CheckerContext &ctx) const {
-
-    // S->dumpColor();
-    // memRegionInfo(Loc.getAsRegion());
 }
 
 void ento::registerMPISchemaChecker(CheckerManager &mgr) {
