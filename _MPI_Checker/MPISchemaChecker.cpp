@@ -687,8 +687,7 @@ void MPISchemaChecker::checkBranchCondition(const Stmt *condition,
     }
 }
 
-void MPISchemaChecker::checkEndFunction(CheckerContext &context) const {
-}
+void MPISchemaChecker::checkEndFunction(CheckerContext &context) const {}
 
 void MPISchemaChecker::checkEndAnalysis(ExplodedGraph &explodedGraph,
                                         BugReporter &bugReporter,
