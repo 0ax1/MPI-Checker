@@ -1,111 +1,64 @@
-#include "../ClangSACheckers.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include <utility>
+#include "llvm/ADT/SmallVector.h"
 
-#include <iostream>
-#include <vector>
-#include <functional>
-
+#include "MPISchemaCheckerAST.hpp"
+#include "ASTFinder.hpp"
 #include "Container.hpp"
-
-// callback functions a checker can register for
-// http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html
-
-// dump-color legend
-// Red           - CastColor
-// Green         - TypeColor
-// Bold Green    - DeclKindNameColor, UndeserializedColor
-// Yellow        - AddressColor, LocationColor
-// Blue          - CommentColor, NullColor, IndentColor
-// Bold Blue     - AttrColor
-// Bold Magenta  - StmtColor
-// Cyan          - ValueKindColor, ObjectKindColor
-// Bold Cyan     - ValueColor, DeclNameColor
 
 using namespace clang;
 using namespace ento;
 
-// argument schema enums ––––––––––––––––––––––––––––––––––––––
-// scope enums, but keep weak typing
-namespace MPIPointToPoint {
-// valid for all point to point functions
-enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
-}
+const std::string mpiBugGroupError{"MPI Error"};
+const std::string mpiBugGroupWarning{"MPI Warning"};
 
-namespace MPI_Comm_rank {
-enum { kComm, kRank };
-}
-
-// TODO subclass nur für identifier info erstellen?
-
-class MPI_ASTVisitor : public RecursiveASTVisitor<MPI_ASTVisitor> {
-    const BugReporter &bugReporter_;
-    const CheckerBase &checkerBase_;
-    const AnalysisDeclContext &analysisDeclContext_;
-
+/// A simple visitor to record what VarDecls occur in EH-handling code.
+class SingleArgVisitor : public clang::RecursiveASTVisitor<SingleArgVisitor> {
 public:
-    MPI_ASTVisitor(const BugReporter &bugReporter,
-                   const CheckerBase &checkerBase,
-                   const AnalysisDeclContext &analysisDeclContext)
-        : bugReporter_{bugReporter},
-          checkerBase_{checkerBase},
-          analysisDeclContext_{analysisDeclContext} {
-        identifierInit(analysisDeclContext.getASTContext());
+    SingleArgVisitor(CallExpr *argExpression, size_t idx) {
+        TraverseStmt(argExpression->getArg(idx));
+    }
+    bool VisitDeclRefExpr(clang::DeclRefExpr *potentialVar) {
+        if (clang::VarDecl *var =
+                clang::dyn_cast<clang::VarDecl>(potentialVar->getDecl())) {
+            vars_.push_back(var);
+        } else if (clang::FunctionDecl *fn =
+                       clang::dyn_cast<clang::FunctionDecl>(
+                           potentialVar->getDecl())) {
+            functions_.push_back(fn);
+        }
+        return true;
     }
 
-    // to enable classification of mpi-functions during analysis
-    std::vector<IdentifierInfo *> mpiSendTypes;
-    std::vector<IdentifierInfo *> mpiRecvTypes;
+    bool VisitBinaryOperator(clang::BinaryOperator *op) {
+        binaryOperators_.push_back(op);
+        return true;
+    }
 
-    std::vector<IdentifierInfo *> mpiBlockingTypes;
-    std::vector<IdentifierInfo *> mpiNonBlockingTypes;
+    bool VisitIntegerLiteral(IntegerLiteral *intLiteral) {
+        integerLiterals_.push_back(intLiteral);
+        return true;
+    }
 
-    std::vector<IdentifierInfo *> mpiPointToPointTypes;
-    std::vector<IdentifierInfo *> mpiPointToCollTypes;
-    std::vector<IdentifierInfo *> mpiCollToPointTypes;
-    std::vector<IdentifierInfo *> mpiCollToCollTypes;
+    bool VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
+        floatingLiterals_.push_back(floatLiteral);
+        return true;
+    }
 
-    IdentifierInfo *identInfo_MPI_Send{nullptr}, *identInfo_MPI_Recv{nullptr},
-        *identInfo_MPI_Isend{nullptr}, *identInfo_MPI_Irecv{nullptr},
-        *identInfo_MPI_Issend{nullptr}, *identInfo_MPI_Ssend{nullptr},
-        *identInfo_MPI_Bsend{nullptr}, *identInfo_MPI_Rsend{nullptr},
-        *identInfo_MPI_Comm_rank{nullptr}, *IdentInfoTrackMem{nullptr};
-
-    // custom bug types
-    std::unique_ptr<BugType> DuplicateSendBugType;
-    std::unique_ptr<BugType> UnmatchedRecvBugType;
-
-    void identifierInit(ASTContext &);
-
-    // visitor callbacks
-    bool VisitDecl(Decl *);
-    bool VisitFunctionDecl(FunctionDecl *);
-    bool VisitDeclRefExpr(DeclRefExpr *);
-    bool VisitCallExpr(CallExpr *);
-    // TODO
-    // bool VisitIfStmt(const IfStmt *);
-
-    // to inspect properties of mpi functions
-    bool isSendType(const IdentifierInfo *) const;
-    bool isRecvType(const IdentifierInfo *) const;
-    bool isBlockingType(const IdentifierInfo *) const;
-    bool isNonBlockingType(const IdentifierInfo *) const;
-    bool isPointToPointType(const IdentifierInfo *) const;
-    bool isPointToCollType(const IdentifierInfo *) const;
-    bool isCollToPointType(const IdentifierInfo *) const;
-    bool isCollToCollType(const IdentifierInfo *) const;
-
-    const Type *getType(const DeclRefExpr *) const;
-    const Type *getType(const CallExpr *, size_t) const;
-
-    bool duplicateMPICall(CallExpr *) const;
+    llvm::SmallVector<BinaryOperator *, 2> binaryOperators_{};
+    llvm::SmallVector<VarDecl *, 2> vars_{};
+    llvm::SmallVector<FunctionDecl *, 2> functions_{};
+    llvm::SmallVector<IntegerLiteral *, 2> integerLiterals_{};
+    llvm::SmallVector<FloatingLiteral *, 2> floatingLiterals_{};
 };
 
-// TODO copy maybe incorrect
-std::vector<CallExpr *> mpiCalls;
+struct MPICall {
+    MPICall(CallExpr *callExpr,
+            llvm::SmallVector<SingleArgVisitor, 8> &&arguments)
+        : callExpr_{callExpr}, arguments_{arguments} {};
+    CallExpr *callExpr_;
+    llvm::SmallVector<SingleArgVisitor, 8> arguments_;
+};
+llvm::SmallVector<MPICall, 16> mpiCalls;
 
 /**
  * Initializes function identifiers lazily. This is the default pattern
@@ -122,42 +75,49 @@ void MPI_ASTVisitor::identifierInit(ASTContext &context) {
     mpiSendTypes.push_back(identInfo_MPI_Send);
     mpiPointToPointTypes.push_back(identInfo_MPI_Send);
     mpiBlockingTypes.push_back(identInfo_MPI_Send);
+    mpiType.push_back(identInfo_MPI_Send);
     assert(identInfo_MPI_Send);
 
     identInfo_MPI_Recv = &context.Idents.get("MPI_Recv");
     mpiRecvTypes.push_back(identInfo_MPI_Recv);
     mpiPointToPointTypes.push_back(identInfo_MPI_Recv);
     mpiBlockingTypes.push_back(identInfo_MPI_Recv);
+    mpiType.push_back(identInfo_MPI_Recv);
     assert(identInfo_MPI_Recv);
 
     identInfo_MPI_Isend = &context.Idents.get("MPI_Isend");
     mpiSendTypes.push_back(identInfo_MPI_Isend);
     mpiPointToPointTypes.push_back(identInfo_MPI_Isend);
     mpiNonBlockingTypes.push_back(identInfo_MPI_Isend);
+    mpiType.push_back(identInfo_MPI_Isend);
     assert(identInfo_MPI_Isend);
 
     identInfo_MPI_Irecv = &context.Idents.get("MPI_Irecv");
     mpiRecvTypes.push_back(identInfo_MPI_Irecv);
     mpiPointToPointTypes.push_back(identInfo_MPI_Irecv);
     mpiNonBlockingTypes.push_back(identInfo_MPI_Irecv);
+    mpiType.push_back(identInfo_MPI_Irecv);
     assert(identInfo_MPI_Irecv);
 
     identInfo_MPI_Ssend = &context.Idents.get("MPI_Ssend");
     mpiSendTypes.push_back(identInfo_MPI_Ssend);
     mpiPointToPointTypes.push_back(identInfo_MPI_Ssend);
     mpiBlockingTypes.push_back(identInfo_MPI_Ssend);
+    mpiType.push_back(identInfo_MPI_Ssend);
     assert(identInfo_MPI_Ssend);
 
     identInfo_MPI_Issend = &context.Idents.get("MPI_Issend");
     mpiSendTypes.push_back(identInfo_MPI_Issend);
     mpiPointToPointTypes.push_back(identInfo_MPI_Issend);
     mpiNonBlockingTypes.push_back(identInfo_MPI_Issend);
+    mpiType.push_back(identInfo_MPI_Issend);
     assert(identInfo_MPI_Issend);
 
     identInfo_MPI_Bsend = &context.Idents.get("MPI_Bsend");
     mpiSendTypes.push_back(identInfo_MPI_Bsend);
     mpiPointToPointTypes.push_back(identInfo_MPI_Bsend);
     mpiBlockingTypes.push_back(identInfo_MPI_Bsend);
+    mpiType.push_back(identInfo_MPI_Bsend);
     assert(identInfo_MPI_Bsend);
 
     // validate
@@ -165,15 +125,24 @@ void MPI_ASTVisitor::identifierInit(ASTContext &context) {
     mpiSendTypes.push_back(identInfo_MPI_Rsend);
     mpiPointToPointTypes.push_back(identInfo_MPI_Rsend);
     mpiBlockingTypes.push_back(identInfo_MPI_Rsend);
+    mpiType.push_back(identInfo_MPI_Rsend);
     assert(identInfo_MPI_Rsend);
 
     // non communicating functions
     identInfo_MPI_Comm_rank = &context.Idents.get("MPI_Comm_rank");
+    mpiType.push_back(identInfo_MPI_Comm_rank);
     assert(identInfo_MPI_Comm_rank);
 }
 
 // classification functions–––––––––––––––––––––––––––––––––––––––––––––––––
-//
+
+/**
+ * Check if MPI send function
+ */
+bool MPI_ASTVisitor::isMPIType(const IdentifierInfo *identInfo) const {
+    return lx::cont::isContained(mpiType, identInfo);
+}
+
 /**
  * Check if MPI send function
  */
@@ -244,7 +213,6 @@ bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 }
 
 bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
-    // TODO this works ok
     if (expression->getDecl()->getIdentifier() == identInfo_MPI_Send) {
         // expression->getDecl()->getObjCFStringFormattingFamily
     }
@@ -261,81 +229,89 @@ bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
 bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
 
-    if (duplicateMPICall(callExpr)) {
-        std::cout << "dupli" << std::endl;
-    }
+    // check if float literal is used in schema
+    if (isMPIType(functionDecl->getIdentifier())) {
+        llvm::SmallVector<SingleArgVisitor, 8> arguments;
+        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
+            arguments.emplace_back(callExpr, i);
+        }
 
-    if (isRecvType(functionDecl->getIdentifier())) {
-        std::cout << "recv type" << std::endl;
-        mpiCalls.push_back(callExpr);
-    }
+        // TODO save to just store the pointer?
+        MPICall mpiCall{callExpr, std::move(arguments)};
+        checkForFloatArgs(mpiCall);
+        checkForDuplicate(mpiCall);
 
-    if (isSendType(functionDecl->getIdentifier())) {
-        std::cout << "send type" << std::endl;
-        mpiCalls.push_back(callExpr);
+        mpiCalls.push_back(std::move(mpiCall));
     }
 
     return true;
 }
 
-const Type *MPI_ASTVisitor::getType(const DeclRefExpr *decl) const {
-    if (auto var = dyn_cast<ValueDecl>(decl->getDecl())) {
-        if (var->getType()->isPointerType()) {
-            return var->getType()->getPointeeType().getTypePtr();
-        } else {
-            bool isConst =
-                var->getType().isConstant(analysisDeclContext_.getASTContext());
-            std::cout << isConst << std::endl;
-            return var->getType().getTypePtr();
-        }
+/**
+ * Returns builtin type for variable. Removes pointer and qualifier attributes.
+ * Ex.: const int, int * -> int (both have builtin type 'int')
+ *
+ * @param var
+ *
+ * @return value type
+ */
+const Type *MPI_ASTVisitor::getBuiltinType(const ValueDecl *var) const {
+    if (var->getType()->isPointerType()) {
+        return var->getType()->getPointeeType()->getUnqualifiedDesugaredType();
+    } else {
+        return var->getType()->getUnqualifiedDesugaredType();
     }
-    return nullptr;
 }
 
-const Type *MPI_ASTVisitor::getType(const CallExpr *callExpr,
-                                    size_t idx) const {
-    if (auto castExpr = dyn_cast<ImplicitCastExpr>(callExpr->getArg(idx))) {
-        if (auto uno = dyn_cast<UnaryOperator>(castExpr->getSubExpr())) {
-            if (auto decl = dyn_cast<DeclRefExpr>(uno->getSubExpr())) {
-                return getType(decl);
+void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
+    const FunctionDecl *functionDecl = mpiCall.callExpr_->getDirectCallee();
+    if (isPointToPointType(functionDecl->getIdentifier())) {
+        auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
+                               MPIPointToPoint::kTag};
+
+        for (size_t idx : indicesToCheck) {
+            // check for float variables
+            auto &arg = mpiCall.arguments_[idx];
+            auto &vars = arg.vars_;
+            for (auto &var : vars) {
+                if (var->getType()->isFloatingType()) {
+                    reportFloat(mpiCall.callExpr_, idx,
+                                FloatArgType::kVariable);
+                }
             }
-        } else if (auto imp =
-                       dyn_cast<ImplicitCastExpr>(castExpr->getSubExpr())) {
-            if (auto decl = dyn_cast<DeclRefExpr>(imp->getSubExpr())) {
-                return getType(decl);
+            // check for float literals
+            if (arg.floatingLiterals_.size()) {
+                reportFloat(mpiCall.callExpr_, idx, FloatArgType::kLiteral);
+            }
+
+            // check for float return values from functions
+            auto &functions = arg.functions_;
+            for (auto &function : functions) {
+                if (function->getReturnType()->isFloatingType()) {
+                    llvm::outs() << functions.size() << "\n";
+                    reportFloat(mpiCall.callExpr_, idx,
+                                FloatArgType::kReturnType);
+                }
             }
         }
     }
-    return nullptr;
 }
-
-/// A simple visitor to record what VarDecls occur in EH-handling code.
-class FindVarDecl : public RecursiveASTVisitor<FindVarDecl> {
-public:
-    // TODO how to save argument list
-
-    bool VisitDeclRefExpr(DeclRefExpr *DR) {
-        if (const VarDecl *D = dyn_cast<VarDecl>(DR->getDecl())) {
-            D->dumpColor();
-        }
-        return true;
-    }
-
-    bool VisitBinaryOperator(clang::BinaryOperator *binOp) {
-        // TODO needs to be saved
-        binOp->getOpcode();
-        binOp->dumpColor();
-        return true;
-    }
-
-    bool VisitIntegerLiteral(clang::IntegerLiteral *intLiteral) {
-        intLiteral->dumpColor();
-        return true;
-    }
-};
 
 // TODO
 // argumente können wie folgt strukturiert sein
+
+bool MPI_ASTVisitor::areMPICallExprsEqual(CallExpr *callExpr1,
+                                          CallExpr *callExpr2) const {
+    // if calls have the same identifier - implies same number of args
+    if (callExpr1->getDirectCallee()->getIdentifier() !=
+        callExpr2->getDirectCallee()->getIdentifier()) {
+        return false;
+    }
+
+    if (isPointToPointType(callExpr1->getDirectCallee()->getIdentifier())) {
+    }
+    return true;
+}
 
 /**
  * Check if the exact same call is already in the MPI function call set.
@@ -346,54 +322,61 @@ public:
  *
  * @return is equal call in list
  */
-bool MPI_ASTVisitor::duplicateMPICall(CallExpr *callExpr) const {
-    bool identical{false};
+void MPI_ASTVisitor::checkForDuplicate(MPICall &discoveredCall) const {
+    const FunctionDecl *functionDecl =
+        discoveredCall.callExpr_->getDirectCallee();
 
-    if (isSendType(callExpr->getDirectCallee()->getIdentifier())) {
-        // callExpr->dumpColor();
-        // auto t = getType(callExpr, 0);
-        // std::cout << t << std::endl;
+    if (isPointToPointType(functionDecl->getIdentifier())) {
+        // bool identical{false};
+
+        auto bufArg = discoveredCall.arguments_[MPIPointToPoint::kBuf];
+        auto type = getBuiltinType(bufArg.vars_.front());
+        type->dump();
+    }
+}
+
+// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+void MPI_ASTVisitor::reportFloat(CallExpr *callExpr, size_t idx,
+                                 FloatArgType type) const {
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), &analysisDeclContext_);
+
+    std::string indexAsString{std::to_string(idx)};
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+
+    std::string typeAsString;
+    switch (type) {
+        case FloatArgType::kLiteral:
+            typeAsString = "literal";
+            break;
+
+        case FloatArgType::kVariable:
+            typeAsString = "variable";
+            break;
+
+        case FloatArgType::kReturnType:
+            typeAsString = "return value from function";
+            break;
     }
 
-    // check for identical call
-    for (const CallExpr *executedCall : mpiCalls) {
-        // if calls have the same identifier - implies same number of args
-        if (executedCall->getDirectCallee()->getIdentifier() ==
-            callExpr->getDirectCallee()->getIdentifier()) {
-            // callExpr->dumpColor();
-            // identical = true;
-            std::cout << "entered dupli" << std::endl;
-            // const size_t numArgs{callExpr->getNumArgs()};
-            std::cout << "comp" << std::endl;
-            // TODO implement comparison
+    bugReporter_.EmitBasicReport(
+        analysisDeclContext_.getDecl(), &checkerBase_, "float schema argument",
+        mpiBugGroupError,
+        "float " + typeAsString + " used at index: " + indexAsString, location,
+        range);
+}
 
-            FindVarDecl finder{};
-            // TODO dont use for loop just put values found in container
+void MPI_ASTVisitor::reportDuplicate(CallExpr *callExpr) const {
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), &analysisDeclContext_);
 
-            finder.TraverseCallExpr(callExpr);
-            // TODO
+    SourceRange range = callExpr->getCallee()->getSourceRange();
 
-            // for (size_t i = 0; i < numArgs; ++i) {
-
-                // not recursive (visitor function)
-                // finder.VisitExpr(callExpr->getArg(i));
-
-
-                // break;
-                // if (callExpr->getArg(i) != executedCall->getArg(i)) {
-                // std::cout << "not" << i << std::endl;
-                // // callExpr->getArg(i)->dumpColor();
-                // // executedCall->getArg(i)->dumpColor();
-                // // call not identical, check next
-                // identical = false;
-                // break;
-                // }
-            // }
-            // end if identical call was found
-            if (identical) break;
-        }
-    }
-    return identical;
+    bugReporter_.EmitBasicReport(
+        analysisDeclContext_.getDecl(), &checkerBase_, "duplicate",
+        mpiBugGroupError,
+        "exact duplicate mpi call, might be summarized in a single call",
+        location, range);
 }
 
 class MPISchemaCheckerAST
@@ -407,13 +390,9 @@ public:
         visitor.TraverseDecl(const_cast<Decl *>(decl));
     }
 
-    // TODO save to rely on this?
     void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
                                    AnalysisManager &mgr,
-                                   BugReporter &BR) const {
-        // why does llvm has special out function?
-        // llvm::outs() << "end of translation unit" << '\n';
-    }
+                                   BugReporter &BR) const {}
 
     // TODO save to rely on this?
     void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
@@ -421,7 +400,6 @@ public:
         static bool finalAnalysis{false};
         if (!finalAnalysis) {
             finalAnalysis = !finalAnalysis;
-            // llvm::outs() << "end of analysis" << '\n';
         }
     }
 };
