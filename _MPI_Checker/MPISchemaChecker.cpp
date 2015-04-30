@@ -2,7 +2,6 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include "MPISchemaChecker.hpp"
-#include "SupportingVisitors.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
 
@@ -17,9 +16,13 @@ const std::string bugGroupMPIWarning{"MPI Warning"};
 struct MPICall {
     MPICall(CallExpr *callExpr,
             llvm::SmallVector<mpi::SingleArgVisitor, 8> &&arguments)
-        : callExpr_{callExpr}, arguments_{std::move(arguments)} {};
+        : callExpr_{callExpr}, arguments_{std::move(arguments)} {
+        const FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
+        identInfo_ = functionDeclNew->getIdentifier();
+    };
     CallExpr *callExpr_;
     llvm::SmallVector<SingleArgVisitor, 8> arguments_;
+    IdentifierInfo *identInfo_;
 };
 llvm::SmallVector<MPICall, 16> mpiCalls;
 
@@ -262,22 +265,6 @@ void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
     }
 }
 
-// TODO
-// argumente können wie folgt strukturiert sein
-
-bool MPI_ASTVisitor::areMPICallExprsEqual(CallExpr *callExpr1,
-                                          CallExpr *callExpr2) const {
-    // if calls have the same identifier - implies same number of args
-    if (callExpr1->getDirectCallee()->getIdentifier() !=
-        callExpr2->getDirectCallee()->getIdentifier()) {
-        return false;
-    }
-
-    if (isPointToPointType(callExpr1->getDirectCallee()->getIdentifier())) {
-    }
-    return true;
-}
-
 /**
  * Compares all components of two arguments for equality
  * obtained from given calls with index.
@@ -290,47 +277,19 @@ bool MPI_ASTVisitor::areMPICallExprsEqual(CallExpr *callExpr1,
  */
 bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
                                             size_t idx) const {
-    // compare count –––––––––––––––––––––––––––––––––––––––––––––––
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
 
-    // general attributes
-    if (argOne.isArgumentStatic_ != argTwo.isArgumentStatic_ ||
-        argOne.isSimpleExpression_ != argTwo.isSimpleExpression_)
+    // operators
+    if (!util::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
         return false;
 
-    // operators
-    // copy because matches get erased
-    auto binOpsOne = argOne.binaryOperators_;
-    for (BinaryOperatorKind binOpFromTwo : argTwo.binaryOperators_) {
-        if (!cont::isContained(binOpsOne, binOpFromTwo)) {
-            return false;
-        } else {
-            // to omit double matching
-            cont::erase(binOpsOne, binOpFromTwo);
-        }
-    }
-
     // variables
-    // copy because matched literals get erased
-    auto varsOne = argOne.vars_;
-    for (VarDecl *varNew : argTwo.vars_) {
-        if (!cont::isContained(varsOne, varNew)) {
-            return false;
-        } else {
-            cont::erase(varsOne, varNew);
-        }
-    }
+    if (!util::isPermutation(argOne.vars_, argTwo.vars_)) return false;
 
     // int literals
-    auto literalsOne = argOne.integerLiterals_;
-    for (llvm::APInt literalFromTwo : argTwo.integerLiterals_) {
-        if (!cont::isContained(literalsOne, literalFromTwo)) {
-            return false;
-        } else {
-            cont::erase(literalsOne, literalFromTwo);
-        }
-    }
+    if (!util::isPermutation(argOne.integerLiterals_, argTwo.integerLiterals_))
+        return false;
 
     // float literals
     // just compare count, floats should not be compared by value
@@ -340,16 +299,14 @@ bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
     }
 
     // functions
-    auto functionsOne = argOne.functions_;
-    for (FunctionDecl *functionFromTwo : argTwo.functions_) {
-        if (!cont::isContained(functionsOne, functionFromTwo)) {
-            return false;
-        } else {
-            cont::erase(functionsOne, functionFromTwo);
-        }
-    }
+    if (!util::isPermutation(argOne.functions_, argTwo.functions_))
+        return false;
+
     return true;
 }
+
+// TODO report datatype missmatch
+// between buffer and mpi datatype
 
 /**
  * Check if the exact same call was already executed.
@@ -360,44 +317,48 @@ bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
  * @return is equal call in list
  */
 void MPI_ASTVisitor::checkForDuplicate(MPICall &newCall) const {
-    const FunctionDecl *functionDecl = newCall.callExpr_->getDirectCallee();
-
-    if (isPointToPointType(functionDecl->getIdentifier())) {
-        bool identical{true};
-        // defensive rating
-
-        auto bufArgNew = newCall.arguments_[MPIPointToPoint::kBuf];
-        auto bufferTypeNew = getBuiltinType(bufArgNew.vars_.front());
-
+    if (isPointToPointType(newCall.identInfo_)) {
         for (MPICall &prevCall : mpiCalls) {
-            identical = true;
+            // compare function identifiers –––––––––––––––––––––––––––––––––
+            if (newCall.identInfo_ != prevCall.identInfo_) continue;
 
-            // compare buffer types ––––––––––––––––––––––––––––––––––––––––
-            auto bufArgPrev = prevCall.arguments_[MPIPointToPoint::kBuf];
-            auto bufferTypePrev = getBuiltinType(bufArgPrev.vars_.front());
+            // compare buffer (types) ––––––––––––––––––––––––––––––––––––––
+            auto bufferTypeNew =
+                newCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
+            auto bufferTypePrev =
+                prevCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
 
-            if (bufferTypeNew != bufferTypePrev) {
-                identical = false;
+            if (getBuiltinType(bufferTypeNew) != getBuiltinType(bufferTypePrev))
                 continue;
-            }
 
-            // argument types which are compared by all components
+            // argument types which are compared by all 'components' –––––––
+            bool identical = true;
             auto indicesToCheck = {MPIPointToPoint::kCount,
                                    MPIPointToPoint::kRank,
                                    MPIPointToPoint::kTag};
             for (size_t idx : indicesToCheck) {
                 if (!fullArgumentComparison(newCall, prevCall, idx)) {
                     identical = false;
-                    // quit inner loop
-                    break;
+                    break;  // end inner loop
                 }
             }
+            if (!identical) continue;
 
-            if (identical) {
-                reportDuplicate(prevCall.callExpr_, newCall.callExpr_);
-                // quit outer loop
-                break;
+            // compare specified mpi datatypes –––––––––––––––––––––––––––––
+            auto mpiTypeNew =
+                newCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+            auto mpiTypePrev =
+                prevCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+
+            if (mpiTypeNew->getName() != mpiTypePrev->getName()) {
+                continue;
             }
+
+            // if function reaches this point
+            // all arguments have been equal
+            reportDuplicate(prevCall.callExpr_, newCall.callExpr_);
+            // end loop
+            break;
         }
     }
 }
