@@ -4,57 +4,70 @@
 #include "MPISchemaCheckerAST.hpp"
 #include "ASTFinder.hpp"
 #include "Container.hpp"
+#include "Utility.hpp"
 
 using namespace clang;
 using namespace ento;
 
-const std::string mpiBugGroupError{"MPI Error"};
-const std::string mpiBugGroupWarning{"MPI Warning"};
+const std::string bugGroupMPIError{"MPI Error"};
+const std::string bugGroupMPIWarning{"MPI Warning"};
 
-/// A simple visitor to record what VarDecls occur in EH-handling code.
 class SingleArgVisitor : public clang::RecursiveASTVisitor<SingleArgVisitor> {
 public:
-    SingleArgVisitor(CallExpr *argExpression, size_t idx) {
-        TraverseStmt(argExpression->getArg(idx));
+    SingleArgVisitor(CallExpr *argExpression, size_t idx)
+        : expr_{argExpression->getArg(idx)} {
+        TraverseStmt(expr_);
     }
-    bool VisitDeclRefExpr(clang::DeclRefExpr *potentialVar) {
+
+    // variables or functions
+    bool VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
         if (clang::VarDecl *var =
-                clang::dyn_cast<clang::VarDecl>(potentialVar->getDecl())) {
+                clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
             vars_.push_back(var);
+            isArgumentStatic_ = false;
         } else if (clang::FunctionDecl *fn =
                        clang::dyn_cast<clang::FunctionDecl>(
-                           potentialVar->getDecl())) {
+                           declRef->getDecl())) {
             functions_.push_back(fn);
+            isArgumentStatic_ = false;
         }
         return true;
     }
 
     bool VisitBinaryOperator(clang::BinaryOperator *op) {
-        binaryOperators_.push_back(op);
+        binaryOperators_.push_back(op->getOpcode());
+        isSimpleExpression_ = false;
         return true;
     }
 
     bool VisitIntegerLiteral(IntegerLiteral *intLiteral) {
-        integerLiterals_.push_back(intLiteral);
+        integerLiterals_.push_back(intLiteral->getValue());
         return true;
     }
 
     bool VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
-        floatingLiterals_.push_back(floatLiteral);
+        floatingLiterals_.push_back(floatLiteral->getValue());
         return true;
     }
 
-    llvm::SmallVector<BinaryOperator *, 2> binaryOperators_{};
-    llvm::SmallVector<VarDecl *, 2> vars_{};
-    llvm::SmallVector<FunctionDecl *, 2> functions_{};
-    llvm::SmallVector<IntegerLiteral *, 2> integerLiterals_{};
-    llvm::SmallVector<FloatingLiteral *, 2> floatingLiterals_{};
+    // complete argument expression
+    Expr *expr_;
+    // extracted components
+    llvm::SmallVector<BinaryOperatorKind, 1> binaryOperators_;
+    llvm::SmallVector<VarDecl *, 1> vars_;
+    llvm::SmallVector<FunctionDecl *, 0> functions_;
+    llvm::SmallVector<llvm::APInt, 1> integerLiterals_;
+    llvm::SmallVector<llvm::APFloat, 0> floatingLiterals_;
+    // if alle operands are static
+    bool isArgumentStatic_{true};
+    // no operator, single literal or variable
+    bool isSimpleExpression_{true};
 };
 
 struct MPICall {
     MPICall(CallExpr *callExpr,
             llvm::SmallVector<SingleArgVisitor, 8> &&arguments)
-        : callExpr_{callExpr}, arguments_{arguments} {};
+        : callExpr_{callExpr}, arguments_{std::move(arguments)} {};
     CallExpr *callExpr_;
     llvm::SmallVector<SingleArgVisitor, 8> arguments_;
 };
@@ -231,8 +244,10 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
 
     // check if float literal is used in schema
     if (isMPIType(functionDecl->getIdentifier())) {
+        // build argument vector
         llvm::SmallVector<SingleArgVisitor, 8> arguments;
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
+            // triggers SingleArgVisitor traversal
             arguments.emplace_back(callExpr, i);
         }
 
@@ -249,7 +264,7 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
 
 /**
  * Returns builtin type for variable. Removes pointer and qualifier attributes.
- * Ex.: const int, int * -> int (both have builtin type 'int')
+ * Ex.: const int, int* -> int (both have builtin type 'int')
  *
  * @param var
  *
@@ -269,6 +284,7 @@ void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
         auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
                                MPIPointToPoint::kTag};
 
+        // iterate indices which should not have float arguments
         for (size_t idx : indicesToCheck) {
             // check for float variables
             auto &arg = mpiCall.arguments_[idx];
@@ -288,7 +304,6 @@ void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
             auto &functions = arg.functions_;
             for (auto &function : functions) {
                 if (function->getReturnType()->isFloatingType()) {
-                    llvm::outs() << functions.size() << "\n";
                     reportFloat(mpiCall.callExpr_, idx,
                                 FloatArgType::kReturnType);
                 }
@@ -314,24 +329,127 @@ bool MPI_ASTVisitor::areMPICallExprsEqual(CallExpr *callExpr1,
 }
 
 /**
- * Check if the exact same call is already in the MPI function call set.
- * (ty = type)
+ * Compares all components of two arguments for equality
+ * obtained from given calls with index.
+ *
+ * @param callOne
+ * @param callTwo
+ * @param idx
+ *
+ * @return areEqual
+ */
+bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
+                                            size_t idx) const {
+    // compare count –––––––––––––––––––––––––––––––––––––––––––––––
+    auto argOne = callOne.arguments_[idx];
+    auto argTwo = callTwo.arguments_[idx];
+
+    // general attributes
+    if (argOne.isArgumentStatic_ != argTwo.isArgumentStatic_ ||
+        argOne.isSimpleExpression_ != argTwo.isSimpleExpression_)
+        return false;
+
+    // operators
+    // copy because matches get erased
+    auto binOpsOne = argOne.binaryOperators_;
+    for (BinaryOperatorKind binOpFromTwo : argTwo.binaryOperators_) {
+        if (!lx::cont::isContained(binOpsOne, binOpFromTwo)) {
+            return false;
+        } else {
+            // to omit double matching
+            lx::cont::erase(binOpsOne, binOpFromTwo);
+        }
+    }
+
+    // variables
+    // copy because matched literals get erased
+    auto varsOne = argOne.vars_;
+    for (VarDecl *varNew : argTwo.vars_) {
+        if (!lx::cont::isContained(varsOne, varNew)) {
+            return false;
+        } else {
+            lx::cont::erase(varsOne, varNew);
+        }
+    }
+
+    // int literals
+    auto literalsOne = argOne.integerLiterals_;
+    for (llvm::APInt literalFromTwo : argTwo.integerLiterals_) {
+        if (!lx::cont::isContained(literalsOne, literalFromTwo)) {
+            return false;
+        } else {
+            lx::cont::erase(literalsOne, literalFromTwo);
+        }
+    }
+
+    // float literals
+    // just compare count, floats should not be compared by value
+    // https://tinyurl.com/ks8smw4
+    if (argOne.floatingLiterals_.size() != argTwo.floatingLiterals_.size()) {
+        return false;
+    }
+
+    // functions
+    auto functionsOne = argOne.functions_;
+    for (FunctionDecl *functionFromTwo : argTwo.functions_) {
+        if (!lx::cont::isContained(functionsOne, functionFromTwo)) {
+            return false;
+        } else {
+            lx::cont::erase(functionsOne, functionFromTwo);
+        }
+    }
+    return true;
+}
+
+/**
+ * Check if the exact same call was already executed.
  *
  * @param callEvent
  * @param mpiFnCallSet set searched for identical calls
  *
  * @return is equal call in list
  */
-void MPI_ASTVisitor::checkForDuplicate(MPICall &discoveredCall) const {
-    const FunctionDecl *functionDecl =
-        discoveredCall.callExpr_->getDirectCallee();
+void MPI_ASTVisitor::checkForDuplicate(MPICall &newCall) const {
+    const FunctionDecl *functionDecl = newCall.callExpr_->getDirectCallee();
 
     if (isPointToPointType(functionDecl->getIdentifier())) {
-        // bool identical{false};
+        bool identical{true};
+        // defensive rating
 
-        auto bufArg = discoveredCall.arguments_[MPIPointToPoint::kBuf];
-        auto type = getBuiltinType(bufArg.vars_.front());
-        type->dump();
+        auto bufArgNew = newCall.arguments_[MPIPointToPoint::kBuf];
+        auto bufferTypeNew = getBuiltinType(bufArgNew.vars_.front());
+        auto countArgNew = newCall.arguments_[MPIPointToPoint::kCount];
+
+        for (MPICall &prevCall : mpiCalls) {
+            identical = true;
+
+            // compare buffer types ––––––––––––––––––––––––––––––––––––––––
+            auto bufArgPrev = prevCall.arguments_[MPIPointToPoint::kBuf];
+            auto bufferTypePrev = getBuiltinType(bufArgPrev.vars_.front());
+
+            if (bufferTypeNew != bufferTypePrev) {
+                identical = false;
+                continue;
+            }
+
+            // argument types which are compared by all components
+            auto indicesToCheck = {MPIPointToPoint::kCount,
+                                   MPIPointToPoint::kRank,
+                                   MPIPointToPoint::kTag};
+            for (size_t idx : indicesToCheck) {
+                if (!fullArgumentComparison(newCall, prevCall, idx)) {
+                    identical = false;
+                    // quit inner loop
+                    break;
+                }
+            }
+
+            if (identical) {
+                reportDuplicate(prevCall.callExpr_, newCall.callExpr_);
+                // quit outer loop
+                break;
+            }
+        }
     }
 }
 
@@ -361,21 +479,30 @@ void MPI_ASTVisitor::reportFloat(CallExpr *callExpr, size_t idx,
 
     bugReporter_.EmitBasicReport(
         analysisDeclContext_.getDecl(), &checkerBase_, "float schema argument",
-        mpiBugGroupError,
+        bugGroupMPIError,
         "float " + typeAsString + " used at index: " + indexAsString, location,
         range);
 }
 
-void MPI_ASTVisitor::reportDuplicate(CallExpr *callExpr) const {
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        callExpr, bugReporter_.getSourceManager(), &analysisDeclContext_);
 
-    SourceRange range = callExpr->getCallee()->getSourceRange();
+void MPI_ASTVisitor::reportDuplicate(CallExpr *matchedCall,
+                                     CallExpr *duplicateCall) const {
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        duplicateCall, bugReporter_.getSourceManager(), &analysisDeclContext_);
+
+    std::string lineNo =
+        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
+            bugReporter_.getSourceManager());
+
+    // split written strings into parts
+    std::vector<std::string> strs = lx::util::split(lineNo, ':');
+    lineNo = strs.at(strs.size() - 2);
+
+    SourceRange range = duplicateCall->getCallee()->getSourceRange();
 
     bugReporter_.EmitBasicReport(
         analysisDeclContext_.getDecl(), &checkerBase_, "duplicate",
-        mpiBugGroupError,
-        "exact duplicate mpi call, might be summarized in a single call",
+        bugGroupMPIError, "exact duplicate of mpi call in line: " + lineNo,
         location, range);
 }
 

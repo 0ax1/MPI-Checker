@@ -92,7 +92,9 @@ public:
     void checkForFloatArgs(MPICall &);
 
     void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
-    void reportDuplicate(clang::CallExpr *) const;
+    void reportDuplicate(clang::CallExpr *, clang::CallExpr *) const;
+
+    bool fullArgumentComparison(MPICall &, MPICall &, size_t) const;
 };
 
 
