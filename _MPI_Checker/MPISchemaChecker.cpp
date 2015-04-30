@@ -1,206 +1,27 @@
-#include "../ClangSACheckers.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include <utility>
+#include "llvm/ADT/SmallVector.h"
 
-#include <iostream>
-#include <vector>
-
+#include "MPISchemaChecker.hpp"
+#include "SupportingVisitors.hpp"
 #include "Container.hpp"
-
-// callback functions a checker can register for
-// http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html
-
-// dump-color legend
-// Red           - CastColor
-// Green         - TypeColor
-// Bold Green    - DeclKindNameColor, UndeserializedColor
-// Yellow        - AddressColor, LocationColor
-// Blue          - CommentColor, NullColor, IndentColor
-// Bold Blue     - AttrColor
-// Bold Magenta  - StmtColor
-// Cyan          - ValueKindColor, ObjectKindColor
-// Bold Cyan     - ValueColor, DeclNameColor
+#include "Utility.hpp"
 
 using namespace clang;
 using namespace ento;
 
-// argument schema enums ––––––––––––––––––––––––––––––––––––––
-// scope enums, but keep weak typing
-namespace MPIPointToPoint {
-// valid for all point to point functions
-enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
-}
+namespace mpi {
 
-namespace MPI_Comm_rank {
-enum { kComm, kRank };
-}
+const std::string bugGroupMPIError{"MPI Error"};
+const std::string bugGroupMPIWarning{"MPI Warning"};
 
-class ASTVisitor : public RecursiveASTVisitor<ASTVisitor> {
-public:
-    bool VisitDecl(Decl *declaration) {
-        declaration->dumpColor();
-        // The return value indicates whether we want the visitation to proceed.
-        // Return false to stop the traversal of the AST.
-        return true;
-    }
-
-    bool VisitExpr(const Expr *expression) {
-        expression->dumpColor();
-        return true;
-    }
-
-    bool VisitDeclRefExpr(DeclRefExpr *expression) {
-        expression->dumpColor();
-        return true;
-    }
+struct MPICall {
+    MPICall(CallExpr *callExpr,
+            llvm::SmallVector<mpi::SingleArgVisitor, 8> &&arguments)
+        : callExpr_{callExpr}, arguments_{std::move(arguments)} {};
+    CallExpr *callExpr_;
+    llvm::SmallVector<SingleArgVisitor, 8> arguments_;
 };
-//–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-/**
- * MPI function call wrapper class. Enables capturing in llvm
- * program state container classes (list, set, map).
- */
-class MPIFunctionCall {
-private:
-public:
-    // capture mpi function call with arguments
-    const CallEventRef<> callEvent_;
-
-    MPIFunctionCall(const CallEventRef<> event) : callEvent_{event} {}
-
-    bool operator==(const MPIFunctionCall &message) const {
-        // check if all call-event args are equal
-        if (callEvent_->getNumArgs() == message.callEvent_->getNumArgs()) {
-            for (size_t i = 0; i < callEvent_->getNumArgs(); ++i) {
-                // if one arg is different
-                if (callEvent_->getArgSVal(i) !=
-                    message.callEvent_->getArgSVal(i)) {
-                    return false;
-                }
-            }
-        }
-        // has different arg count
-        else {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool operator<(const MPIFunctionCall &message) const {
-        // order is irrelevant
-        return true;
-    }
-
-    // to enable analyzer to check if nodes are in the same execution state
-    void Profile(llvm::FoldingSetNodeID &foldingNodeId) const {
-        foldingNodeId.AddPointer(&callEvent_);
-    }
-};
-
-struct RankVar {
-    loc::MemRegionVal sval_;
-
-    RankVar(loc::MemRegionVal symbolRef) : sval_{symbolRef} {}
-
-    bool operator==(const RankVar &otherRankVar) const {
-        return sval_ == otherRankVar.sval_;
-    }
-
-    bool operator<(const RankVar &otherRankVar) const {
-        // order is irrelevant
-        return true;
-    }
-
-    void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddPointer(&sval_); }
-};
-
-// capture mpi function calls in control flow graph
-// operations are customly removed from cfg when completed
-REGISTER_SET_WITH_PROGRAMSTATE(MPIFnCallSet, MPIFunctionCall)
-
-// track rank variables set by MPI_Comm_rank
-REGISTER_SET_WITH_PROGRAMSTATE(RankVarsSet, RankVar)
-
-// template inheritance arguments set callback functions
-class MPISchemaChecker
-    // IfStmt not triggered with pre/post-stmt
-    : public Checker<check::PreCall, check::PostCall, check::DeadSymbols,
-                     check::BranchCondition, check::EndFunction,
-                     check::EndAnalysis> {
-public:
-    // to enable classification of mpi-functions during analysis
-    std::vector<IdentifierInfo *> mpiSendTypes;
-    std::vector<IdentifierInfo *> mpiRecvTypes;
-
-    std::vector<IdentifierInfo *> mpiBlockingTypes;
-    std::vector<IdentifierInfo *> mpiNonBlockingTypes;
-
-    std::vector<IdentifierInfo *> mpiPointToPointTypes;
-    std::vector<IdentifierInfo *> mpiPointToCollTypes;
-    std::vector<IdentifierInfo *> mpiCollToPointTypes;
-    std::vector<IdentifierInfo *> mpiCollToCollTypes;
-    //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-    IdentifierInfo *IdentInfo_MPI_Send, *IdentInfo_MPI_Recv,
-        *IdentInfo_MPI_Isend, *IdentInfo_MPI_Irecv, *IdentInfo_MPI_Issend,
-        *IdentInfo_MPI_Ssend, *IdentInfo_MPI_Bsend, *IdentInfo_MPI_Rsend,
-        *IdentInfo_MPI_Comm_rank, *IdentInfoTrackMem;
-
-    // custom bug types
-    std::unique_ptr<BugType> DuplicateSendBugType;
-    std::unique_ptr<BugType> UnmatchedRecvBugType;
-
-    void dynamicIdentifierInit(ASTContext &);
-    void dynamicIdentifierInit(CheckerContext &) const;
-
-    void reportDuplicateSend(const CallEvent &, CheckerContext &) const;
-    void reportUnmatchedRecv(const CallEvent &, CheckerContext &) const;
-
-    bool identicalMPICall(const CallEvent &, MPIFnCallSetTy) const;
-    bool areCommArgsConst(const CallEvent &) const;
-
-    void checkForMatchingSend(const CallEvent &, CheckerContext &) const;
-    bool hasMatchingSend(const CallEvent &, CheckerContext &) const;
-    bool isSendRecvPairMatching(const CallEvent &, const CallEvent &,
-                                CheckerContext &) const;
-
-    void checkPreCall(const CallEvent &, CheckerContext &) const;
-    void checkPostCall(const CallEvent &, CheckerContext &) const;
-    void checkEndFunction(CheckerContext &) const;
-    void checkEndAnalysis(ExplodedGraph &, BugReporter &, ExprEngine &) const;
-
-    void checkBranchCondition(const Stmt *, CheckerContext &) const;
-
-    void checkDeadSymbols(SymbolReaper &, CheckerContext &) const;
-
-    // to inspect properties of mpi functions
-    bool isSendType(const CallEvent &) const;
-    bool isRecvType(const CallEvent &) const;
-    bool isBlockingType(const CallEvent &) const;
-    bool isNonBlockingType(const CallEvent &) const;
-    bool isPointToPointType(const CallEvent &) const;
-    bool isPointToCollType(const CallEvent &) const;
-    bool isCollToPointType(const CallEvent &) const;
-    bool isCollToCollType(const CallEvent &) const;
-
-    void memRegionInfo(const MemRegion *MR) const;
-
-    MPISchemaChecker()
-        :  // inspecting the state of initialization is based
-           // on MPI_Send identifier pointer (see dynamicIdentifierInit)
-          IdentInfo_MPI_Send(nullptr) {
-        // initialize bug types
-        DuplicateSendBugType.reset(
-            new BugType(this, "duplicate send", "MPI Error"));
-
-        UnmatchedRecvBugType.reset(
-            new BugType(this, "unmatched receive", "MPI Error"));
-    };
-};
+llvm::SmallVector<MPICall, 16> mpiCalls;
 
 /**
  * Initializes function identifiers lazily. This is the default pattern
@@ -210,521 +31,456 @@ public:
  *
  * @param context that is used for analyzing cfg nodes
  */
-void MPISchemaChecker::dynamicIdentifierInit(ASTContext &context) {
-    // guard to check if identifiers are intialized
-    if (IdentInfo_MPI_Send) return;
-
+void MPI_ASTVisitor::identifierInit(ASTContext &context) {
     // init function identifiers
     // and copy them into the correct classification containers
-    IdentInfo_MPI_Send = &context.Idents.get("MPI_Send");
-    mpiSendTypes.push_back(IdentInfo_MPI_Send);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Send);
-    mpiBlockingTypes.push_back(IdentInfo_MPI_Send);
+    identInfo_MPI_Send = &context.Idents.get("MPI_Send");
+    mpiSendTypes.push_back(identInfo_MPI_Send);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Send);
+    mpiBlockingTypes.push_back(identInfo_MPI_Send);
+    mpiType.push_back(identInfo_MPI_Send);
+    assert(identInfo_MPI_Send);
 
-    IdentInfo_MPI_Recv = &context.Idents.get("MPI_Recv");
-    mpiRecvTypes.push_back(IdentInfo_MPI_Recv);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Recv);
-    mpiBlockingTypes.push_back(IdentInfo_MPI_Recv);
+    identInfo_MPI_Recv = &context.Idents.get("MPI_Recv");
+    mpiRecvTypes.push_back(identInfo_MPI_Recv);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Recv);
+    mpiBlockingTypes.push_back(identInfo_MPI_Recv);
+    mpiType.push_back(identInfo_MPI_Recv);
+    assert(identInfo_MPI_Recv);
 
-    IdentInfo_MPI_Isend = &context.Idents.get("MPI_Isend");
-    mpiSendTypes.push_back(IdentInfo_MPI_Isend);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Isend);
-    mpiNonBlockingTypes.push_back(IdentInfo_MPI_Isend);
+    identInfo_MPI_Isend = &context.Idents.get("MPI_Isend");
+    mpiSendTypes.push_back(identInfo_MPI_Isend);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Isend);
+    mpiNonBlockingTypes.push_back(identInfo_MPI_Isend);
+    mpiType.push_back(identInfo_MPI_Isend);
+    assert(identInfo_MPI_Isend);
 
-    IdentInfo_MPI_Irecv = &context.Idents.get("MPI_Irecv");
-    mpiRecvTypes.push_back(IdentInfo_MPI_Irecv);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Irecv);
-    mpiNonBlockingTypes.push_back(IdentInfo_MPI_Irecv);
+    identInfo_MPI_Irecv = &context.Idents.get("MPI_Irecv");
+    mpiRecvTypes.push_back(identInfo_MPI_Irecv);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Irecv);
+    mpiNonBlockingTypes.push_back(identInfo_MPI_Irecv);
+    mpiType.push_back(identInfo_MPI_Irecv);
+    assert(identInfo_MPI_Irecv);
 
-    IdentInfo_MPI_Ssend = &context.Idents.get("MPI_Ssend");
-    mpiSendTypes.push_back(IdentInfo_MPI_Ssend);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Ssend);
-    mpiBlockingTypes.push_back(IdentInfo_MPI_Ssend);
+    identInfo_MPI_Ssend = &context.Idents.get("MPI_Ssend");
+    mpiSendTypes.push_back(identInfo_MPI_Ssend);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Ssend);
+    mpiBlockingTypes.push_back(identInfo_MPI_Ssend);
+    mpiType.push_back(identInfo_MPI_Ssend);
+    assert(identInfo_MPI_Ssend);
 
-    IdentInfo_MPI_Issend = &context.Idents.get("MPI_Issend");
-    mpiSendTypes.push_back(IdentInfo_MPI_Issend);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Issend);
-    mpiNonBlockingTypes.push_back(IdentInfo_MPI_Issend);
+    identInfo_MPI_Issend = &context.Idents.get("MPI_Issend");
+    mpiSendTypes.push_back(identInfo_MPI_Issend);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Issend);
+    mpiNonBlockingTypes.push_back(identInfo_MPI_Issend);
+    mpiType.push_back(identInfo_MPI_Issend);
+    assert(identInfo_MPI_Issend);
 
-    IdentInfo_MPI_Bsend = &context.Idents.get("MPI_Bsend");
-    mpiSendTypes.push_back(IdentInfo_MPI_Bsend);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Bsend);
-    mpiBlockingTypes.push_back(IdentInfo_MPI_Bsend);
+    identInfo_MPI_Bsend = &context.Idents.get("MPI_Bsend");
+    mpiSendTypes.push_back(identInfo_MPI_Bsend);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Bsend);
+    mpiBlockingTypes.push_back(identInfo_MPI_Bsend);
+    mpiType.push_back(identInfo_MPI_Bsend);
+    assert(identInfo_MPI_Bsend);
 
     // validate
-    IdentInfo_MPI_Rsend = &context.Idents.get("MPI_Rsend");
-    mpiSendTypes.push_back(IdentInfo_MPI_Rsend);
-    mpiPointToPointTypes.push_back(IdentInfo_MPI_Rsend);
-    mpiBlockingTypes.push_back(IdentInfo_MPI_Rsend);
+    identInfo_MPI_Rsend = &context.Idents.get("MPI_Rsend");
+    mpiSendTypes.push_back(identInfo_MPI_Rsend);
+    mpiPointToPointTypes.push_back(identInfo_MPI_Rsend);
+    mpiBlockingTypes.push_back(identInfo_MPI_Rsend);
+    mpiType.push_back(identInfo_MPI_Rsend);
+    assert(identInfo_MPI_Rsend);
 
     // non communicating functions
-    IdentInfo_MPI_Comm_rank = &context.Idents.get("MPI_Comm_rank");
-
-    IdentInfoTrackMem = &context.Idents.get("trackMem");
+    identInfo_MPI_Comm_rank = &context.Idents.get("MPI_Comm_rank");
+    mpiType.push_back(identInfo_MPI_Comm_rank);
+    assert(identInfo_MPI_Comm_rank);
 }
 
+// classification functions–––––––––––––––––––––––––––––––––––––––––––––––––
+
 /**
- * Convenience function to enable dynamic initialization triggered
- * from const functions. Initializes identifiers lazily. This is the
- * default pattern for initializating checker identifier.
- *
- * @param context
+ * Check if MPI send function
  */
-void MPISchemaChecker::dynamicIdentifierInit(CheckerContext &context) const {
-    if (IdentInfo_MPI_Send) return;
-    const_cast<MPISchemaChecker *>(this)
-        ->dynamicIdentifierInit(context.getASTContext());
+bool MPI_ASTVisitor::isMPIType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiType, identInfo);
 }
 
 /**
  * Check if MPI send function
  */
-bool MPISchemaChecker::isSendType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiSendTypes, callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isSendType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiSendTypes, identInfo);
 }
 
 /**
  * Check if MPI recv function
  */
-bool MPISchemaChecker::isRecvType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiRecvTypes, callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isRecvType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiRecvTypes, identInfo);
 }
 
 /**
  * Check if MPI blocking function
  */
-bool MPISchemaChecker::isBlockingType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiBlockingTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isBlockingType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiBlockingTypes, identInfo);
 }
 
 /**
  * Check if MPI nonblocking function
  */
-bool MPISchemaChecker::isNonBlockingType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiNonBlockingTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isNonBlockingType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiNonBlockingTypes, identInfo);
 }
 
 /**
  * Check if MPI point to point function
  */
-bool MPISchemaChecker::isPointToPointType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiPointToPointTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isPointToPointType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiPointToPointTypes, identInfo);
 }
 
 /**
  * Check if MPI point to collective function
  */
-bool MPISchemaChecker::isPointToCollType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiPointToCollTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isPointToCollType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiPointToCollTypes, identInfo);
 }
 
 /**
  * Check if MPI collective to point function
  */
-bool MPISchemaChecker::isCollToPointType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiCollToPointTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isCollToPointType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiCollToPointTypes, identInfo);
 }
 
 /**
  * Check if MPI collective to collective function
  */
-bool MPISchemaChecker::isCollToCollType(const CallEvent &callEvent) const {
-    return lx::cont::isContained(mpiCollToCollTypes,
-                                 callEvent.getCalleeIdentifier());
+bool MPI_ASTVisitor::isCollToCollType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiCollToCollTypes, identInfo);
 }
 
-void MPISchemaChecker::memRegionInfo(const MemRegion *memRegion) const {
-    llvm::SmallString<100> buf;
-    llvm::raw_svector_ostream os(buf);
+// visitor functions––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-    switch (memRegion->getKind()) {
-        case MemRegion::FunctionTextRegionKind: {
-            const NamedDecl *FD =
-                cast<FunctionTextRegion>(memRegion)->getDecl();
-            if (FD)
-                os << "the address of the function '" << *FD << '\'';
-            else
-                os << "the address of a function";
-        }
-        case MemRegion::BlockTextRegionKind:
-            os << "block text";
-        case MemRegion::BlockDataRegionKind:
-            os << "a block";
-        default: {
-            const MemSpaceRegion *MS = memRegion->getMemorySpace();
+bool MPI_ASTVisitor::VisitDecl(Decl *declaration) {
+    // std::cout << declaration->getDeclKindName() << std::endl;
+    return true;
+}
 
-            if (isa<StackLocalsSpaceRegion>(MS)) {
-                const VarRegion *VR = dyn_cast<VarRegion>(memRegion);
-                const VarDecl *VD;
-                if (VR)
-                    VD = VR->getDecl();
-                else
-                    VD = nullptr;
+// MPI_ASTVisitor::Visits all function definitions
+// (schema in the scope of one function can be evaluated easily)
+bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
+    return true;
+}
 
-                if (VD)
-                    os << "the address of the local variable '" << VD->getName()
-                       << "'";
-                else
-                    os << "the address of a local stack variable";
-            }
-
-            if (isa<StackArgumentsSpaceRegion>(MS)) {
-                const VarRegion *VR = dyn_cast<VarRegion>(memRegion);
-                const VarDecl *VD;
-                if (VR)
-                    VD = VR->getDecl();
-                else
-                    VD = nullptr;
-
-                if (VD)
-                    os << "the address of the parameter '" << VD->getName()
-                       << "'";
-                else
-                    os << "the address of a parameter";
-            }
-
-            if (isa<GlobalsSpaceRegion>(MS)) {
-                const VarRegion *VR = dyn_cast<VarRegion>(memRegion);
-                const VarDecl *VD;
-                if (VR)
-                    VD = VR->getDecl();
-                else
-                    VD = nullptr;
-
-                if (VD) {
-                    if (VD->isStaticLocal())
-                        os << "the address of the static variable '"
-                           << VD->getName() << "'";
-                    else
-                        os << "the address of the global variable '"
-                           << VD->getName() << "'";
-                } else
-                    os << "the address of a global variable";
-            }
-        }
+bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
+    if (expression->getDecl()->getIdentifier() == identInfo_MPI_Send) {
+        // expression->getDecl()->getObjCFStringFormattingFamily
     }
-    std::cout << os.str().str() << std::endl;
+    return true;
 }
 
 /**
- * Check if the exact same call is already in the MPI function call set.
- * (ty = type)
+ * Called when function calls are executed.
+ *
+ * @param callExpr
+ *
+ * @return
+ */
+bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
+    const FunctionDecl *functionDecl = callExpr->getDirectCallee();
+
+    // check if float literal is used in schema
+    if (isMPIType(functionDecl->getIdentifier())) {
+        // build argument vector
+        llvm::SmallVector<SingleArgVisitor, 8> arguments;
+        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
+            // triggers SingleArgVisitor traversal
+            arguments.emplace_back(callExpr, i);
+        }
+
+        // TODO save to just store the pointer?
+        MPICall mpiCall{callExpr, std::move(arguments)};
+        checkForFloatArgs(mpiCall);
+        checkForDuplicate(mpiCall);
+
+        mpiCalls.push_back(std::move(mpiCall));
+    }
+
+    return true;
+}
+
+/**
+ * Returns builtin type for variable. Removes pointer and qualifier attributes.
+ * Ex.: const int, int* -> int (both have builtin type 'int')
+ *
+ * @param var
+ *
+ * @return value type
+ */
+const Type *MPI_ASTVisitor::getBuiltinType(const ValueDecl *var) const {
+    if (var->getType()->isPointerType()) {
+        return var->getType()->getPointeeType()->getUnqualifiedDesugaredType();
+    } else {
+        return var->getType()->getUnqualifiedDesugaredType();
+    }
+}
+
+void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
+    const FunctionDecl *functionDecl = mpiCall.callExpr_->getDirectCallee();
+    if (isPointToPointType(functionDecl->getIdentifier())) {
+        auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
+                               MPIPointToPoint::kTag};
+
+        // iterate indices which should not have float arguments
+        for (size_t idx : indicesToCheck) {
+            // check for float variables
+            auto &arg = mpiCall.arguments_[idx];
+            auto &vars = arg.vars_;
+            for (auto &var : vars) {
+                if (var->getType()->isFloatingType()) {
+                    reportFloat(mpiCall.callExpr_, idx,
+                                FloatArgType::kVariable);
+                }
+            }
+            // check for float literals
+            if (arg.floatingLiterals_.size()) {
+                reportFloat(mpiCall.callExpr_, idx, FloatArgType::kLiteral);
+            }
+
+            // check for float return values from functions
+            auto &functions = arg.functions_;
+            for (auto &function : functions) {
+                if (function->getReturnType()->isFloatingType()) {
+                    reportFloat(mpiCall.callExpr_, idx,
+                                FloatArgType::kReturnType);
+                }
+            }
+        }
+    }
+}
+
+// TODO
+// argumente können wie folgt strukturiert sein
+
+bool MPI_ASTVisitor::areMPICallExprsEqual(CallExpr *callExpr1,
+                                          CallExpr *callExpr2) const {
+    // if calls have the same identifier - implies same number of args
+    if (callExpr1->getDirectCallee()->getIdentifier() !=
+        callExpr2->getDirectCallee()->getIdentifier()) {
+        return false;
+    }
+
+    if (isPointToPointType(callExpr1->getDirectCallee()->getIdentifier())) {
+    }
+    return true;
+}
+
+/**
+ * Compares all components of two arguments for equality
+ * obtained from given calls with index.
+ *
+ * @param callOne
+ * @param callTwo
+ * @param idx
+ *
+ * @return areEqual
+ */
+bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
+                                            size_t idx) const {
+    // compare count –––––––––––––––––––––––––––––––––––––––––––––––
+    auto argOne = callOne.arguments_[idx];
+    auto argTwo = callTwo.arguments_[idx];
+
+    // general attributes
+    if (argOne.isArgumentStatic_ != argTwo.isArgumentStatic_ ||
+        argOne.isSimpleExpression_ != argTwo.isSimpleExpression_)
+        return false;
+
+    // operators
+    // copy because matches get erased
+    auto binOpsOne = argOne.binaryOperators_;
+    for (BinaryOperatorKind binOpFromTwo : argTwo.binaryOperators_) {
+        if (!cont::isContained(binOpsOne, binOpFromTwo)) {
+            return false;
+        } else {
+            // to omit double matching
+            cont::erase(binOpsOne, binOpFromTwo);
+        }
+    }
+
+    // variables
+    // copy because matched literals get erased
+    auto varsOne = argOne.vars_;
+    for (VarDecl *varNew : argTwo.vars_) {
+        if (!cont::isContained(varsOne, varNew)) {
+            return false;
+        } else {
+            cont::erase(varsOne, varNew);
+        }
+    }
+
+    // int literals
+    auto literalsOne = argOne.integerLiterals_;
+    for (llvm::APInt literalFromTwo : argTwo.integerLiterals_) {
+        if (!cont::isContained(literalsOne, literalFromTwo)) {
+            return false;
+        } else {
+            cont::erase(literalsOne, literalFromTwo);
+        }
+    }
+
+    // float literals
+    // just compare count, floats should not be compared by value
+    // https://tinyurl.com/ks8smw4
+    if (argOne.floatingLiterals_.size() != argTwo.floatingLiterals_.size()) {
+        return false;
+    }
+
+    // functions
+    auto functionsOne = argOne.functions_;
+    for (FunctionDecl *functionFromTwo : argTwo.functions_) {
+        if (!cont::isContained(functionsOne, functionFromTwo)) {
+            return false;
+        } else {
+            cont::erase(functionsOne, functionFromTwo);
+        }
+    }
+    return true;
+}
+
+/**
+ * Check if the exact same call was already executed.
  *
  * @param callEvent
  * @param mpiFnCallSet set searched for identical calls
  *
  * @return is equal call in list
  */
-bool MPISchemaChecker::identicalMPICall(const CallEvent &callEvent,
-                                        MPIFnCallSetTy mpiFnCallSet) const {
-    bool identical{false};
+void MPI_ASTVisitor::checkForDuplicate(MPICall &newCall) const {
+    const FunctionDecl *functionDecl = newCall.callExpr_->getDirectCallee();
 
-    // check for identical call
-    for (const MPIFunctionCall &mess : mpiFnCallSet) {
-        // if calls have the same identifier - implies same number of args
-        if (mess.callEvent_->getCalleeIdentifier() ==
-            callEvent.getCalleeIdentifier()) {
+    if (isPointToPointType(functionDecl->getIdentifier())) {
+        bool identical{true};
+        // defensive rating
+
+        auto bufArgNew = newCall.arguments_[MPIPointToPoint::kBuf];
+        auto bufferTypeNew = getBuiltinType(bufArgNew.vars_.front());
+
+        for (MPICall &prevCall : mpiCalls) {
             identical = true;
-            const size_t numArgs{callEvent.getNumArgs()};
-            for (size_t i = 0; i < numArgs; ++i) {
-                if (callEvent.getArgSVal(i) != mess.callEvent_->getArgSVal(i)) {
-                    // call not identical, check next
+
+            // compare buffer types ––––––––––––––––––––––––––––––––––––––––
+            auto bufArgPrev = prevCall.arguments_[MPIPointToPoint::kBuf];
+            auto bufferTypePrev = getBuiltinType(bufArgPrev.vars_.front());
+
+            if (bufferTypeNew != bufferTypePrev) {
+                identical = false;
+                continue;
+            }
+
+            // argument types which are compared by all components
+            auto indicesToCheck = {MPIPointToPoint::kCount,
+                                   MPIPointToPoint::kRank,
+                                   MPIPointToPoint::kTag};
+            for (size_t idx : indicesToCheck) {
+                if (!fullArgumentComparison(newCall, prevCall, idx)) {
                     identical = false;
+                    // quit inner loop
                     break;
                 }
             }
-            // end if identical call was found
-            if (identical) break;
-        }
-    }
-    return identical;
-}
 
-/**
- * Checks if potentially variable arguments used for communication are const.
- *
- * @param callEvent function to check args for
- *
- * @return all args are const
- */
-bool MPISchemaChecker::areCommArgsConst(const CallEvent &callEvent) const {
-    std::vector<unsigned char> indices;
-    // set indices to check for constness based on mpi function type
-    if (isPointToPointType(callEvent)) {
-        indices = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
-                   MPIPointToPoint::kTag};
-    }
-
-    bool areConstant{true};
-    for (unsigned char idx : indices) {
-        if (!callEvent.getArgSVal(idx).isConstant()) {
-            areConstant = false;
-            break;
-        }
-    }
-
-    return areConstant;
-}
-
-/**
- * Checks for a specific pair if send matches receive.
- *
- * @param send
- * @param recv
- * @param constness describes if send
- *
- * @return
- */
-bool MPISchemaChecker::isSendRecvPairMatching(const CallEvent &send,
-                                              const CallEvent &recv,
-                                              CheckerContext &ctx) const {
-    bool areSendArgsConst{areCommArgsConst(send)};
-    // send/recv must be both const or dynamic
-    if (areSendArgsConst != areCommArgsConst(recv)) return false;
-
-    bool matchSuccesful{false};
-    if (isSendType(send) && isRecvType(recv)) {
-        bool rankMatches;
-        // const case: just check if destination == source
-        if (areSendArgsConst) {
-            rankMatches = send.getArgSVal(MPIPointToPoint::kRank) ==
-                          recv.getArgSVal(MPIPointToPoint::kRank);
-            std::cout << "const" << std::endl;
-        } else {
-            // TODO implement dyn matching
-            rankMatches = true;  // change
-
-            auto s = send.getArgSVal(MPIPointToPoint::kRank).getAs<NonLoc>();
-            s.getValue().dump();
-            std::cout << std::endl;
-
-            // SValBuilder &svb{ctx.getSValBuilder()};
-            // llvm::APSInt a{1};
-            // SVal ss = svb.makeIntLocVal(a);
-            // ss.dump();
-
-            const Expr *ss = send.getArgExpr(MPIPointToPoint::kRank);
-
-            if (const BinaryOperator *b = dyn_cast<BinaryOperator>(ss)) {
-                if (b->isAdditiveOp()) {
-                    // works
-                    const Expr *e = b->getRHS();
-                    e->dumpColor();
-                    auto b = dyn_cast<IntegerLiteral>(e);
-                    b->dumpColor();
-
-                    llvm::SmallString<100> buf;
-                    llvm::raw_svector_ostream os(buf);
-
-                    llvm::APInt apsInt = b->getValue();
-                    // prints: "../../mpi_symmetric.c:43:421"
-                    b->getLocation().dump(ctx.getSourceManager());
-
-                    os << apsInt;
-                    std::cout << os.str().str() << std::endl;
-
-                    // beim binary operator lässt sich der operator
-                    // durch den opcode feststellen
-                    // ... falls im recv additive wird im recv nach subtractive
-                    // gesucht
-
-                    // llvm::APInt api;
-                    // api.setBit(0);
-                    // apsInt.getSignedMaxValue(0);
-
-                    // std::cout << areEqual << std::endl;
-                }
+            if (identical) {
+                reportDuplicate(prevCall.callExpr_, newCall.callExpr_);
+                // quit outer loop
+                break;
             }
-            // rankMatches = send.getArgSVal(MPIPointToPoint::kRank) ==
-            // recv.getArgSVal(MPIPointToPoint::kRank) ||
-            // complement == send.getArgSVal(MPIPointToPoint::kRank);
-            // std::cout << "dyn" << std::endl;
         }
-
-        matchSuccesful = send.getArgSVal(MPIPointToPoint::kCount) ==
-                             recv.getArgSVal(MPIPointToPoint::kCount) &&
-
-                         send.getArgSVal(MPIPointToPoint::kDatatype) ==
-                             recv.getArgSVal(MPIPointToPoint::kDatatype) &&
-
-                         send.getArgSVal(MPIPointToPoint::kTag) ==
-                             recv.getArgSVal(MPIPointToPoint::kTag) &&
-
-                         send.getArgSVal(MPIPointToPoint::kComm) ==
-                             recv.getArgSVal(MPIPointToPoint::kComm);
-
-        matchSuccesful = rankMatches && matchSuccesful;
     }
-
-    else {
-        // reaching this part means that arguments were used incorrectely
-        // -> abort static analysis
-        llvm_unreachable("no send/recv pair to check found");
-    }
-
-    return matchSuccesful;
 }
 
-/**
- * Checks if there's a matching send for a recv.
- * Works with point to point pairs.
- *
- * @param recvEvent
- * @param context
- */
-void MPISchemaChecker::checkForMatchingSend(const CallEvent &recvEvent,
-                                            CheckerContext &context) const {
-    ProgramStateRef progStateR = context.getState();
-    MPIFnCallSetTy mpiFunctionCalls = progStateR->get<MPIFnCallSet>();
+// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+void MPI_ASTVisitor::reportFloat(CallExpr *callExpr, size_t idx,
+                                 FloatArgType type) const {
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), &analysisDeclContext_);
 
-    // defensive checking -> only false if there's surely no match
-    bool hasMatchingSend{false};
+    std::string indexAsString{std::to_string(idx)};
+    SourceRange range = callExpr->getCallee()->getSourceRange();
 
-    for (const MPIFunctionCall &mpiFunctionCall : mpiFunctionCalls) {
-        // if point-to-point send operation
-        if (isSendType(*mpiFunctionCall.callEvent_) &&
-            isPointToPointType(*mpiFunctionCall.callEvent_)) {
-            hasMatchingSend = isSendRecvPairMatching(
-                *mpiFunctionCall.callEvent_, recvEvent, context);
-        }
-
-        if (hasMatchingSend) {
-            // remove matching send to omit double match for other receives
-            progStateR = progStateR->remove<MPIFnCallSet>(mpiFunctionCall);
-            context.addTransition(progStateR);
+    std::string typeAsString;
+    switch (type) {
+        case FloatArgType::kLiteral:
+            typeAsString = "literal";
             break;
+
+        case FloatArgType::kVariable:
+            typeAsString = "variable";
+            break;
+
+        case FloatArgType::kReturnType:
+            typeAsString = "return value from function";
+            break;
+    }
+
+    bugReporter_.EmitBasicReport(
+        analysisDeclContext_.getDecl(), &checkerBase_, "float schema argument",
+        bugGroupMPIError,
+        "float " + typeAsString + " used at index: " + indexAsString, location,
+        range);
+}
+
+void MPI_ASTVisitor::reportDuplicate(CallExpr *matchedCall,
+                                     CallExpr *duplicateCall) const {
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        duplicateCall, bugReporter_.getSourceManager(), &analysisDeclContext_);
+
+    std::string lineNo =
+        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
+            bugReporter_.getSourceManager());
+
+    // split written strings into parts
+    std::vector<std::string> strs = util::split(lineNo, ':');
+    lineNo = strs.at(strs.size() - 2);
+
+    SourceRange range = duplicateCall->getCallee()->getSourceRange();
+
+    bugReporter_.EmitBasicReport(
+        analysisDeclContext_.getDecl(), &checkerBase_, "duplicate",
+        bugGroupMPIError, "exact duplicate of mpi call in line: " + lineNo,
+        location, range);
+}
+
+class MPISchemaChecker
+    : public Checker<check::ASTCodeBody, check::EndOfTranslationUnit,
+                     check::EndAnalysis> {
+public:
+    void checkASTCodeBody(const Decl *decl, AnalysisManager &analysisManager,
+                          BugReporter &bugReporter) const {
+        MPI_ASTVisitor visitor{bugReporter, *this,
+                               *analysisManager.getAnalysisDeclContext(decl)};
+        visitor.TraverseDecl(const_cast<Decl *>(decl));
+    }
+
+    void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
+                                   AnalysisManager &mgr,
+                                   BugReporter &BR) const {}
+
+    // TODO save to rely on this?
+    void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
+                          ExprEngine &Eng) const {
+        static bool finalAnalysis{false};
+        if (!finalAnalysis) {
+            finalAnalysis = !finalAnalysis;
         }
     }
+};
 
-    // report if there's a send missing
-    if (!hasMatchingSend) reportUnmatchedRecv(recvEvent, context);
-}
-
-void MPISchemaChecker::checkDeadSymbols(SymbolReaper &symbolReaper,
-                                        CheckerContext &context) const {
-    if (!symbolReaper.hasDeadSymbols()) return;
-}
-
-void MPISchemaChecker::checkPreCall(const CallEvent &callEvent,
-                                    CheckerContext &context) const {
-    dynamicIdentifierInit(context);
-
-    ProgramStateRef progStateR = context.getState();
-    MPIFnCallSetTy mpiCalls = progStateR->get<MPIFnCallSet>();
-
-    // send-operation called
-    if (isSendType(callEvent)) {
-        // same send currently in list -> report duplicate
-        if (identicalMPICall(callEvent, mpiCalls)) {
-            reportDuplicateSend(callEvent, context);
-        }
-
-        // add message to program-state
-        progStateR = progStateR->add<MPIFnCallSet>(
-            MPIFunctionCall(callEvent.cloneWithState(progStateR)));
-        context.addTransition(progStateR);
-    }
-
-    // recv-operation called
-    else if (isRecvType(callEvent)) {
-        // TODO
-        // collect mpi calls if inside if/else block
-
-        if (isPointToPointType(callEvent)) {
-            checkForMatchingSend(callEvent, context);
-        }
-        // blocking receive should not be added to state
-        // doch falls in if stmt
-    }
-
-    if (isNonBlockingType(callEvent)) {
-        // TODO track request of nonblocking call
-        // if memory region is dead, report missing wait as warning
-    }
-}
-
-void MPISchemaChecker::checkPostCall(const CallEvent &callEvent,
-                                     CheckerContext &context) const {
-    dynamicIdentifierInit(context);
-
-    // track rank variables
-    if (callEvent.getCalleeIdentifier() == IdentInfo_MPI_Comm_rank) {
-        // callEvent.getOriginExpr()->viewAST(); // open ast in graphviz
-        callEvent.getOriginExpr()->dumpColor();  // dump to terminal with colors
-        // callEvent.dump();
-        // use rec ast visitor
-        ASTVisitor ncv;
-        ncv.VisitExpr(callEvent.getArgExpr(1));
-
-        ProgramStateRef progStateRef = context.getState();
-        SVal rankVarSVal = callEvent.getArgSVal(MPI_Comm_rank::kRank);
-
-        const MemRegion *MR = rankVarSVal.getAsRegion();
-        memRegionInfo(MR);
-
-        loc::MemRegionVal X = rankVarSVal.castAs<loc::MemRegionVal>();
-        if (!progStateRef->contains<RankVarsSet>(X)) {
-            progStateRef = progStateRef->add<RankVarsSet>(X);
-            context.addTransition(progStateRef);
-
-        } else {
-            std::cout << "reuse rank var" << std::endl;
-        }
-    }
-}
-
-void MPISchemaChecker::checkBranchCondition(const Stmt *condition,
-                                            CheckerContext &ctx) const {
-    // condition->dumpColor();
-    if (const BinaryOperator *b = dyn_cast<BinaryOperator>(condition)) {
-        if (b->isComparisonOp()) {
-        }
-    }
-}
-
-void MPISchemaChecker::checkEndFunction(CheckerContext &context) const {}
-
-void MPISchemaChecker::checkEndAnalysis(ExplodedGraph &explodedGraph,
-                                        BugReporter &bugReporter,
-                                        ExprEngine &expressionEngine) const {
-    // expressionEngine.ViewGraph(0);
-}
-
-void MPISchemaChecker::reportUnmatchedRecv(const CallEvent &callEvent,
-                                           CheckerContext &context) const {
-    // sink, current path hit a critical bug and is not further investigated
-    ExplodedNode *ErrNode = context.generateSink();
-    // ErrNode->getFirstPred
-    // ErrNode->addPredecessor
-    if (!ErrNode) return;
-    BugReport *bugReport = new BugReport(*UnmatchedRecvBugType,
-                                         "unmatched receive - no "
-                                         "corresponding send",
-                                         ErrNode);
-    // highlight source code position
-    bugReport->addRange(callEvent.getSourceRange());
-    // report
-    context.emitReport(bugReport);
-}
-
-void MPISchemaChecker::reportDuplicateSend(const CallEvent &callEvent,
-                                           CheckerContext &context) const {
-    // sink, current path hit a critical bug and is not further investigated
-    ExplodedNode *ErrNode = context.generateSink();
-    if (!ErrNode) return;
-    BugReport *bugReport =
-        new BugReport(*DuplicateSendBugType, "duplicate send", ErrNode);
-    // highlight source code position
-    bugReport->addRange(callEvent.getSourceRange());
-    // report
-    context.emitReport(bugReport);
-}
+}  // end of namespace: mpi
 
 void ento::registerMPISchemaChecker(CheckerManager &mgr) {
-    mgr.registerChecker<MPISchemaChecker>();
+    mgr.registerChecker<mpi::MPISchemaChecker>();
 }
