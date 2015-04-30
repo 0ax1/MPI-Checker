@@ -3,7 +3,6 @@
 
 #include <algorithm>
 
-namespace lx {
 namespace cont {
 
 // convenience wrapper for container functions
@@ -129,6 +128,5 @@ size_t indexPred(const T &container, P predicate) {
 }
 
 }  // end of namespace: cont
-}  // end of namespace: lx
 
 #endif  // end of include guard: CONTAINER_HPP_XM1FDRVJ

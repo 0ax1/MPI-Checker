@@ -1,6 +1,5 @@
 #include "Utility.hpp"
 
-namespace lx {
 namespace util {
 
 std::vector<std::string> &split(const std::string &s, char delim,
@@ -20,4 +19,3 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 }  // end of namespace: util
-}  // end of namespace: lx
