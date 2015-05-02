@@ -13,7 +13,11 @@ namespace mpi {
 const std::string bugGroupMPIError{"MPI Error"};
 const std::string bugGroupMPIWarning{"MPI Warning"};
 
+const std::string bugTypeEfficiency{"schema efficiency"};
+const std::string bugTypeArgumentType{"argument type"};
+
 struct MPICall {
+public:
     MPICall(CallExpr *callExpr,
             llvm::SmallVector<mpi::SingleArgVisitor, 8> &&arguments)
         : callExpr_{callExpr}, arguments_{std::move(arguments)} {
@@ -23,7 +27,12 @@ struct MPICall {
     CallExpr *callExpr_;
     llvm::SmallVector<SingleArgVisitor, 8> arguments_;
     IdentifierInfo *identInfo_;
+    unsigned long id_{id++};
+
+private:
+    static unsigned long id;
 };
+unsigned long MPICall::id{0};
 llvm::SmallVector<MPICall, 16> mpiCalls;
 
 /**
@@ -37,67 +46,69 @@ llvm::SmallVector<MPICall, 16> mpiCalls;
 void MPI_ASTVisitor::identifierInit(ASTContext &context) {
     // init function identifiers
     // and copy them into the correct classification containers
-    identInfo_MPI_Send = &context.Idents.get("MPI_Send");
-    mpiSendTypes.push_back(identInfo_MPI_Send);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Send);
-    mpiBlockingTypes.push_back(identInfo_MPI_Send);
-    mpiType.push_back(identInfo_MPI_Send);
-    assert(identInfo_MPI_Send);
+    identInfo_MPI_Send_ = &context.Idents.get("MPI_Send");
+    mpiSendTypes_.push_back(identInfo_MPI_Send_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Send_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Send_);
+    mpiType_.push_back(identInfo_MPI_Send_);
+    assert(identInfo_MPI_Send_);
 
-    identInfo_MPI_Recv = &context.Idents.get("MPI_Recv");
-    mpiRecvTypes.push_back(identInfo_MPI_Recv);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Recv);
-    mpiBlockingTypes.push_back(identInfo_MPI_Recv);
-    mpiType.push_back(identInfo_MPI_Recv);
-    assert(identInfo_MPI_Recv);
+    llvm::outs() << identInfo_MPI_Send_ << "\n";
 
-    identInfo_MPI_Isend = &context.Idents.get("MPI_Isend");
-    mpiSendTypes.push_back(identInfo_MPI_Isend);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Isend);
-    mpiNonBlockingTypes.push_back(identInfo_MPI_Isend);
-    mpiType.push_back(identInfo_MPI_Isend);
-    assert(identInfo_MPI_Isend);
+    identInfo_MPI_Recv_ = &context.Idents.get("MPI_Recv");
+    mpiRecvTypes_.push_back(identInfo_MPI_Recv_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Recv_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Recv_);
+    mpiType_.push_back(identInfo_MPI_Recv_);
+    assert(identInfo_MPI_Recv_);
 
-    identInfo_MPI_Irecv = &context.Idents.get("MPI_Irecv");
-    mpiRecvTypes.push_back(identInfo_MPI_Irecv);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Irecv);
-    mpiNonBlockingTypes.push_back(identInfo_MPI_Irecv);
-    mpiType.push_back(identInfo_MPI_Irecv);
-    assert(identInfo_MPI_Irecv);
+    identInfo_MPI_Isend_ = &context.Idents.get("MPI_Isend");
+    mpiSendTypes_.push_back(identInfo_MPI_Isend_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Isend_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Isend_);
+    mpiType_.push_back(identInfo_MPI_Isend_);
+    assert(identInfo_MPI_Isend_);
 
-    identInfo_MPI_Ssend = &context.Idents.get("MPI_Ssend");
-    mpiSendTypes.push_back(identInfo_MPI_Ssend);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Ssend);
-    mpiBlockingTypes.push_back(identInfo_MPI_Ssend);
-    mpiType.push_back(identInfo_MPI_Ssend);
-    assert(identInfo_MPI_Ssend);
+    identInfo_MPI_Irecv_ = &context.Idents.get("MPI_Irecv");
+    mpiRecvTypes_.push_back(identInfo_MPI_Irecv_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Irecv_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Irecv_);
+    mpiType_.push_back(identInfo_MPI_Irecv_);
+    assert(identInfo_MPI_Irecv_);
 
-    identInfo_MPI_Issend = &context.Idents.get("MPI_Issend");
-    mpiSendTypes.push_back(identInfo_MPI_Issend);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Issend);
-    mpiNonBlockingTypes.push_back(identInfo_MPI_Issend);
-    mpiType.push_back(identInfo_MPI_Issend);
-    assert(identInfo_MPI_Issend);
+    identInfo_MPI_Ssend_ = &context.Idents.get("MPI_Ssend");
+    mpiSendTypes_.push_back(identInfo_MPI_Ssend_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Ssend_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Ssend_);
+    mpiType_.push_back(identInfo_MPI_Ssend_);
+    assert(identInfo_MPI_Ssend_);
 
-    identInfo_MPI_Bsend = &context.Idents.get("MPI_Bsend");
-    mpiSendTypes.push_back(identInfo_MPI_Bsend);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Bsend);
-    mpiBlockingTypes.push_back(identInfo_MPI_Bsend);
-    mpiType.push_back(identInfo_MPI_Bsend);
-    assert(identInfo_MPI_Bsend);
+    identInfo_MPI_Issend_ = &context.Idents.get("MPI_Issend");
+    mpiSendTypes_.push_back(identInfo_MPI_Issend_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Issend_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Issend_);
+    mpiType_.push_back(identInfo_MPI_Issend_);
+    assert(identInfo_MPI_Issend_);
+
+    identInfo_MPI_Bsend_ = &context.Idents.get("MPI_Bsend");
+    mpiSendTypes_.push_back(identInfo_MPI_Bsend_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Bsend_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Bsend_);
+    mpiType_.push_back(identInfo_MPI_Bsend_);
+    assert(identInfo_MPI_Bsend_);
 
     // validate
-    identInfo_MPI_Rsend = &context.Idents.get("MPI_Rsend");
-    mpiSendTypes.push_back(identInfo_MPI_Rsend);
-    mpiPointToPointTypes.push_back(identInfo_MPI_Rsend);
-    mpiBlockingTypes.push_back(identInfo_MPI_Rsend);
-    mpiType.push_back(identInfo_MPI_Rsend);
-    assert(identInfo_MPI_Rsend);
+    identInfo_MPI_Rsend_ = &context.Idents.get("MPI_Rsend");
+    mpiSendTypes_.push_back(identInfo_MPI_Rsend_);
+    mpiPointToPointTypes_.push_back(identInfo_MPI_Rsend_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Rsend_);
+    mpiType_.push_back(identInfo_MPI_Rsend_);
+    assert(identInfo_MPI_Rsend_);
 
     // non communicating functions
-    identInfo_MPI_Comm_rank = &context.Idents.get("MPI_Comm_rank");
-    mpiType.push_back(identInfo_MPI_Comm_rank);
-    assert(identInfo_MPI_Comm_rank);
+    identInfo_MPI_Comm_rank_ = &context.Idents.get("MPI_Comm_rank");
+    mpiType_.push_back(identInfo_MPI_Comm_rank_);
+    assert(identInfo_MPI_Comm_rank_);
 }
 
 // classification functions–––––––––––––––––––––––––––––––––––––––––––––––––
@@ -106,63 +117,63 @@ void MPI_ASTVisitor::identifierInit(ASTContext &context) {
  * Check if MPI send function
  */
 bool MPI_ASTVisitor::isMPIType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiType, identInfo);
+    return cont::isContained(mpiType_, identInfo);
 }
 
 /**
  * Check if MPI send function
  */
 bool MPI_ASTVisitor::isSendType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiSendTypes, identInfo);
+    return cont::isContained(mpiSendTypes_, identInfo);
 }
 
 /**
  * Check if MPI recv function
  */
 bool MPI_ASTVisitor::isRecvType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiRecvTypes, identInfo);
+    return cont::isContained(mpiRecvTypes_, identInfo);
 }
 
 /**
  * Check if MPI blocking function
  */
 bool MPI_ASTVisitor::isBlockingType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiBlockingTypes, identInfo);
+    return cont::isContained(mpiBlockingTypes_, identInfo);
 }
 
 /**
  * Check if MPI nonblocking function
  */
 bool MPI_ASTVisitor::isNonBlockingType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiNonBlockingTypes, identInfo);
+    return cont::isContained(mpiNonBlockingTypes_, identInfo);
 }
 
 /**
  * Check if MPI point to point function
  */
 bool MPI_ASTVisitor::isPointToPointType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToPointTypes, identInfo);
+    return cont::isContained(mpiPointToPointTypes_, identInfo);
 }
 
 /**
  * Check if MPI point to collective function
  */
 bool MPI_ASTVisitor::isPointToCollType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToCollTypes, identInfo);
+    return cont::isContained(mpiPointToCollTypes_, identInfo);
 }
 
 /**
  * Check if MPI collective to point function
  */
 bool MPI_ASTVisitor::isCollToPointType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToPointTypes, identInfo);
+    return cont::isContained(mpiCollToPointTypes_, identInfo);
 }
 
 /**
  * Check if MPI collective to collective function
  */
 bool MPI_ASTVisitor::isCollToCollType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToCollTypes, identInfo);
+    return cont::isContained(mpiCollToCollTypes_, identInfo);
 }
 
 // visitor functions––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -179,7 +190,7 @@ bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 }
 
 bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
-    if (expression->getDecl()->getIdentifier() == identInfo_MPI_Send) {
+    if (expression->getDecl()->getIdentifier() == identInfo_MPI_Send_) {
         // expression->getDecl()->getObjCFStringFormattingFamily
     }
     return true;
@@ -200,14 +211,12 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
         // build argument vector
         llvm::SmallVector<SingleArgVisitor, 8> arguments;
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // triggers SingleArgVisitor traversal
+            // triggers SingleArgVisitor ctor->traversal
             arguments.emplace_back(callExpr, i);
         }
 
-        // TODO save to just store the pointer?
         MPICall mpiCall{callExpr, std::move(arguments)};
         checkForFloatArgs(mpiCall);
-        checkForDuplicate(mpiCall);
 
         mpiCalls.push_back(std::move(mpiCall));
     }
@@ -231,7 +240,7 @@ const Type *MPI_ASTVisitor::getBuiltinType(const ValueDecl *var) const {
     }
 }
 
-void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
+void MPI_ASTVisitor::checkForFloatArgs(const MPICall &mpiCall) const {
     const FunctionDecl *functionDecl = mpiCall.callExpr_->getDirectCallee();
     if (isPointToPointType(functionDecl->getIdentifier())) {
         auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
@@ -275,7 +284,8 @@ void MPI_ASTVisitor::checkForFloatArgs(MPICall &mpiCall) {
  *
  * @return areEqual
  */
-bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
+bool MPI_ASTVisitor::fullArgumentComparison(const MPICall &callOne,
+                                            const MPICall &callTwo,
                                             size_t idx) const {
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
@@ -308,6 +318,59 @@ bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
 // TODO report datatype missmatch
 // between buffer and mpi datatype
 
+void MPI_ASTVisitor::checkForDuplicatePointToPoint(
+    const MPICall &callToCheck) const {
+    for (const MPICall &comparedCall : mpiCalls) {
+        if (!isPointToPointType(comparedCall.identInfo_)) continue;
+        // do not check against the call itself
+        if (callToCheck.id_ == comparedCall.id_) continue;
+        // both must be of send or receive type
+        if (isSendType(callToCheck.identInfo_) !=
+            isSendType(comparedCall.identInfo_))
+            continue;
+
+        // compare buffer (types) ––––––––––––––––––––––––––––––––––––––
+
+        // auto bufferNew =
+        // callToCheck.arguments_[MPIPointToPoint::kBuf].vars_.front();
+        // auto bufferPrev =
+        // comparedCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
+        // if (bufferNew != bufferPrev) continue;
+
+        // if (getBuiltinType(bufferTypeNew) !=
+        // getBuiltinType(bufferTypePrev))
+        // continue;
+
+        // argument types which are compared by all 'components' –––––––
+        bool identical = true;
+        auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
+                               MPIPointToPoint::kTag};
+        for (size_t idx : indicesToCheck) {
+            if (!fullArgumentComparison(callToCheck, comparedCall, idx)) {
+                identical = false;
+                break;  // end inner loop
+            }
+        }
+        if (!identical) continue;
+
+        // compare specified mpi datatypes –––––––––––––––––––––––––––––
+        auto mpiTypeNew =
+            callToCheck.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+        auto mpiTypePrev =
+            comparedCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+
+        if (mpiTypeNew->getName() != mpiTypePrev->getName()) {
+            continue;
+        }
+
+        // if function reaches this point
+        // all arguments have been equal
+        reportDuplicate(comparedCall.callExpr_, callToCheck.callExpr_);
+        // end loop
+        break;
+    }
+}
+
 /**
  * Check if the exact same call was already executed.
  *
@@ -316,50 +379,9 @@ bool MPI_ASTVisitor::fullArgumentComparison(MPICall &callOne, MPICall &callTwo,
  *
  * @return is equal call in list
  */
-void MPI_ASTVisitor::checkForDuplicate(MPICall &newCall) const {
+void MPI_ASTVisitor::checkForDuplicate(const MPICall &newCall) const {
     if (isPointToPointType(newCall.identInfo_)) {
-        for (MPICall &prevCall : mpiCalls) {
-            // compare function identifiers –––––––––––––––––––––––––––––––––
-            if (newCall.identInfo_ != prevCall.identInfo_) continue;
-
-            // compare buffer (types) ––––––––––––––––––––––––––––––––––––––
-            auto bufferTypeNew =
-                newCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
-            auto bufferTypePrev =
-                prevCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
-
-            if (getBuiltinType(bufferTypeNew) != getBuiltinType(bufferTypePrev))
-                continue;
-
-            // argument types which are compared by all 'components' –––––––
-            bool identical = true;
-            auto indicesToCheck = {MPIPointToPoint::kCount,
-                                   MPIPointToPoint::kRank,
-                                   MPIPointToPoint::kTag};
-            for (size_t idx : indicesToCheck) {
-                if (!fullArgumentComparison(newCall, prevCall, idx)) {
-                    identical = false;
-                    break;  // end inner loop
-                }
-            }
-            if (!identical) continue;
-
-            // compare specified mpi datatypes –––––––––––––––––––––––––––––
-            auto mpiTypeNew =
-                newCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
-            auto mpiTypePrev =
-                prevCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
-
-            if (mpiTypeNew->getName() != mpiTypePrev->getName()) {
-                continue;
-            }
-
-            // if function reaches this point
-            // all arguments have been equal
-            reportDuplicate(prevCall.callExpr_, newCall.callExpr_);
-            // end loop
-            break;
-        }
+        checkForDuplicatePointToPoint(newCall);
     }
 }
 
@@ -388,14 +410,14 @@ void MPI_ASTVisitor::reportFloat(CallExpr *callExpr, size_t idx,
     }
 
     bugReporter_.EmitBasicReport(
-        analysisDeclContext_.getDecl(), &checkerBase_, "float schema argument",
+        analysisDeclContext_.getDecl(), &checkerBase_, bugTypeArgumentType,
         bugGroupMPIError,
         "float " + typeAsString + " used at index: " + indexAsString, location,
         range);
 }
 
-void MPI_ASTVisitor::reportDuplicate(CallExpr *matchedCall,
-                                     CallExpr *duplicateCall) const {
+void MPI_ASTVisitor::reportDuplicate(const CallExpr *matchedCall,
+                                     const CallExpr *duplicateCall) const {
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         duplicateCall, bugReporter_.getSourceManager(), &analysisDeclContext_);
 
@@ -403,21 +425,24 @@ void MPI_ASTVisitor::reportDuplicate(CallExpr *matchedCall,
         matchedCall->getCallee()->getSourceRange().getBegin().printToString(
             bugReporter_.getSourceManager());
 
-    // split written strings into parts
+    // split written string into parts
     std::vector<std::string> strs = util::split(lineNo, ':');
     lineNo = strs.at(strs.size() - 2);
 
     SourceRange range = duplicateCall->getCallee()->getSourceRange();
 
     bugReporter_.EmitBasicReport(
-        analysisDeclContext_.getDecl(), &checkerBase_, "duplicate",
-        bugGroupMPIError, "exact duplicate of mpi call in line: " + lineNo,
+        analysisDeclContext_.getDecl(), &checkerBase_, bugTypeEfficiency,
+        bugGroupMPIWarning,
+        "identical communication "
+        "arguments (count, mpi-datatype, rank, tag) used in " +
+            matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
+            lineNo + " \n\nconsider to summarize these calls",
         location, range);
 }
 
 class MPISchemaChecker
-    : public Checker<check::ASTCodeBody, check::EndOfTranslationUnit,
-                     check::EndAnalysis> {
+    : public Checker<check::ASTCodeBody, check::EndOfTranslationUnit> {
 public:
     void checkASTCodeBody(const Decl *decl, AnalysisManager &analysisManager,
                           BugReporter &bugReporter) const {
@@ -426,18 +451,17 @@ public:
         visitor.TraverseDecl(const_cast<Decl *>(decl));
     }
 
-    void checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
-                                   AnalysisManager &mgr,
-                                   BugReporter &BR) const {}
-
-    // TODO save to rely on this?
-    void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,
-                          ExprEngine &Eng) const {
-        static bool finalAnalysis{false};
-        if (!finalAnalysis) {
-            finalAnalysis = !finalAnalysis;
-        }
+    void checkEndOfTranslationUnit(const TranslationUnitDecl *translationUnit,
+                                   AnalysisManager &analysisManager,
+                                   BugReporter &bugReporter) const {
+        // FIXME
+        // for (const MPICall &mpiCall : mpiCalls) {
+            // lastVisitor_->checkForDuplicate(mpiCall);
+        // }
     }
+
+private:
+    mutable MPI_ASTVisitor *lastVisitor_{nullptr};
 };
 
 }  // end of namespace: mpi

@@ -18,7 +18,7 @@ namespace util {
  * @return isPermutation
  */
 template <typename T1, typename T2>
-bool isPermutation(T1 &first, T2 &second) {
+bool isPermutation(const T1 &first, const T2 &second) {
 
     // size must match
     if (first.size() != second.size()) return false;

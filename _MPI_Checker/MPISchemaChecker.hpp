@@ -46,25 +46,26 @@ public:
         identifierInit(analysisDeclContext.getASTContext());
     }
 
+    // TODO move from visitor
     // to enable classification of mpi-functions during analysis
-    std::vector<clang::IdentifierInfo *> mpiSendTypes;
-    std::vector<clang::IdentifierInfo *> mpiRecvTypes;
+    std::vector<clang::IdentifierInfo *> mpiSendTypes_;
+    std::vector<clang::IdentifierInfo *> mpiRecvTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiBlockingTypes;
-    std::vector<clang::IdentifierInfo *> mpiNonBlockingTypes;
+    std::vector<clang::IdentifierInfo *> mpiBlockingTypes_;
+    std::vector<clang::IdentifierInfo *> mpiNonBlockingTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiPointToPointTypes;
-    std::vector<clang::IdentifierInfo *> mpiPointToCollTypes;
-    std::vector<clang::IdentifierInfo *> mpiCollToPointTypes;
-    std::vector<clang::IdentifierInfo *> mpiCollToCollTypes;
-    std::vector<clang::IdentifierInfo *> mpiType;
+    std::vector<clang::IdentifierInfo *> mpiPointToPointTypes_;
+    std::vector<clang::IdentifierInfo *> mpiPointToCollTypes_;
+    std::vector<clang::IdentifierInfo *> mpiCollToPointTypes_;
+    std::vector<clang::IdentifierInfo *> mpiCollToCollTypes_;
+    std::vector<clang::IdentifierInfo *> mpiType_;
 
-    clang::IdentifierInfo *identInfo_MPI_Send{nullptr},
-        *identInfo_MPI_Recv{nullptr}, *identInfo_MPI_Isend{nullptr},
-        *identInfo_MPI_Irecv{nullptr}, *identInfo_MPI_Issend{nullptr},
-        *identInfo_MPI_Ssend{nullptr}, *identInfo_MPI_Bsend{nullptr},
-        *identInfo_MPI_Rsend{nullptr}, *identInfo_MPI_Comm_rank{nullptr},
-        *IdentInfoTrackMem{nullptr};
+    clang::IdentifierInfo *identInfo_MPI_Send_{nullptr},
+        *identInfo_MPI_Recv_{nullptr}, *identInfo_MPI_Isend_{nullptr},
+        *identInfo_MPI_Irecv_{nullptr}, *identInfo_MPI_Issend_{nullptr},
+        *identInfo_MPI_Ssend_{nullptr}, *identInfo_MPI_Bsend_{nullptr},
+        *identInfo_MPI_Rsend_{nullptr}, *identInfo_MPI_Comm_rank_{nullptr},
+        *IdentInfoTrackMem_{nullptr};
 
     void identifierInit(clang::ASTContext &);
 
@@ -76,6 +77,8 @@ public:
     // TODO
     // bool VisitIfStmt(const IfStmt *);
 
+    // TODO move from visitor
+    // to enable classification of mpi-functions during analysis
     // to inspect properties of mpi functions
     bool isMPIType(const clang::IdentifierInfo *) const;
     bool isSendType(const clang::IdentifierInfo *) const;
@@ -89,13 +92,18 @@ public:
 
     const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
 
-    void checkForDuplicate(MPICall &) const;
-    void checkForFloatArgs(MPICall &);
+    // TODO move from visitor
+    void checkForDuplicate(const MPICall &) const;
+    void checkForFloatArgs(const MPICall &) const;
 
+    // TODO move from visitor
     void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
-    void reportDuplicate(clang::CallExpr *, clang::CallExpr *) const;
+    void reportDuplicate(const clang::CallExpr *,
+                         const clang::CallExpr *) const;
 
-    bool fullArgumentComparison(MPICall &, MPICall &, size_t) const;
+    // TODO move from visitor
+    bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
+    void checkForDuplicatePointToPoint(const MPICall &) const;
 };
 
 }  // end of namespace: mpi
