@@ -31,22 +31,47 @@ struct MPICall;
 // Cyan          - ValueKindColor, ObjectKindColor
 // Bold Cyan     - ValueColor, DeclNameColor
 
-class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
+class MPIBugReporter {
+private:
     clang::ento::BugReporter &bugReporter_;
     const clang::ento::CheckerBase &checkerBase_;
-    clang::AnalysisDeclContext &analysisDeclContext_;
+    clang::ento::AnalysisManager &analysisManager_;
 
 public:
-    MPI_ASTVisitor(clang::ento::BugReporter &bugReporter,
+    MPIBugReporter(clang::ento::BugReporter &bugReporter,
                    const clang::ento::CheckerBase &checkerBase,
-                   clang::AnalysisDeclContext &analysisDeclContext)
+                   clang::ento::AnalysisManager &analysisManager)
         : bugReporter_{bugReporter},
           checkerBase_{checkerBase},
-          analysisDeclContext_{analysisDeclContext} {
-        identifierInit(analysisDeclContext.getASTContext());
-    }
+          analysisManager_{analysisManager} {}
 
-    // TODO move from visitor
+    void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
+    void reportDuplicate(const clang::CallExpr *,
+                         const clang::CallExpr *) const;
+
+    clang::Decl *currentFunctionDecl_{nullptr};
+};
+
+class MPIFunctionClassifier {
+public:
+    MPIFunctionClassifier(clang::ento::AnalysisManager &analysisManager) {
+        identifierInit(analysisManager);
+    }
+    // to enable classification of mpi-functions during analysis
+    // to inspect properties of mpi functions
+    bool isMPIType(const clang::IdentifierInfo *) const;
+    bool isSendType(const clang::IdentifierInfo *) const;
+    bool isRecvType(const clang::IdentifierInfo *) const;
+    bool isBlockingType(const clang::IdentifierInfo *) const;
+    bool isNonBlockingType(const clang::IdentifierInfo *) const;
+    bool isPointToPointType(const clang::IdentifierInfo *) const;
+    bool isPointToCollType(const clang::IdentifierInfo *) const;
+    bool isCollToPointType(const clang::IdentifierInfo *) const;
+    bool isCollToCollType(const clang::IdentifierInfo *) const;
+
+private:
+    void identifierInit(clang::ento::AnalysisManager &);
+
     // to enable classification of mpi-functions during analysis
     std::vector<clang::IdentifierInfo *> mpiSendTypes_;
     std::vector<clang::IdentifierInfo *> mpiRecvTypes_;
@@ -64,44 +89,39 @@ public:
         *identInfo_MPI_Recv_{nullptr}, *identInfo_MPI_Isend_{nullptr},
         *identInfo_MPI_Irecv_{nullptr}, *identInfo_MPI_Issend_{nullptr},
         *identInfo_MPI_Ssend_{nullptr}, *identInfo_MPI_Bsend_{nullptr},
-        *identInfo_MPI_Rsend_{nullptr}, *identInfo_MPI_Comm_rank_{nullptr},
-        *IdentInfoTrackMem_{nullptr};
+        *identInfo_MPI_Rsend_{nullptr}, *identInfo_MPI_Comm_rank_{nullptr};
+};
 
-    void identifierInit(clang::ASTContext &);
+class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
+private:
+    MPIFunctionClassifier funcClassifier_;
+    MPIBugReporter bugReporter_;
+    clang::Decl *currentFunctionDecl_;
+
+public:
+    MPI_ASTVisitor(clang::ento::BugReporter &bugReporter,
+                   const clang::ento::CheckerBase &checkerBase,
+                   clang::ento::AnalysisManager &analysisManager)
+        : funcClassifier_{analysisManager},
+          bugReporter_{bugReporter, checkerBase, analysisManager} {}
 
     // visitor callbacks
     bool VisitDecl(clang::Decl *);
     bool VisitFunctionDecl(clang::FunctionDecl *);
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitCallExpr(clang::CallExpr *);
-    // TODO
     // bool VisitIfStmt(const IfStmt *);
 
-    // TODO move from visitor
-    // to enable classification of mpi-functions during analysis
-    // to inspect properties of mpi functions
-    bool isMPIType(const clang::IdentifierInfo *) const;
-    bool isSendType(const clang::IdentifierInfo *) const;
-    bool isRecvType(const clang::IdentifierInfo *) const;
-    bool isBlockingType(const clang::IdentifierInfo *) const;
-    bool isNonBlockingType(const clang::IdentifierInfo *) const;
-    bool isPointToPointType(const clang::IdentifierInfo *) const;
-    bool isPointToCollType(const clang::IdentifierInfo *) const;
-    bool isCollToPointType(const clang::IdentifierInfo *) const;
-    bool isCollToCollType(const clang::IdentifierInfo *) const;
+    void setCurrentFunctionDecl(clang::Decl *decl) {
+        currentFunctionDecl_ = decl;
+        bugReporter_.currentFunctionDecl_ = decl;
+    }
 
     const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
 
-    // TODO move from visitor
-    void checkForDuplicate(const MPICall &) const;
+    void checkForDuplicates() const;
     void checkForFloatArgs(const MPICall &) const;
 
-    // TODO move from visitor
-    void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
-    void reportDuplicate(const clang::CallExpr *,
-                         const clang::CallExpr *) const;
-
-    // TODO move from visitor
     bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
     void checkForDuplicatePointToPoint(const MPICall &) const;
 };

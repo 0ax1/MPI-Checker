@@ -5,17 +5,15 @@ using namespace ento;
 
 namespace mpi {
 
-// variables or functions
-bool SingleArgVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
-    if (clang::VarDecl *var =
-            clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
-        vars_.push_back(var);
-        isArgumentStatic_ = false;
-    } else if (clang::FunctionDecl *fn =
-                   clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-        functions_.push_back(fn);
-        isArgumentStatic_ = false;
-    }
+bool SingleArgVisitor::VisitVarDecl(clang::VarDecl *var) {
+    vars_.push_back(var);
+    isArgumentStatic_ = false;
+    return true;
+}
+
+bool SingleArgVisitor::VisitFunctionDecl(clang::FunctionDecl *fnDecl) {
+    functions_.push_back(fnDecl);
+    isArgumentStatic_ = false;
     return true;
 }
 
