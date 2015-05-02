@@ -31,27 +31,6 @@ struct MPICall;
 // Cyan          - ValueKindColor, ObjectKindColor
 // Bold Cyan     - ValueColor, DeclNameColor
 
-class MPIBugReporter {
-private:
-    clang::ento::BugReporter &bugReporter_;
-    const clang::ento::CheckerBase &checkerBase_;
-    clang::ento::AnalysisManager &analysisManager_;
-
-public:
-    MPIBugReporter(clang::ento::BugReporter &bugReporter,
-                   const clang::ento::CheckerBase &checkerBase,
-                   clang::ento::AnalysisManager &analysisManager)
-        : bugReporter_{bugReporter},
-          checkerBase_{checkerBase},
-          analysisManager_{analysisManager} {}
-
-    void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
-    void reportDuplicate(const clang::CallExpr *,
-                         const clang::CallExpr *) const;
-
-    clang::Decl *currentFunctionDecl_{nullptr};
-};
-
 class MPIFunctionClassifier {
 public:
     MPIFunctionClassifier(clang::ento::AnalysisManager &analysisManager) {
@@ -92,6 +71,27 @@ private:
         *identInfo_MPI_Rsend_{nullptr}, *identInfo_MPI_Comm_rank_{nullptr};
 };
 
+class MPIBugReporter {
+private:
+    clang::ento::BugReporter &bugReporter_;
+    const clang::ento::CheckerBase &checkerBase_;
+    clang::ento::AnalysisManager &analysisManager_;
+
+public:
+    MPIBugReporter(clang::ento::BugReporter &bugReporter,
+                   const clang::ento::CheckerBase &checkerBase,
+                   clang::ento::AnalysisManager &analysisManager)
+        : bugReporter_{bugReporter},
+          checkerBase_{checkerBase},
+          analysisManager_{analysisManager} {}
+
+    void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
+    void reportDuplicate(const clang::CallExpr *,
+                         const clang::CallExpr *) const;
+
+    clang::Decl *currentFunctionDecl_{nullptr};
+};
+
 class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
 private:
     MPIFunctionClassifier funcClassifier_;
@@ -109,13 +109,12 @@ public:
     bool VisitFunctionDecl(clang::FunctionDecl *);
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitCallExpr(clang::CallExpr *);
-    // bool VisitIfStmt(const IfStmt *);
+    bool VisitIfStmt(clang::IfStmt *);
 
+    // validation functions
     const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
-
     void checkForDuplicates() const;
     void checkForFloatArgs(const MPICall &) const;
-
     bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
     void checkForDuplicatePointToPoint(const MPICall &) const;
 };

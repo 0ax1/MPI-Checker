@@ -37,6 +37,7 @@ private:
 llvm::SmallVector<MPICall, 16> MPICall::visitedCalls;
 unsigned long MPICall::id{0};
 
+// classification ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Initializes function identifiers. Instead of using strings,
  * indentifier-pointers are initially captured
@@ -113,8 +114,6 @@ void MPIFunctionClassifier::identifierInit(
     assert(identInfo_MPI_Comm_rank_);
 }
 
-// classification functions–––––––––––––––––––––––––––––––––––––––––––––––––
-
 /**
  * Check if MPI send function
  */
@@ -184,7 +183,66 @@ bool MPIFunctionClassifier::isCollToCollType(
     return cont::isContained(mpiCollToCollTypes_, identInfo);
 }
 
-// visitor functions––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+void MPIBugReporter::reportFloat(CallExpr *callExpr, size_t idx,
+                                 FloatArgType type) const {
+    auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), d);
+
+    std::string indexAsString{std::to_string(idx)};
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+
+    std::string typeAsString;
+    switch (type) {
+        case FloatArgType::kLiteral:
+            typeAsString = "literal";
+            break;
+
+        case FloatArgType::kVariable:
+            typeAsString = "variable";
+            break;
+
+        case FloatArgType::kReturnType:
+            typeAsString = "return value from function";
+            break;
+    }
+
+    bugReporter_.EmitBasicReport(
+        d->getDecl(), &checkerBase_, bugTypeArgumentType, bugGroupMPIError,
+        "float " + typeAsString + " used at index: " + indexAsString, location,
+        range);
+}
+
+void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
+                                     const CallExpr *duplicateCall) const {
+    auto analysisDeclCtx =
+        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+
+    std::string lineNo =
+        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
+            bugReporter_.getSourceManager());
+
+    // split written string into parts
+    std::vector<std::string> strs = util::split(lineNo, ':');
+    lineNo = strs.at(strs.size() - 2);
+
+    SourceRange range = duplicateCall->getCallee()->getSourceRange();
+
+    bugReporter_.EmitBasicReport(
+        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
+        bugGroupMPIWarning,
+        "identical communication "
+        "arguments (count, mpi-datatype, rank, tag) used in " +
+            matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
+            lineNo + " \n\nconsider to summarize these calls",
+        location, range);
+}
+
+// visitor –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 bool MPI_ASTVisitor::VisitDecl(Decl *declaration) {
     // std::cout << declaration->getDeclKindName() << std::endl;
@@ -201,6 +259,10 @@ bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 }
 
 bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
+    return true;
+}
+
+bool MPI_ASTVisitor::VisitIfStmt(IfStmt *ifStmt) {
     return true;
 }
 
@@ -397,69 +459,13 @@ void MPI_ASTVisitor::checkForDuplicates() const {
     }
 }
 
-// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-void MPIBugReporter::reportFloat(CallExpr *callExpr, size_t idx,
-                                 FloatArgType type) const {
-    auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        callExpr, bugReporter_.getSourceManager(), d);
 
-    std::string indexAsString{std::to_string(idx)};
-    SourceRange range = callExpr->getCallee()->getSourceRange();
-
-    std::string typeAsString;
-    switch (type) {
-        case FloatArgType::kLiteral:
-            typeAsString = "literal";
-            break;
-
-        case FloatArgType::kVariable:
-            typeAsString = "variable";
-            break;
-
-        case FloatArgType::kReturnType:
-            typeAsString = "return value from function";
-            break;
-    }
-
-    bugReporter_.EmitBasicReport(
-        d->getDecl(), &checkerBase_, bugTypeArgumentType, bugGroupMPIError,
-        "float " + typeAsString + " used at index: " + indexAsString, location,
-        range);
-}
-
-void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
-                                     const CallExpr *duplicateCall) const {
-    auto analysisDeclCtx =
-        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
-
-    std::string lineNo =
-        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
-            bugReporter_.getSourceManager());
-
-    // split written string into parts
-    std::vector<std::string> strs = util::split(lineNo, ':');
-    lineNo = strs.at(strs.size() - 2);
-
-    SourceRange range = duplicateCall->getCallee()->getSourceRange();
-
-    bugReporter_.EmitBasicReport(
-        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
-        bugGroupMPIWarning,
-        "identical communication "
-        "arguments (count, mpi-datatype, rank, tag) used in " +
-            matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
-            lineNo + " \n\nconsider to summarize these calls",
-        location, range);
-}
-
+// host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
- * Main checker host class. Receives callback for every translation unit.
+ * Main checker host class. Registers checker functionality.
  * Class name determines checker name to specify when the command line
  * is invoked for static analysis.
+ * Receives callback for every translation unit about to visit.
  */
 class MPISchemaChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
