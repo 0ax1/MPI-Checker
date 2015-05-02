@@ -441,27 +441,20 @@ void MPI_ASTVisitor::reportDuplicate(const CallExpr *matchedCall,
         location, range);
 }
 
-class MPISchemaChecker
-    : public Checker<check::ASTCodeBody, check::EndOfTranslationUnit> {
+class MPISchemaChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 public:
-    void checkASTCodeBody(const Decl *decl, AnalysisManager &analysisManager,
-                          BugReporter &bugReporter) const {
+    void checkASTDecl(const TranslationUnitDecl *decl,
+                      AnalysisManager &analysisManager,
+                      BugReporter &bugReporter) const {
+
         MPI_ASTVisitor visitor{bugReporter, *this,
-                               *analysisManager.getAnalysisDeclContext(decl)};
-        visitor.TraverseDecl(const_cast<Decl *>(decl));
-    }
+        *analysisManager.getAnalysisDeclContext(decl)};
+        visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(decl));
 
-    void checkEndOfTranslationUnit(const TranslationUnitDecl *translationUnit,
-                                   AnalysisManager &analysisManager,
-                                   BugReporter &bugReporter) const {
-        // FIXME
-        // for (const MPICall &mpiCall : mpiCalls) {
-            // lastVisitor_->checkForDuplicate(mpiCall);
-        // }
+        for (const MPICall &mpiCall : mpiCalls) {
+            visitor.checkForDuplicate(mpiCall);
+        }
     }
-
-private:
-    mutable MPI_ASTVisitor *lastVisitor_{nullptr};
 };
 
 }  // end of namespace: mpi
