@@ -193,7 +193,7 @@ bool MPI_ASTVisitor::VisitDecl(Decl *declaration) {
 
 bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
-    if (functionDecl->clang::Decl::hasBody()  && !functionDecl->isInlined()) {
+    if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
         // to make display of function in diagnostics available
         bugReporter_.currentFunctionDecl_ = functionDecl;
     }
@@ -201,11 +201,6 @@ bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 }
 
 bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) {
-    // expression->getde
-    // if (expression->hasbo()->hasBody()) {
-
-        // llvm::outs() << callExpr->getDirectCallee()->getName() << "\n";
-    // }
     return true;
 }
 
@@ -254,8 +249,7 @@ const Type *MPI_ASTVisitor::getBuiltinType(const ValueDecl *var) const {
 }
 
 void MPI_ASTVisitor::checkForFloatArgs(const MPICall &mpiCall) const {
-    const FunctionDecl *functionDecl = mpiCall.callExpr_->getDirectCallee();
-    if (funcClassifier_.isPointToPointType(functionDecl->getIdentifier())) {
+    if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
                                MPIPointToPoint::kTag};
 
@@ -436,11 +430,11 @@ void MPIBugReporter::reportFloat(CallExpr *callExpr, size_t idx,
 
 void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
                                      const CallExpr *duplicateCall) const {
-    auto d =
+    auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        duplicateCall, bugReporter_.getSourceManager(), d);
+        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
     std::string lineNo =
         matchedCall->getCallee()->getSourceRange().getBegin().printToString(
@@ -453,7 +447,8 @@ void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
     SourceRange range = duplicateCall->getCallee()->getSourceRange();
 
     bugReporter_.EmitBasicReport(
-        d->getDecl(), &checkerBase_, bugTypeEfficiency, bugGroupMPIWarning,
+        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
+        bugGroupMPIWarning,
         "identical communication "
         "arguments (count, mpi-datatype, rank, tag) used in " +
             matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
@@ -466,17 +461,15 @@ void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
  * Class name determines checker name to specify when the command line
  * is invoked for static analysis.
  */
-class MPISchemaChecker
-    : public Checker<check::ASTDecl<TranslationUnitDecl>> {
-
+class MPISchemaChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
 public:
-    void checkASTDecl(const TranslationUnitDecl *decl,
+    void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
         MPI_ASTVisitor visitor{bugReporter, *this, analysisManager};
         visitor.TraverseTranslationUnitDecl(
-            const_cast<TranslationUnitDecl *>(decl));
+            const_cast<TranslationUnitDecl *>(tuDecl));
 
         // checks invoked after travering a translation unit
         visitor.checkForDuplicates();
