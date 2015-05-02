@@ -96,7 +96,6 @@ class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
 private:
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
-    clang::Decl *currentFunctionDecl_;
 
 public:
     MPI_ASTVisitor(clang::ento::BugReporter &bugReporter,
@@ -111,11 +110,6 @@ public:
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitCallExpr(clang::CallExpr *);
     // bool VisitIfStmt(const IfStmt *);
-
-    void setCurrentFunctionDecl(clang::Decl *decl) {
-        currentFunctionDecl_ = decl;
-        bugReporter_.currentFunctionDecl_ = decl;
-    }
 
     const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
 

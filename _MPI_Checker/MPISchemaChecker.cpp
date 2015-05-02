@@ -191,11 +191,11 @@ bool MPI_ASTVisitor::VisitDecl(Decl *declaration) {
     return true;
 }
 
-// MPIFunctionClassifier::Visits all function definitions
-// (schema in the scope of one function can be evaluated easily)
 bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
-    if (functionDecl->clang::Decl::hasBody()) {
-        currentFunctionDecl_ = functionDecl;
+    // to keep track which function implementation is currently analysed
+    if (functionDecl->clang::Decl::hasBody()  && !functionDecl->isInlined()) {
+        // to make display of function in diagnostics available
+        bugReporter_.currentFunctionDecl_ = functionDecl;
     }
     return true;
 }
@@ -406,7 +406,7 @@ void MPI_ASTVisitor::checkForDuplicates() const {
 // bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 void MPIBugReporter::reportFloat(CallExpr *callExpr, size_t idx,
                                  FloatArgType type) const {
-    auto d = analysisManager_.getAnalysisDeclContext(callExpr->getCalleeDecl());
+    auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), d);
 
@@ -470,14 +470,11 @@ class MPISchemaChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 
 private:
-    mutable MPI_ASTVisitor *currentVisitor_{nullptr};
-
 public:
     void checkASTDecl(const TranslationUnitDecl *decl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
         MPI_ASTVisitor visitor{bugReporter, *this, analysisManager};
-        currentVisitor_ = &visitor;
         visitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(decl));
 

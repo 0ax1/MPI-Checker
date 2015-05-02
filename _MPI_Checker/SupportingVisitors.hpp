@@ -17,8 +17,7 @@ public:
         TraverseStmt(expr_);
     }
 
-    bool VisitVarDecl(clang::VarDecl *);
-    bool VisitFunctionDecl(clang::FunctionDecl *);
+    bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitBinaryOperator(clang::BinaryOperator *);
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
