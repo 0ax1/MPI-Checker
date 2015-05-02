@@ -85,6 +85,7 @@ public:
           checkerBase_{checkerBase},
           analysisManager_{analysisManager} {}
 
+    void reportTypeMismatch(clang::CallExpr *) const;
     void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
     void reportDuplicate(const clang::CallExpr *,
                          const clang::CallExpr *) const;
@@ -113,8 +114,9 @@ public:
 
     // validation functions
     const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
-    void checkForDuplicates() const;
+    void checkForTypeMismatch(const MPICall &mpiCall) const;
     void checkForFloatArgs(const MPICall &) const;
+    void checkForDuplicates() const;
     bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
     void checkForDuplicatePointToPoint(const MPICall &) const;
 };

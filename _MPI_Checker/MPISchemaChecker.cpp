@@ -185,6 +185,18 @@ bool MPIFunctionClassifier::isCollToCollType(
 }
 
 // bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+void MPIBugReporter::reportTypeMismatch(CallExpr *callExpr) const {
+    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), adc);
+
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+
+    bugReporter_.EmitBasicReport(
+        adc->getDecl(), &checkerBase_, bugTypeArgumentType, bugGroupMPIError,
+        "buffer type and specified mpi type do not match", location,
+        range);
+}
 void MPIBugReporter::reportFloat(CallExpr *callExpr, size_t idx,
                                  FloatArgType type) const {
     auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
@@ -287,6 +299,7 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
         }
 
         MPICall mpiCall{callExpr, std::move(arguments)};
+        checkForTypeMismatch(mpiCall);
         checkForFloatArgs(mpiCall);
 
         MPICall::visitedCalls.push_back(std::move(mpiCall));
@@ -311,6 +324,35 @@ const Type *MPI_ASTVisitor::getBuiltinType(const ValueDecl *var) const {
     }
 }
 
+void MPI_ASTVisitor::checkForTypeMismatch(const MPICall &mpiCall) const {
+    // float, int complex
+
+    // compare buffer (types) ––––––––––––––––––––––––––––––––––––––
+
+    // auto bufferNew =
+    // callToCheck.arguments_[MPIPointToPoint::kBuf].vars_.front();
+    // auto bufferPrev =
+    // comparedCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
+    // if (bufferNew != bufferPrev) continue;
+
+    // if (getBuiltinType(bufferTypeNew) !=
+    // getBuiltinType(bufferTypePrev))
+    // continue;
+
+    if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
+        auto bufferArg =
+            mpiCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+
+        auto datatypeArg =
+            mpiCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
+
+        // if (getBuiltinType(bufferArg)->get) {
+            // [> code <];
+        // }
+    }
+
+}
+
 void MPI_ASTVisitor::checkForFloatArgs(const MPICall &mpiCall) const {
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         auto indicesToCheck = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
@@ -322,7 +364,7 @@ void MPI_ASTVisitor::checkForFloatArgs(const MPICall &mpiCall) const {
             auto &arg = mpiCall.arguments_[idx];
             auto &vars = arg.vars_;
             for (auto &var : vars) {
-                if (var->getType()->isFloatingType()) {
+                if (getBuiltinType(var)->isFloatingType()) {
                     bugReporter_.reportFloat(mpiCall.callExpr_, idx,
                                              FloatArgType::kVariable);
                 }
@@ -386,9 +428,6 @@ bool MPI_ASTVisitor::fullArgumentComparison(const MPICall &callOne,
     return true;
 }
 
-// TODO report datatype missmatch
-// between buffer and mpi datatype
-
 void MPI_ASTVisitor::checkForDuplicatePointToPoint(
     const MPICall &callToCheck) const {
     for (const MPICall &comparedCall : MPICall::visitedCalls) {
@@ -404,18 +443,6 @@ void MPI_ASTVisitor::checkForDuplicatePointToPoint(
         if (funcClassifier_.isSendType(callToCheck.identInfo_) !=
             funcClassifier_.isSendType(comparedCall.identInfo_))
             continue;
-
-        // compare buffer (types) ––––––––––––––––––––––––––––––––––––––
-
-        // auto bufferNew =
-        // callToCheck.arguments_[MPIPointToPoint::kBuf].vars_.front();
-        // auto bufferPrev =
-        // comparedCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
-        // if (bufferNew != bufferPrev) continue;
-
-        // if (getBuiltinType(bufferTypeNew) !=
-        // getBuiltinType(bufferTypePrev))
-        // continue;
 
         // argument types which are compared by all 'components' –––––––
         bool identical = true;
