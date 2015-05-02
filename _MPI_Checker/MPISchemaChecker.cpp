@@ -28,6 +28,7 @@ public:
     llvm::SmallVector<SingleArgVisitor, 8> arguments_;
     IdentifierInfo *identInfo_;
     unsigned long id_{id++};
+    mutable bool isMarked_;
 
     static llvm::SmallVector<MPICall, 16> visitedCalls;
 
@@ -391,6 +392,10 @@ bool MPI_ASTVisitor::fullArgumentComparison(const MPICall &callOne,
 void MPI_ASTVisitor::checkForDuplicatePointToPoint(
     const MPICall &callToCheck) const {
     for (const MPICall &comparedCall : MPICall::visitedCalls) {
+        // to omit double matching
+        if (comparedCall.isMarked_) {
+            continue;
+        }
         if (!funcClassifier_.isPointToPointType(comparedCall.identInfo_))
             continue;
         // do not check against the call itself
@@ -434,10 +439,12 @@ void MPI_ASTVisitor::checkForDuplicatePointToPoint(
             continue;
         }
 
-        // if function reaches this point
-        // all arguments have been equal
-        bugReporter_.reportDuplicate(comparedCall.callExpr_,
-                                     callToCheck.callExpr_);
+        // mark call to omit symmetric duplicate report
+        callToCheck.isMarked_ = true;
+
+        // if function reaches this point all arguments have been equal
+        bugReporter_.reportDuplicate(callToCheck.callExpr_,
+                                     comparedCall.callExpr_);
         // end loop
         break;
     }
@@ -457,6 +464,14 @@ void MPI_ASTVisitor::checkForDuplicates() const {
             checkForDuplicatePointToPoint(mpiCall);
         }
     }
+
+    // unmark calls
+    for (const MPICall &mpiCall : MPICall::visitedCalls) {
+        if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
+            mpiCall.isMarked_ = false;
+        }
+    }
+
 }
 
 

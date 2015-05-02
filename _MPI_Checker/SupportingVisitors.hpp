@@ -30,7 +30,7 @@ public:
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<llvm::APInt, 1> integerLiterals_;
     llvm::SmallVector<llvm::APFloat, 0> floatingLiterals_;
-    // if alle operands are static
+    // if all operands are static
     bool isArgumentStatic_{true};
     // no operator, single literal or variable
     bool isSimpleExpression_{true};
