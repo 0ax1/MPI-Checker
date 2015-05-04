@@ -86,7 +86,8 @@ public:
           analysisManager_{analysisManager} {}
 
     void reportTypeMismatch(clang::CallExpr *) const;
-    void reportFloat(clang::CallExpr *, size_t, FloatArgType) const;
+    void reportInvalidArgumentType(clang::CallExpr *, size_t,
+                                   InvalidArgType) const;
     void reportDuplicate(const clang::CallExpr *,
                          const clang::CallExpr *) const;
 
@@ -95,15 +96,39 @@ public:
 
 class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
 private:
+    // validation functions
+    bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
+
+    void checkForInvalidArgs(const MPICall &) const;
+    void checkForDuplicatePointToPoint(const MPICall &) const;
+
+    void checkBufferTypeMatch(const MPICall &mpiCall) const;
+    void checkCharTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                              llvm::StringRef) const;
+    void checkSignedTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                              llvm::StringRef) const;
+    void checkUnsignedTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                                llvm::StringRef) const;
+    void checkFloatTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                             llvm::StringRef) const;
+    void checkComplexTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                               llvm::StringRef) const;
+    void checkExactWidthTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+                                  llvm::StringRef) const;
+
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
+    clang::ento::AnalysisManager &analysisManager_;
 
 public:
+    enum class MatchType { kMatch, kMismatch, kNoMatch };
+
     MPI_ASTVisitor(clang::ento::BugReporter &bugReporter,
                    const clang::ento::CheckerBase &checkerBase,
                    clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager},
-          bugReporter_{bugReporter, checkerBase, analysisManager} {}
+          bugReporter_{bugReporter, checkerBase, analysisManager},
+          analysisManager_{analysisManager} {}
 
     // visitor callbacks
     bool VisitDecl(clang::Decl *);
@@ -112,13 +137,7 @@ public:
     bool VisitCallExpr(clang::CallExpr *);
     bool VisitIfStmt(clang::IfStmt *);
 
-    // validation functions
-    const clang::Type *getBuiltinType(const clang::ValueDecl *) const;
-    void checkForTypeMismatch(const MPICall &mpiCall) const;
-    void checkForFloatArgs(const MPICall &) const;
     void checkForDuplicates() const;
-    bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
-    void checkForDuplicatePointToPoint(const MPICall &) const;
 };
 
 }  // end of namespace: mpi

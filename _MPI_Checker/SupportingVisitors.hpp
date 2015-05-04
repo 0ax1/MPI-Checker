@@ -8,7 +8,7 @@
 
 #include "Typedefs.hpp"
 
-namespace mpi {
+namespace vis {
 
 class SingleArgVisitor : public clang::RecursiveASTVisitor<SingleArgVisitor> {
 public:
@@ -35,6 +35,41 @@ public:
     // no operator, single literal or variable
     bool isSimpleExpression_{true};
 };
-}  // end of namespace: mpi
+
+class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
+public:
+    TypeVisitor(clang::QualType qualType) {
+        TraverseType(qualType);
+    }
+
+    bool VisitTypedefType(clang::TypedefType *tdt) {
+        typedefTypeName_ = tdt->getDecl()->getQualifiedNameAsString();
+        isTypedefType_ = true;
+        return true;
+    }
+
+    bool VisitBuiltinType(clang::BuiltinType *builtinType) {
+        builtinType_ = builtinType;
+        return true;
+    }
+
+    bool VisitComplexType(clang::ComplexType *complexType) {
+        complexType_ = complexType;
+        return true;
+    }
+
+    // passed qual type
+    clang::QualType *qualType_;
+
+    bool isTypedefType_{false};
+    std::string typedefTypeName_;
+
+    clang::BuiltinType *builtinType_{nullptr};
+    clang::ComplexType *complexType_{nullptr};
+
+    // clang::BuiltinType *builtinType_{nullptr};
+};
+
+}  // end of namespace: vis
 
 #endif  // end of include guard: SUPPORTINGVISITORS_HPP_NWUC3OWQ

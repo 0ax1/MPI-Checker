@@ -3,7 +3,7 @@
 using namespace clang;
 using namespace ento;
 
-namespace mpi {
+namespace vis {
 
 // variables or functions
 bool SingleArgVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
@@ -35,4 +35,4 @@ bool SingleArgVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     return true;
 }
 
-}  // end of namespace: mpi
+}  // end of namespace: vis

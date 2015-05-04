@@ -21,4 +21,13 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
+clang::StringRef sourceRangeAsStringRef(
+    clang::SourceRange sourceRange,
+    clang::ento::AnalysisManager &analysisManager) {
+    auto charSourceRange = clang::CharSourceRange::getTokenRange(sourceRange);
+    return clang::Lexer::getSourceText(charSourceRange,
+                                       analysisManager.getSourceManager(),
+                                       clang::LangOptions());
+}
+
 }  // end of namespace: util

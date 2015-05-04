@@ -13,6 +13,6 @@ enum { kComm, kRank };
 }
 
 // used for argument identification
-enum class FloatArgType { kLiteral, kVariable, kReturnType };
+enum class InvalidArgType { kLiteral, kVariable, kReturnType };
 
 #endif  // end of include guard: TYPEDEFS_HPP_IFNUH41O

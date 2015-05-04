@@ -1,6 +1,16 @@
 #ifndef UTILITY_HPP_SVQZWTL8
 #define UTILITY_HPP_SVQZWTL8
 
+#include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/Analysis/AnalysisContext.h"
+#include "clang/Basic/LangOptions.h"
+
+#include "../ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+
 #include <sstream>
 #include <vector>
 #include "Container.hpp"
@@ -19,7 +29,6 @@ namespace util {
  */
 template <typename T1, typename T2>
 bool isPermutation(const T1 &first, const T2 &second) {
-
     // size must match
     if (first.size() != second.size()) return false;
 
@@ -35,6 +44,26 @@ bool isPermutation(const T1 &first, const T2 &second) {
     }
     return true;
 }
+
+/**
+ * Check if variable decl has a typedef type.
+ *
+ * @param vardecl to check
+ *
+ * @return
+ */
+bool isTypedef(const clang::VarDecl *);
+
+/**
+ * Returns part of the code specified by range unmodified as string ref.
+ *
+ * @param source range
+ * @param analysis manager
+ *
+ * @return code part as string ref
+ */
+clang::StringRef sourceRangeAsStringRef(clang::SourceRange,
+                                   clang::ento::AnalysisManager &);
 
 /**
  * Split string by delimiter.
