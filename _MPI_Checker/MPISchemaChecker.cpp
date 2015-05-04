@@ -331,7 +331,7 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
             mpiCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
 
         // collect type information
-        vis::TypeVisitor typeRetriever{vis::TypeVisitor(bufferArg->getType())};
+        vis::TypeVisitor typeVisitor{bufferArg->getType()};
 
         // get mpi datatype as string
         auto mpiDatatype = mpiCall.arguments_[MPIPointToPoint::kDatatype].expr_;
@@ -339,35 +339,34 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
             mpiDatatype->getSourceRange(), analysisManager_)};
 
         // check for exact width types (e.g. int16_t, uint32_t)
-        if (typeRetriever.isTypedefType_) {
-            checkExactWidthTypeMatch(mpiCall.callExpr_, typeRetriever,
+        if (typeVisitor.isTypedefType_) {
+            checkExactWidthTypeMatch(mpiCall.callExpr_, typeVisitor,
                                      mpiDatatypeString);
             return;
         }
 
         // check for complex-floating types (e.g. float _Complex)
-        if (typeRetriever.complexType_) {
-            checkComplexTypeMatch(mpiCall.callExpr_, typeRetriever,
+        if (typeVisitor.complexType_) {
+            checkComplexTypeMatch(mpiCall.callExpr_, typeVisitor,
                                   mpiDatatypeString);
             return;
         }
 
         // check for basic builtin types (e.g. int, char)
-        clang::BuiltinType *builtinTypeBuffer = typeRetriever.builtinType_;
+        clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType_;
         if (!builtinTypeBuffer) return;  // if no builtin type cancel checking
 
-        if (builtinTypeBuffer->isCharType() ||
-            builtinTypeBuffer->isWideCharType()) {
-            checkCharTypeMatch(mpiCall.callExpr_, typeRetriever,
+        if (builtinTypeBuffer->isAnyCharacterType()) {
+            checkCharTypeMatch(mpiCall.callExpr_, typeVisitor,
                                mpiDatatypeString);
         } else if (builtinTypeBuffer->isSignedInteger()) {
-            checkSignedTypeMatch(mpiCall.callExpr_, typeRetriever,
+            checkSignedTypeMatch(mpiCall.callExpr_, typeVisitor,
                                  mpiDatatypeString);
         } else if (builtinTypeBuffer->isUnsignedIntegerType()) {
-            checkUnsignedTypeMatch(mpiCall.callExpr_, typeRetriever,
+            checkUnsignedTypeMatch(mpiCall.callExpr_, typeVisitor,
                                    mpiDatatypeString);
         } else if (builtinTypeBuffer->isFloatingType()) {
-            checkFloatTypeMatch(mpiCall.callExpr_, typeRetriever,
+            checkFloatTypeMatch(mpiCall.callExpr_, typeVisitor,
                                 mpiDatatypeString);
         }
     }
@@ -382,14 +381,21 @@ void MPI_ASTVisitor::checkCharTypeMatch(CallExpr *callExpr,
             isTypeMatching =
                 (mpiDatatype == "MPI_CHAR" || mpiDatatype == "MPI_SIGNED_CHAR");
             break;
+        case BuiltinType::Char_S:
+            isTypeMatching =
+                (mpiDatatype == "MPI_CHAR" || mpiDatatype == "MPI_SIGNED_CHAR");
+            break;
         case BuiltinType::UChar:
+            isTypeMatching = (mpiDatatype == "MPI_UNSIGNED_CHAR");
+            break;
+        case BuiltinType::Char_U:
             isTypeMatching = (mpiDatatype == "MPI_UNSIGNED_CHAR");
             break;
         case BuiltinType::WChar_S:
             isTypeMatching = (mpiDatatype == "MPI_WCHAR");
             break;
         case BuiltinType::WChar_U:
-            isTypeMatching = (mpiDatatype == "MPI_UNSIGNED_CHAR");
+            isTypeMatching = (mpiDatatype == "MPI_WCHAR");
             break;
 
         default:
@@ -532,7 +538,7 @@ void MPI_ASTVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
 
         // iterate indices which should not have float arguments
         for (const size_t idx : indicesToCheck) {
-            // check for float variables
+            // check for invalid variable types
             const auto &arg = mpiCall.arguments_[idx];
             const auto &vars = arg.vars_;
             for (const auto &var : vars) {
@@ -550,7 +556,7 @@ void MPI_ASTVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
                     mpiCall.callExpr_, idx, InvalidArgType::kLiteral);
             }
 
-            // check for float return values from functions
+            // check for invalid return types from functions
             const auto &functions = arg.functions_;
             for (const auto &function : functions) {
                 vis::TypeVisitor typeVisitor{function->getReturnType()};
