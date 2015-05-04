@@ -340,15 +340,14 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
 
         // check for exact width types (e.g. int16_t, uint32_t)
         if (typeVisitor.isTypedefType_) {
-            checkExactWidthTypeMatch(mpiCall.callExpr_, typeVisitor,
-                                     mpiDatatypeString);
+            matchExactWidthType(mpiCall.callExpr_, typeVisitor,
+                                mpiDatatypeString);
             return;
         }
 
         // check for complex-floating types (e.g. float _Complex)
         if (typeVisitor.complexType_) {
-            checkComplexTypeMatch(mpiCall.callExpr_, typeVisitor,
-                                  mpiDatatypeString);
+            matchComplexType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
             return;
         }
 
@@ -357,24 +356,21 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
         if (!builtinTypeBuffer) return;  // if no builtin type cancel checking
 
         if (builtinTypeBuffer->isAnyCharacterType()) {
-            checkCharTypeMatch(mpiCall.callExpr_, typeVisitor,
-                               mpiDatatypeString);
+            matchCharType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
         } else if (builtinTypeBuffer->isSignedInteger()) {
-            checkSignedTypeMatch(mpiCall.callExpr_, typeVisitor,
-                                 mpiDatatypeString);
+            matchSignedType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
         } else if (builtinTypeBuffer->isUnsignedIntegerType()) {
-            checkUnsignedTypeMatch(mpiCall.callExpr_, typeVisitor,
-                                   mpiDatatypeString);
+            matchUnsignedType(mpiCall.callExpr_, typeVisitor,
+                              mpiDatatypeString);
         } else if (builtinTypeBuffer->isFloatingType()) {
-            checkFloatTypeMatch(mpiCall.callExpr_, typeVisitor,
-                                mpiDatatypeString);
+            matchFloatType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
         }
     }
 }
 
-void MPI_ASTVisitor::checkCharTypeMatch(CallExpr *callExpr,
-                                        vis::TypeVisitor &visitor,
-                                        llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchCharType(CallExpr *callExpr,
+                                   vis::TypeVisitor &visitor,
+                                   llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
     switch (visitor.builtinType_->getKind()) {
         case BuiltinType::SChar:
@@ -405,9 +401,9 @@ void MPI_ASTVisitor::checkCharTypeMatch(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::checkSignedTypeMatch(CallExpr *callExpr,
-                                          vis::TypeVisitor &visitor,
-                                          llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchSignedType(CallExpr *callExpr,
+                                     vis::TypeVisitor &visitor,
+                                     llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -434,9 +430,9 @@ void MPI_ASTVisitor::checkSignedTypeMatch(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::checkUnsignedTypeMatch(CallExpr *callExpr,
-                                            vis::TypeVisitor &visitor,
-                                            llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchUnsignedType(CallExpr *callExpr,
+                                       vis::TypeVisitor &visitor,
+                                       llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -459,9 +455,9 @@ void MPI_ASTVisitor::checkUnsignedTypeMatch(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::checkFloatTypeMatch(CallExpr *callExpr,
-                                         vis::TypeVisitor &visitor,
-                                         llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchFloatType(CallExpr *callExpr,
+                                    vis::TypeVisitor &visitor,
+                                    llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -480,9 +476,9 @@ void MPI_ASTVisitor::checkFloatTypeMatch(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::checkComplexTypeMatch(CallExpr *callExpr,
-                                           vis::TypeVisitor &visitor,
-                                           llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchComplexType(CallExpr *callExpr,
+                                      vis::TypeVisitor &visitor,
+                                      llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -503,9 +499,9 @@ void MPI_ASTVisitor::checkComplexTypeMatch(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::checkExactWidthTypeMatch(
-    CallExpr *callExpr, vis::TypeVisitor &visitor,
-    llvm::StringRef mpiDatatype) const {
+void MPI_ASTVisitor::matchExactWidthType(CallExpr *callExpr,
+                                         vis::TypeVisitor &visitor,
+                                         llvm::StringRef mpiDatatype) const {
     // check typedef type match
     // no break needs to be specified for string switch
     bool isTypeMatching = llvm::StringSwitch<bool>(visitor.typedefTypeName_)

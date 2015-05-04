@@ -103,18 +103,18 @@ private:
     void checkForDuplicatePointToPoint(const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
-    void checkCharTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
-                              llvm::StringRef) const;
-    void checkSignedTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
-                              llvm::StringRef) const;
-    void checkUnsignedTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
-                                llvm::StringRef) const;
-    void checkFloatTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
+    void matchCharType(clang::CallExpr *, vis::TypeVisitor &,
+                       llvm::StringRef) const;
+    void matchSignedType(clang::CallExpr *, vis::TypeVisitor &,
+                         llvm::StringRef) const;
+    void matchUnsignedType(clang::CallExpr *, vis::TypeVisitor &,
+                           llvm::StringRef) const;
+    void matchFloatType(clang::CallExpr *, vis::TypeVisitor &,
+                        llvm::StringRef) const;
+    void matchComplexType(clang::CallExpr *, vis::TypeVisitor &,
+                          llvm::StringRef) const;
+    void matchExactWidthType(clang::CallExpr *, vis::TypeVisitor &,
                              llvm::StringRef) const;
-    void checkComplexTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
-                               llvm::StringRef) const;
-    void checkExactWidthTypeMatch(clang::CallExpr *, vis::TypeVisitor &,
-                                  llvm::StringRef) const;
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
