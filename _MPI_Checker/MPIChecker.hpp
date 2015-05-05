@@ -94,7 +94,7 @@ public:
     clang::Decl *currentFunctionDecl_{nullptr};
 };
 
-class MPI_ASTVisitor : public clang::RecursiveASTVisitor<MPI_ASTVisitor> {
+class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
 private:
     // validation functions
     bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
@@ -125,7 +125,7 @@ private:
 public:
     enum class MatchType { kMatch, kMismatch, kNoMatch };
 
-    MPI_ASTVisitor(clang::ento::BugReporter &bugReporter,
+    MPIVisitor(clang::ento::BugReporter &bugReporter,
                    const clang::ento::CheckerBase &checkerBase,
                    clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager},

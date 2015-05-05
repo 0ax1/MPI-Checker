@@ -274,12 +274,12 @@ void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
 
 // visitor –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-bool MPI_ASTVisitor::VisitDecl(Decl *declaration) {
+bool MPIVisitor::VisitDecl(Decl *declaration) {
     // std::cout << declaration->getDeclKindName() << std::endl;
     return true;
 }
 
-bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
+bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
         // to make display of function in diagnostics available
@@ -288,9 +288,9 @@ bool MPI_ASTVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     return true;
 }
 
-bool MPI_ASTVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
+bool MPIVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
 
-bool MPI_ASTVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
+bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
 
 /**
  * Visited when function calls to execute are visited.
@@ -299,7 +299,7 @@ bool MPI_ASTVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
  *
  * @return
  */
-bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
+bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
 
     // check if float literal is used in schema
@@ -312,6 +312,7 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
         }
 
         MPICall mpiCall{callExpr, std::move(arguments)};
+        // check correctness for single calls
         checkBufferTypeMatch(mpiCall);
         checkForInvalidArgs(mpiCall);
 
@@ -326,7 +327,7 @@ bool MPI_ASTVisitor::VisitCallExpr(CallExpr *callExpr) {
  *
  * @param mpiCall call to check type correspondence for
  */
-void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
+void MPIVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         const VarDecl *bufferArg =
             mpiCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
@@ -370,7 +371,7 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
         }
     }
 }
-void MPI_ASTVisitor::matchBoolType(CallExpr *callExpr,
+void MPIVisitor::matchBoolType(CallExpr *callExpr,
                                    vis::TypeVisitor &visitor,
                                    llvm::StringRef mpiDatatype) const {
 
@@ -378,7 +379,7 @@ void MPI_ASTVisitor::matchBoolType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchCharType(CallExpr *callExpr,
+void MPIVisitor::matchCharType(CallExpr *callExpr,
                                    vis::TypeVisitor &visitor,
                                    llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
@@ -411,7 +412,7 @@ void MPI_ASTVisitor::matchCharType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchSignedType(CallExpr *callExpr,
+void MPIVisitor::matchSignedType(CallExpr *callExpr,
                                      vis::TypeVisitor &visitor,
                                      llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
@@ -437,7 +438,7 @@ void MPI_ASTVisitor::matchSignedType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchUnsignedType(CallExpr *callExpr,
+void MPIVisitor::matchUnsignedType(CallExpr *callExpr,
                                        vis::TypeVisitor &visitor,
                                        llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
@@ -462,7 +463,7 @@ void MPI_ASTVisitor::matchUnsignedType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchFloatType(CallExpr *callExpr,
+void MPIVisitor::matchFloatType(CallExpr *callExpr,
                                     vis::TypeVisitor &visitor,
                                     llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
@@ -483,7 +484,7 @@ void MPI_ASTVisitor::matchFloatType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchComplexType(CallExpr *callExpr,
+void MPIVisitor::matchComplexType(CallExpr *callExpr,
                                       vis::TypeVisitor &visitor,
                                       llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
@@ -506,7 +507,7 @@ void MPI_ASTVisitor::matchComplexType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPI_ASTVisitor::matchExactWidthType(CallExpr *callExpr,
+void MPIVisitor::matchExactWidthType(CallExpr *callExpr,
                                          vis::TypeVisitor &visitor,
                                          llvm::StringRef mpiDatatype) const {
     // check typedef type match
@@ -533,7 +534,7 @@ void MPI_ASTVisitor::matchExactWidthType(CallExpr *callExpr,
  *
  * @param mpiCall to check the arguments for
  */
-void MPI_ASTVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
+void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         const auto indicesToCheck = {MPIPointToPoint::kCount,
                                      MPIPointToPoint::kRank,
@@ -583,7 +584,7 @@ void MPI_ASTVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
  *
  * @return areEqual
  */
-bool MPI_ASTVisitor::fullArgumentComparison(const MPICall &callOne,
+bool MPIVisitor::fullArgumentComparison(const MPICall &callOne,
                                             const MPICall &callTwo,
                                             size_t idx) const {
     auto argOne = callOne.arguments_[idx];
@@ -614,7 +615,7 @@ bool MPI_ASTVisitor::fullArgumentComparison(const MPICall &callOne,
     return true;
 }
 
-void MPI_ASTVisitor::checkForDuplicatePointToPoint(
+void MPIVisitor::checkForDuplicatePointToPoint(
     const MPICall &callToCheck) const {
     for (const MPICall &comparedCall : MPICall::visitedCalls) {
         // to omit double matching
@@ -674,7 +675,7 @@ void MPI_ASTVisitor::checkForDuplicatePointToPoint(
  *
  * @return is equal call in list
  */
-void MPI_ASTVisitor::checkForDuplicates() const {
+void MPIVisitor::checkForDuplicates() const {
     for (const MPICall &mpiCall : MPICall::visitedCalls) {
         if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
             checkForDuplicatePointToPoint(mpiCall);
@@ -701,7 +702,7 @@ public:
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
-        MPI_ASTVisitor visitor{bugReporter, *this, analysisManager};
+        MPIVisitor visitor{bugReporter, *this, analysisManager};
         visitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
