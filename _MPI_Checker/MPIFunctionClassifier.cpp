@@ -19,7 +19,7 @@ void MPIFunctionClassifier::identifierInit(
     // init function identifiers
     initPointToPointIdentifiers(analysisManager);
     initCollectiveIdentifiers(analysisManager);
-    initNonCommunicatingIdentifiers(analysisManager);
+    initAdditionalIdentifiers(analysisManager);
 }
 
 void MPIFunctionClassifier::initPointToPointIdentifiers(
@@ -194,14 +194,17 @@ void MPIFunctionClassifier::initCollectiveIdentifiers(
     assert(identInfo_MPI_Barrier_);
 }
 
-void MPIFunctionClassifier::initNonCommunicatingIdentifiers(
+void MPIFunctionClassifier::initAdditionalIdentifiers(
     clang::ento::AnalysisManager &analysisManager) {
 
     ASTContext &context = analysisManager.getASTContext();
-    // non communicating functions
     identInfo_MPI_Comm_rank_ = &context.Idents.get("MPI_Comm_rank");
     mpiType_.push_back(identInfo_MPI_Comm_rank_);
     assert(identInfo_MPI_Comm_rank_);
+
+    identInfo_MPI_Wait_ = &context.Idents.get("MPI_Wait");
+    mpiType_.push_back(identInfo_MPI_Wait_);
+    assert(identInfo_MPI_Wait_);
 }
 
 /**

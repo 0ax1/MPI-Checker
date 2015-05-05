@@ -28,7 +28,7 @@ private:
     void identifierInit(clang::ento::AnalysisManager &);
     void initPointToPointIdentifiers(clang::ento::AnalysisManager &);
     void initCollectiveIdentifiers(clang::ento::AnalysisManager &);
-    void initNonCommunicatingIdentifiers(clang::ento::AnalysisManager &);
+    void initAdditionalIdentifiers(clang::ento::AnalysisManager &);
 
     // to enable classification of mpi-functions during analysis
     std::vector<clang::IdentifierInfo *> mpiSendTypes_;
@@ -49,11 +49,11 @@ private:
 
     // point to point functions
     clang::IdentifierInfo *identInfo_MPI_Send_{nullptr},
-        *identInfo_MPI_Isend_{nullptr}, *identInfo_MPI_Recv_{nullptr},
-        *identInfo_MPI_Irecv_{nullptr}, *identInfo_MPI_Ssend_{nullptr},
+        *identInfo_MPI_Isend_{nullptr}, *identInfo_MPI_Ssend_{nullptr},
         *identInfo_MPI_Issend_{nullptr}, *identInfo_MPI_Bsend_{nullptr},
         *identInfo_MPI_Ibsend_{nullptr}, *identInfo_MPI_Rsend_{nullptr},
-        *identInfo_MPI_Irsend_{nullptr};
+        *identInfo_MPI_Irsend_{nullptr}, *identInfo_MPI_Recv_{nullptr},
+        *identInfo_MPI_Irecv_{nullptr};
 
     // collective functions
     clang::IdentifierInfo *identInfo_MPI_Scatter_{nullptr},
@@ -65,8 +65,9 @@ private:
         *identInfo_MPI_Iallreduce_{nullptr}, *identInfo_MPI_Alltoall_{nullptr},
         *identInfo_MPI_Ialltoall_{nullptr}, *identInfo_MPI_Barrier_{nullptr};
 
-    // non communicating functions
-    clang::IdentifierInfo *identInfo_MPI_Comm_rank_{nullptr};
+    // additional functions
+    clang::IdentifierInfo *identInfo_MPI_Comm_rank_{nullptr},
+        *identInfo_MPI_Wait_{nullptr};
 };
 
 }  // end of namespace: mpi
