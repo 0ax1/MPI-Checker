@@ -19,14 +19,14 @@ void MPIFunctionClassifier::identifierInit(
     // init function identifiers
     initPointToPointIdentifiers(analysisManager);
     initCollectiveIdentifiers(analysisManager);
-    initNonCommunicationIdentifiers(analysisManager);
+    initNonCommunicatingIdentifiers(analysisManager);
 }
 
 void MPIFunctionClassifier::initPointToPointIdentifiers(
     clang::ento::AnalysisManager &analysisManager) {
     ASTContext &context = analysisManager.getASTContext();
 
-    // and copy them into the correct classification containers
+    // copy them into the correct classification containers
     identInfo_MPI_Send_ = &context.Idents.get("MPI_Send");
     mpiSendTypes_.push_back(identInfo_MPI_Send_);
     mpiPointToPointTypes_.push_back(identInfo_MPI_Send_);
@@ -100,11 +100,101 @@ void MPIFunctionClassifier::initPointToPointIdentifiers(
 
 void MPIFunctionClassifier::initCollectiveIdentifiers(
     clang::ento::AnalysisManager &analysisManager) {
+    ASTContext &context = analysisManager.getASTContext();
 
-    // ASTContext &context = analysisManager.getASTContext();
+    // copy them into the correct classification containers
+    identInfo_MPI_Scatter_ = &context.Idents.get("MPI_Scatter");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Scatter_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Scatter_);
+    mpiType_.push_back(identInfo_MPI_Scatter_);
+    assert(identInfo_MPI_Scatter_);
+
+    identInfo_MPI_Iscatter_ = &context.Idents.get("MPI_Iscatter");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Iscatter_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Iscatter_);
+    mpiType_.push_back(identInfo_MPI_Iscatter_);
+    assert(identInfo_MPI_Iscatter_);
+
+    identInfo_MPI_Gather_ = &context.Idents.get("MPI_Gather");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Gather_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Gather_);
+    mpiType_.push_back(identInfo_MPI_Gather_);
+    assert(identInfo_MPI_Gather_);
+
+    identInfo_MPI_Igather_ = &context.Idents.get("MPI_Igather");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Igather_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Igather_);
+    mpiType_.push_back(identInfo_MPI_Igather_);
+    assert(identInfo_MPI_Igather_);
+
+    identInfo_MPI_Allgather_ = &context.Idents.get("MPI_Allgather");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Allgather_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Allgather_);
+    mpiType_.push_back(identInfo_MPI_Allgather_);
+    assert(identInfo_MPI_Allgather_);
+
+    identInfo_MPI_Iallgather_ = &context.Idents.get("MPI_Iallgather");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Iallgather_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Iallgather_);
+    mpiType_.push_back(identInfo_MPI_Iallgather_);
+    assert(identInfo_MPI_Iallgather_);
+
+    identInfo_MPI_Bcast_ = &context.Idents.get("MPI_Bcast");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Bcast_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Bcast_);
+    mpiType_.push_back(identInfo_MPI_Bcast_);
+    assert(identInfo_MPI_Bcast_);
+
+    identInfo_MPI_Ibcast_ = &context.Idents.get("MPI_Ibcast");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Ibcast_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Ibcast_);
+    mpiType_.push_back(identInfo_MPI_Ibcast_);
+    assert(identInfo_MPI_Ibcast_);
+
+    identInfo_MPI_Reduce_ = &context.Idents.get("MPI_Reduce");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Reduce_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Reduce_);
+    mpiType_.push_back(identInfo_MPI_Reduce_);
+    assert(identInfo_MPI_Reduce_);
+
+    identInfo_MPI_Ireduce_ = &context.Idents.get("MPI_Ireduce");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Ireduce_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Ireduce_);
+    mpiType_.push_back(identInfo_MPI_Ireduce_);
+    assert(identInfo_MPI_Ireduce_);
+
+    identInfo_MPI_Allreduce_ = &context.Idents.get("MPI_Allreduce");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Allreduce_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Allreduce_);
+    mpiType_.push_back(identInfo_MPI_Allreduce_);
+    assert(identInfo_MPI_Allreduce_);
+
+    identInfo_MPI_Iallreduce_ = &context.Idents.get("MPI_Iallreduce");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Iallreduce_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Iallreduce_);
+    mpiType_.push_back(identInfo_MPI_Iallreduce_);
+    assert(identInfo_MPI_Iallreduce_);
+
+    identInfo_MPI_Alltoall_ = &context.Idents.get("MPI_Alltoall");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Alltoall_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Alltoall_);
+    mpiType_.push_back(identInfo_MPI_Alltoall_);
+    assert(identInfo_MPI_Alltoall_);
+
+    identInfo_MPI_Ialltoall_ = &context.Idents.get("MPI_Ialltoall");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Ialltoall_);
+    mpiNonBlockingTypes_.push_back(identInfo_MPI_Ialltoall_);
+    mpiType_.push_back(identInfo_MPI_Ialltoall_);
+    assert(identInfo_MPI_Ialltoall_);
+
+    identInfo_MPI_Barrier_ = &context.Idents.get("MPI_Barrier");
+    mpiCollectiveTypes_.push_back(identInfo_MPI_Barrier_);
+    mpiBlockingTypes_.push_back(identInfo_MPI_Barrier_);
+    mpiType_.push_back(identInfo_MPI_Barrier_);
+    assert(identInfo_MPI_Barrier_);
 }
 
-void MPIFunctionClassifier::initNonCommunicationIdentifiers(
+void MPIFunctionClassifier::initNonCommunicatingIdentifiers(
     clang::ento::AnalysisManager &analysisManager) {
 
     ASTContext &context = analysisManager.getASTContext();
@@ -160,27 +250,35 @@ bool MPIFunctionClassifier::isPointToPointType(
 }
 
 /**
+ * Check if MPI point to point function
+ */
+bool MPIFunctionClassifier::isCollectiveType(
+    const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiCollectiveTypes_, identInfo);
+}
+
+/**
  * Check if MPI point to collective function
  */
-bool MPIFunctionClassifier::isPointToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToCollTypes_, identInfo);
-}
+// bool MPIFunctionClassifier::isPointToCollType(
+    // const IdentifierInfo *identInfo) const {
+    // return cont::isContained(mpiPointToCollTypes_, identInfo);
+// }
 
 /**
  * Check if MPI collective to point function
  */
-bool MPIFunctionClassifier::isCollToPointType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToPointTypes_, identInfo);
-}
+// bool MPIFunctionClassifier::isCollToPointType(
+    // const IdentifierInfo *identInfo) const {
+    // return cont::isContained(mpiCollToPointTypes_, identInfo);
+// }
 
 /**
  * Check if MPI collective to collective function
  */
-bool MPIFunctionClassifier::isCollToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToCollTypes_, identInfo);
-}
+// bool MPIFunctionClassifier::isCollToCollType(
+    // const IdentifierInfo *identInfo) const {
+    // return cont::isContained(mpiCollToCollTypes_, identInfo);
+// }
 
 }  // end of namespace: mpi
