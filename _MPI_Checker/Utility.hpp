@@ -46,15 +46,6 @@ bool isPermutation(const T1 &first, const T2 &second) {
 }
 
 /**
- * Check if variable decl has a typedef type.
- *
- * @param vardecl to check
- *
- * @return
- */
-bool isTypedef(const clang::VarDecl *);
-
-/**
  * Returns part of the code specified by range unmodified as string ref.
  *
  * @param source range

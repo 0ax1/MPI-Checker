@@ -2,7 +2,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "clang/Lex/Lexer.h"
 
-#include "MPISchemaChecker.hpp"
+#include "MPIChecker.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
 
@@ -32,6 +32,7 @@ public:
     unsigned long id_{id++};
     mutable bool isMarked_;
 
+    // captures all visited calls traversing the ast
     static llvm::SmallVector<MPICall, 16> visitedCalls;
 
 private:
@@ -355,7 +356,9 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
         clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType_;
         if (!builtinTypeBuffer) return;  // if no builtin type cancel checking
 
-        if (builtinTypeBuffer->isAnyCharacterType()) {
+        if (builtinTypeBuffer->isBooleanType()) {
+            matchBoolType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
+        } else if (builtinTypeBuffer->isAnyCharacterType()) {
             matchCharType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
         } else if (builtinTypeBuffer->isSignedInteger()) {
             matchSignedType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
@@ -366,6 +369,13 @@ void MPI_ASTVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
             matchFloatType(mpiCall.callExpr_, typeVisitor, mpiDatatypeString);
         }
     }
+}
+void MPI_ASTVisitor::matchBoolType(CallExpr *callExpr,
+                                   vis::TypeVisitor &visitor,
+                                   llvm::StringRef mpiDatatype) const {
+
+    bool isTypeMatching = (mpiDatatype == "MPI_C_BOOL");
+    if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
 void MPI_ASTVisitor::matchCharType(CallExpr *callExpr,
@@ -419,9 +429,6 @@ void MPI_ASTVisitor::matchSignedType(CallExpr *callExpr,
         case BuiltinType::LongLong:
             isTypeMatching = (mpiDatatype == "MPI_LONG_LONG" ||
                               mpiDatatype == "MPI_LONG_LONG_INT");
-            break;
-        case BuiltinType::Bool:
-            isTypeMatching = (mpiDatatype == "MPI_C_BOOL");
             break;
         default:
             isTypeMatching = true;
@@ -612,11 +619,11 @@ void MPI_ASTVisitor::checkForDuplicatePointToPoint(
     for (const MPICall &comparedCall : MPICall::visitedCalls) {
         // to omit double matching
         if (comparedCall.isMarked_) continue;
+        // do not compare with the call itself
+        if (callToCheck.id_ == comparedCall.id_) continue;
         // to ensure mpi point to point call is matched against
         if (!funcClassifier_.isPointToPointType(comparedCall.identInfo_))
             continue;
-        // do not compare with the call itself
-        if (callToCheck.id_ == comparedCall.id_) continue;
         // both must be of send or receive type
         if (funcClassifier_.isSendType(callToCheck.identInfo_) !=
             funcClassifier_.isSendType(comparedCall.identInfo_))
@@ -689,7 +696,7 @@ void MPI_ASTVisitor::checkForDuplicates() const {
  * is invoked for static analysis.
  * Receives callback for every translation unit about to visit.
  */
-class MPISchemaChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
+class MPIChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 public:
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
@@ -705,6 +712,6 @@ public:
 
 }  // end of namespace: mpi
 
-void ento::registerMPISchemaChecker(CheckerManager &mgr) {
-    mgr.registerChecker<mpi::MPISchemaChecker>();
+void ento::registerMPIChecker(CheckerManager &mgr) {
+    mgr.registerChecker<mpi::MPIChecker>();
 }

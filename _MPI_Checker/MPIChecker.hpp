@@ -103,6 +103,8 @@ private:
     void checkForDuplicatePointToPoint(const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
+    void matchBoolType(clang::CallExpr *, vis::TypeVisitor &,
+                       llvm::StringRef) const;
     void matchCharType(clang::CallExpr *, vis::TypeVisitor &,
                        llvm::StringRef) const;
     void matchSignedType(clang::CallExpr *, vis::TypeVisitor &,
