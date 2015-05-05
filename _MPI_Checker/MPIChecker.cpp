@@ -11,13 +11,6 @@ using namespace ento;
 
 namespace mpi {
 
-const std::string bugGroupMPIError{"MPI Error"};
-const std::string bugGroupMPIWarning{"MPI Warning"};
-
-const std::string bugTypeEfficiency{"schema efficiency"};
-const std::string bugTypeInvalidArgumentType{"invalid argument type"};
-const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
-
 struct MPICall {
 public:
     MPICall(CallExpr *callExpr,
@@ -41,239 +34,8 @@ private:
 llvm::SmallVector<MPICall, 16> MPICall::visitedCalls;
 unsigned long MPICall::id{0};
 
-// classification ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-/**
- * Initializes function identifiers. Instead of using strings,
- * indentifier-pointers are initially captured
- * to recognize functions during analysis by comparison later.
- *
- * @param current ast-context used for analysis
- */
-void MPIFunctionClassifier::identifierInit(
-    clang::ento::AnalysisManager &analysisManager) {
-    ASTContext &context = analysisManager.getASTContext();
-
-    // init function identifiers
-    // and copy them into the correct classification containers
-    identInfo_MPI_Send_ = &context.Idents.get("MPI_Send");
-    mpiSendTypes_.push_back(identInfo_MPI_Send_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Send_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Send_);
-    mpiType_.push_back(identInfo_MPI_Send_);
-    assert(identInfo_MPI_Send_);
-
-    identInfo_MPI_Recv_ = &context.Idents.get("MPI_Recv");
-    mpiRecvTypes_.push_back(identInfo_MPI_Recv_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Recv_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Recv_);
-    mpiType_.push_back(identInfo_MPI_Recv_);
-    assert(identInfo_MPI_Recv_);
-
-    identInfo_MPI_Isend_ = &context.Idents.get("MPI_Isend");
-    mpiSendTypes_.push_back(identInfo_MPI_Isend_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Isend_);
-    mpiNonBlockingTypes_.push_back(identInfo_MPI_Isend_);
-    mpiType_.push_back(identInfo_MPI_Isend_);
-    assert(identInfo_MPI_Isend_);
-
-    identInfo_MPI_Irecv_ = &context.Idents.get("MPI_Irecv");
-    mpiRecvTypes_.push_back(identInfo_MPI_Irecv_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Irecv_);
-    mpiNonBlockingTypes_.push_back(identInfo_MPI_Irecv_);
-    mpiType_.push_back(identInfo_MPI_Irecv_);
-    assert(identInfo_MPI_Irecv_);
-
-    identInfo_MPI_Ssend_ = &context.Idents.get("MPI_Ssend");
-    mpiSendTypes_.push_back(identInfo_MPI_Ssend_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Ssend_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Ssend_);
-    mpiType_.push_back(identInfo_MPI_Ssend_);
-    assert(identInfo_MPI_Ssend_);
-
-    identInfo_MPI_Issend_ = &context.Idents.get("MPI_Issend");
-    mpiSendTypes_.push_back(identInfo_MPI_Issend_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Issend_);
-    mpiNonBlockingTypes_.push_back(identInfo_MPI_Issend_);
-    mpiType_.push_back(identInfo_MPI_Issend_);
-    assert(identInfo_MPI_Issend_);
-
-    identInfo_MPI_Bsend_ = &context.Idents.get("MPI_Bsend");
-    mpiSendTypes_.push_back(identInfo_MPI_Bsend_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Bsend_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Bsend_);
-    mpiType_.push_back(identInfo_MPI_Bsend_);
-    assert(identInfo_MPI_Bsend_);
-
-    // validate
-    identInfo_MPI_Rsend_ = &context.Idents.get("MPI_Rsend");
-    mpiSendTypes_.push_back(identInfo_MPI_Rsend_);
-    mpiPointToPointTypes_.push_back(identInfo_MPI_Rsend_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Rsend_);
-    mpiType_.push_back(identInfo_MPI_Rsend_);
-    assert(identInfo_MPI_Rsend_);
-
-    // non communicating functions
-    identInfo_MPI_Comm_rank_ = &context.Idents.get("MPI_Comm_rank");
-    mpiType_.push_back(identInfo_MPI_Comm_rank_);
-    assert(identInfo_MPI_Comm_rank_);
-}
-
-/**
- * Check if MPI send function
- */
-bool MPIFunctionClassifier::isMPIType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiType_, identInfo);
-}
-
-/**
- * Check if MPI send function
- */
-bool MPIFunctionClassifier::isSendType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiSendTypes_, identInfo);
-}
-
-/**
- * Check if MPI recv function
- */
-bool MPIFunctionClassifier::isRecvType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiRecvTypes_, identInfo);
-}
-
-/**
- * Check if MPI blocking function
- */
-bool MPIFunctionClassifier::isBlockingType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiBlockingTypes_, identInfo);
-}
-
-/**
- * Check if MPI nonblocking function
- */
-bool MPIFunctionClassifier::isNonBlockingType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiNonBlockingTypes_, identInfo);
-}
-
-/**
- * Check if MPI point to point function
- */
-bool MPIFunctionClassifier::isPointToPointType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToPointTypes_, identInfo);
-}
-
-/**
- * Check if MPI point to collective function
- */
-bool MPIFunctionClassifier::isPointToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToCollTypes_, identInfo);
-}
-
-/**
- * Check if MPI collective to point function
- */
-bool MPIFunctionClassifier::isCollToPointType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToPointTypes_, identInfo);
-}
-
-/**
- * Check if MPI collective to collective function
- */
-bool MPIFunctionClassifier::isCollToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToCollTypes_, identInfo);
-}
-
-// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-/**
- * Reports mismach between buffer type and mpi datatype.
- * @param callExpr
- */
-void MPIBugReporter::reportTypeMismatch(CallExpr *callExpr) const {
-    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        callExpr, bugReporter_.getSourceManager(), adc);
-
-    SourceRange range = callExpr->getCallee()->getSourceRange();
-
-    bugReporter_.EmitBasicReport(
-        adc->getDecl(), &checkerBase_, bugTypeArgumentTypeMismatch,
-        bugGroupMPIError, "buffer type and specified mpi type do not match",
-        location, range);
-}
-
-/**
- * Report non-integer value usage at indices where not allowed.
- *
- * @param callExpr
- * @param idx
- * @param type
- */
-void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
-                                               InvalidArgType type) const {
-    auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        callExpr, bugReporter_.getSourceManager(), d);
-
-    std::string indexAsString{std::to_string(idx)};
-    SourceRange range = callExpr->getCallee()->getSourceRange();
-
-    std::string typeAsString;
-    switch (type) {
-        case InvalidArgType::kLiteral:
-            typeAsString = "literal";
-            break;
-
-        case InvalidArgType::kVariable:
-            typeAsString = "variable";
-            break;
-
-        case InvalidArgType::kReturnType:
-            typeAsString = "return value from function";
-            break;
-    }
-
-    bugReporter_.EmitBasicReport(
-        d->getDecl(), &checkerBase_, bugTypeInvalidArgumentType,
-        bugGroupMPIError,
-        typeAsString + " used at index " + indexAsString + " is not valid",
-        location, range);
-}
-
-void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
-                                     const CallExpr *duplicateCall) const {
-    auto analysisDeclCtx =
-        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
-
-    std::string lineNo =
-        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
-            bugReporter_.getSourceManager());
-
-    // split written string into parts
-    std::vector<std::string> strs = util::split(lineNo, ':');
-    lineNo = strs.at(strs.size() - 2);
-
-    SourceRange range = duplicateCall->getCallee()->getSourceRange();
-
-    bugReporter_.EmitBasicReport(
-        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
-        bugGroupMPIWarning,
-        "identical communication "
-        "arguments (count, mpi-datatype, rank, tag) used in " +
-            matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
-            lineNo + " \n\nconsider to summarize these calls",
-        location, range);
-}
 
 // visitor –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
 bool MPIVisitor::VisitDecl(Decl *declaration) {
     // std::cout << declaration->getDeclKindName() << std::endl;
     return true;
@@ -328,6 +90,7 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
  * @param mpiCall call to check type correspondence for
  */
 void MPIVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
+    // TODO extend to collective call
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         const VarDecl *bufferArg =
             mpiCall.arguments_[MPIPointToPoint::kBuf].vars_.front();
@@ -371,17 +134,14 @@ void MPIVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
         }
     }
 }
-void MPIVisitor::matchBoolType(CallExpr *callExpr,
-                                   vis::TypeVisitor &visitor,
-                                   llvm::StringRef mpiDatatype) const {
-
+void MPIVisitor::matchBoolType(CallExpr *callExpr, vis::TypeVisitor &visitor,
+                               llvm::StringRef mpiDatatype) const {
     bool isTypeMatching = (mpiDatatype == "MPI_C_BOOL");
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPIVisitor::matchCharType(CallExpr *callExpr,
-                                   vis::TypeVisitor &visitor,
-                                   llvm::StringRef mpiDatatype) const {
+void MPIVisitor::matchCharType(CallExpr *callExpr, vis::TypeVisitor &visitor,
+                               llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
     switch (visitor.builtinType_->getKind()) {
         case BuiltinType::SChar:
@@ -412,9 +172,8 @@ void MPIVisitor::matchCharType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPIVisitor::matchSignedType(CallExpr *callExpr,
-                                     vis::TypeVisitor &visitor,
-                                     llvm::StringRef mpiDatatype) const {
+void MPIVisitor::matchSignedType(CallExpr *callExpr, vis::TypeVisitor &visitor,
+                                 llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -439,8 +198,8 @@ void MPIVisitor::matchSignedType(CallExpr *callExpr,
 }
 
 void MPIVisitor::matchUnsignedType(CallExpr *callExpr,
-                                       vis::TypeVisitor &visitor,
-                                       llvm::StringRef mpiDatatype) const {
+                                   vis::TypeVisitor &visitor,
+                                   llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -463,9 +222,8 @@ void MPIVisitor::matchUnsignedType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPIVisitor::matchFloatType(CallExpr *callExpr,
-                                    vis::TypeVisitor &visitor,
-                                    llvm::StringRef mpiDatatype) const {
+void MPIVisitor::matchFloatType(CallExpr *callExpr, vis::TypeVisitor &visitor,
+                                llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -484,9 +242,8 @@ void MPIVisitor::matchFloatType(CallExpr *callExpr,
     if (!isTypeMatching) bugReporter_.reportTypeMismatch(callExpr);
 }
 
-void MPIVisitor::matchComplexType(CallExpr *callExpr,
-                                      vis::TypeVisitor &visitor,
-                                      llvm::StringRef mpiDatatype) const {
+void MPIVisitor::matchComplexType(CallExpr *callExpr, vis::TypeVisitor &visitor,
+                                  llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -508,8 +265,8 @@ void MPIVisitor::matchComplexType(CallExpr *callExpr,
 }
 
 void MPIVisitor::matchExactWidthType(CallExpr *callExpr,
-                                         vis::TypeVisitor &visitor,
-                                         llvm::StringRef mpiDatatype) const {
+                                     vis::TypeVisitor &visitor,
+                                     llvm::StringRef mpiDatatype) const {
     // check typedef type match
     // no break needs to be specified for string switch
     bool isTypeMatching = llvm::StringSwitch<bool>(visitor.typedefTypeName_)
@@ -585,8 +342,8 @@ void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
  * @return areEqual
  */
 bool MPIVisitor::fullArgumentComparison(const MPICall &callOne,
-                                            const MPICall &callTwo,
-                                            size_t idx) const {
+                                        const MPICall &callTwo,
+                                        size_t idx) const {
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
 

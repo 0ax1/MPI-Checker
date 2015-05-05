@@ -8,6 +8,12 @@ namespace MPIPointToPoint {
 enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 }
 
+
+namespace MPICollective {
+// valid for all collective functions
+enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
+}
+
 namespace MPI_Comm_rank {
 enum { kComm, kRank };
 }
