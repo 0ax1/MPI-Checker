@@ -52,7 +52,10 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 
 bool MPIVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
 
-bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
+// check if branch is entered depedent on rank variable
+bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
+    return true;
+}
 
 /**
  * Visited when function calls to execute are visited.
@@ -449,7 +452,7 @@ void MPIVisitor::checkForDuplicates() const {
 
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
- * Main checker host class. Registers checker functionality.
+ * Checker host class. Registers checker functionality.
  * Class name determines checker name to specify when the command line
  * is invoked for static analysis.
  * Receives callback for every translation unit about to visit.
@@ -465,6 +468,9 @@ public:
 
         // invoked after travering a translation unit
         visitor.checkForDuplicates();
+
+        // clear visited calls after every translation unit
+        MPICall::visitedCalls.clear();
     }
 };
 

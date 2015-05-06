@@ -34,6 +34,13 @@ struct MPICall;
 // Bold Cyan     - ValueColor, DeclNameColor
 
 
+/**
+ * Main visitor class to collect information about MPI calls traversing
+ * the AST and checking invariants during the traversal.
+ * This class uses several helper classes: MPIFunctionClassifier,
+ * MPIBugreporter, additional visitors from 'SupportingVisitors.hpp'.
+ *
+ */
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
 private:
     // validation functions
