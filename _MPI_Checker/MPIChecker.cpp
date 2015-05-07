@@ -497,12 +497,8 @@ void MPIVisitor::checkForRedundantCall(const MPICall &callToCheck) const {
         callToCheck.isMarked_ = true;
 
         SmallVector<size_t, 5> checkedIndices;
-        checkedIndices.insert(checkedIndices.end(),
-                              indicesToCheckAllComponents.begin(),
-                              indicesToCheckAllComponents.end());
-
-        checkedIndices.insert(checkedIndices.end(), mpiDatatypeIndices.begin(),
-                              mpiDatatypeIndices.end());
+        cont::copy(indicesToCheckAllComponents, checkedIndices);
+        cont::copy(mpiDatatypeIndices, checkedIndices);
 
         bugReporter_.reportDuplicate(callToCheck.callExpr_,
                                      comparedCall.callExpr_, checkedIndices);

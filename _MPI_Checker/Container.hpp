@@ -127,6 +127,17 @@ size_t indexPred(const T &container, P predicate) {
            container.begin();
 }
 
+/**
+ * Copy elements from one container to another.
+ *
+ * @param source
+ * @param dest
+ */
+template <typename T, typename T2>
+void copy(const T &source, T2 &dest) {
+      std::copy(source.begin(), source.end(), dest.begin());
+}
+
 }  // end of namespace: cont
 
 #endif  // end of include guard: CONTAINER_HPP_XM1FDRVJ
