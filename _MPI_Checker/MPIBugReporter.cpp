@@ -75,8 +75,7 @@ void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
 
 void MPIBugReporter::reportDuplicate(
     const CallExpr *matchedCall, const CallExpr *duplicateCall,
-    const llvm::SmallVectorImpl<size_t>& indices) const {
-
+    const llvm::SmallVectorImpl<size_t> &indices) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
@@ -91,16 +90,22 @@ void MPIBugReporter::reportDuplicate(
     std::vector<std::string> strs = util::split(lineNo, ':');
     lineNo = strs.at(strs.size() - 2);
 
-    SourceRange range = duplicateCall->getCallee()->getSourceRange();
+    SmallVector<SourceRange, 8> sourceRanges{
+        matchedCall->getCallee()->getSourceRange(),
+        duplicateCall->getCallee()->getSourceRange()};
+
+    for (size_t idx : indices) {
+        sourceRanges.push_back(matchedCall->getArg(idx)->getSourceRange());
+        sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
+    }
 
     bugReporter_.EmitBasicReport(
         analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
         bugGroupMPIWarning,
-        "identical communication "
-        "arguments (count, mpi-datatype, rank, tag) used in " +
-            matchedCall->getDirectCallee()->getNameAsString() + " in line: " +
-            lineNo + " \n\nconsider to summarize these calls",
-        location, range);
+        "identical communication arguments used in " +
+            matchedCall->getDirectCallee()->getNameAsString() + " in line " +
+            lineNo + "\nconsider to summarize these calls",
+        location, sourceRanges);
 }
 
 }  // end of namespace: mpi
