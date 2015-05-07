@@ -406,53 +406,106 @@ bool MPIVisitor::areComponentsOfArgumentEqual(const MPICall &callOne,
     return true;
 }
 
-void MPIVisitor::checkForDuplicatePointToPoint(
-    const MPICall &callToCheck) const {
+bool MPIVisitor::areDatatypesEqual(const MPICall &callOne,
+                                   const MPICall &callTwo,
+                                   const size_t idx) const {
+    const VarDecl *mpiTypeNew = callOne.arguments_[idx].vars_.front();
+    const VarDecl *mpiTypePrev = callTwo.arguments_[idx].vars_.front();
+
+    return mpiTypeNew->getName() == mpiTypePrev->getName();
+}
+
+/**
+ * Check if two calls are both point to point or collective calls.
+ *
+ * @param callOne
+ * @param callTwo
+ *
+ * @return
+ */
+bool MPIVisitor::areCommunicationTypesEqual(const MPICall &callOne,
+                                            const MPICall &callTwo) const {
+    return ((funcClassifier_.isPointToPointType(callOne.identInfo_) &&
+             funcClassifier_.isPointToPointType(callTwo.identInfo_)) ||
+
+            (funcClassifier_.isCollectiveType(callOne.identInfo_) &&
+             funcClassifier_.isCollectiveType(callTwo.identInfo_)));
+}
+
+/**
+ * Check if two calls qualify for a redundancy comparison.
+ *
+ * @param callToCheck
+ * @param comparedCall
+ *
+ * @return
+ */
+bool MPIVisitor::qualifyRedundancyCheck(const MPICall &callToCheck,
+        const MPICall &comparedCall) const {
+    if (comparedCall.isMarked_) return false; // to omit double matching
+    // do not compare with the call itself
+    if (callToCheck.id_ == comparedCall.id_) return false;
+    if (!areCommunicationTypesEqual(callToCheck, comparedCall)) return false;
+    if (funcClassifier_.isCollectiveType(callToCheck.identInfo_)) {
+        // if collective, calls must be the 'same' function
+        if (callToCheck.identInfo_ != comparedCall.identInfo_) return false;
+    }
+    return true;
+}
+
+/**
+ * Check if there is a redundant call to the call passed.
+ *
+ * @param callToCheck
+ */
+void MPIVisitor::checkForRedundantCall(const MPICall &callToCheck) const {
+    SmallVector<size_t, 3> indicesToCheckAllComponents;
+    SmallVector<size_t, 2> mpiDatatypeIndices;
+
+    if (funcClassifier_.isPointToPointType(callToCheck.identInfo_)) {
+        indicesToCheckAllComponents = {MPIPointToPoint::kCount,
+                                       MPIPointToPoint::kRank,
+                                       MPIPointToPoint::kTag};
+        mpiDatatypeIndices = {MPIPointToPoint::kDatatype};
+    } else if (funcClassifier_.isMPI_Scatter(callToCheck.identInfo_)) {
+        indicesToCheckAllComponents = {1, 4, 6};
+        mpiDatatypeIndices = {2, 5};
+    }
+
     for (const MPICall &comparedCall : MPICall::visitedCalls) {
-        // to omit double matching
-        if (comparedCall.isMarked_) continue;
-        // do not compare with the call itself
-        if (callToCheck.id_ == comparedCall.id_) continue;
-
-        // to ensure mpi point to point call is matched against
-        if (!funcClassifier_.isPointToPointType(comparedCall.identInfo_))
-            continue;
-
-        // both must be of send or receive type
-        if (funcClassifier_.isSendType(callToCheck.identInfo_) !=
-            funcClassifier_.isSendType(comparedCall.identInfo_))
-            continue;
+        if (!qualifyRedundancyCheck(callToCheck, comparedCall)) continue;
 
         // argument types which are compared by all 'components' –––––––
         bool identical = true;
-        const SmallVector<size_t, 3> indicesToCheck{MPIPointToPoint::kCount,
-                                                    MPIPointToPoint::kRank,
-                                                    MPIPointToPoint::kTag};
-
-        for (const size_t idx : indicesToCheck) {
+        for (const size_t idx : indicesToCheckAllComponents) {
             if (!areComponentsOfArgumentEqual(callToCheck, comparedCall, idx)) {
+                identical = false;
+                break;  // end inner loop
+            }
+        }
+        // compare specified mpi datatypes –––––––––––––––––––––––––––––
+        for (const size_t idx : mpiDatatypeIndices) {
+            if (!areDatatypesEqual(callToCheck, comparedCall, idx)) {
                 identical = false;
                 break;  // end inner loop
             }
         }
         if (!identical) continue;
 
-        // compare specified mpi datatypes –––––––––––––––––––––––––––––
-        const VarDecl *mpiTypeNew =
-            callToCheck.arguments_[MPIPointToPoint::kDatatype].vars_.front();
-        const VarDecl *mpiTypePrev =
-            comparedCall.arguments_[MPIPointToPoint::kDatatype].vars_.front();
-
-        // VarDecl->getName() returns implementation defined type name:
-        // ompi_mpi_xy
-        if (mpiTypeNew->getName() != mpiTypePrev->getName()) continue;
-
+        // if function reaches this point all arguments have been equal
         // mark call to omit symmetric duplicate report
         callToCheck.isMarked_ = true;
 
-        // if function reaches this point all arguments have been equal
+        SmallVector<size_t, 5> checkedIndices;
+        checkedIndices.insert(checkedIndices.end(),
+                              indicesToCheckAllComponents.begin(),
+                              indicesToCheckAllComponents.end());
+
+        checkedIndices.insert(checkedIndices.end(), mpiDatatypeIndices.begin(),
+                              mpiDatatypeIndices.end());
+
         bugReporter_.reportDuplicate(callToCheck.callExpr_,
-                                     comparedCall.callExpr_, indicesToCheck);
+                                     comparedCall.callExpr_, checkedIndices);
 
         // do not match against further calls
         // still all duplicate calls will appear in the diagnostics
@@ -462,20 +515,16 @@ void MPIVisitor::checkForDuplicatePointToPoint(
 }
 
 /**
- * Check if the exact same call was already executed.
+ * Check if there are redundant mpi calls.
  *
  * @param callEvent
  * @param mpiFnCallSet set searched for identical calls
  *
  * @return is equal call in list
  */
-void MPIVisitor::checkForDuplicates() const {
+void MPIVisitor::checkForRedundantCalls() const {
     for (const MPICall &mpiCall : MPICall::visitedCalls) {
-        if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
-            checkForDuplicatePointToPoint(mpiCall);
-        } else if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
-            // TODO
-        }
+        checkForRedundantCall(mpiCall);
     }
 
     // unmark calls
@@ -503,7 +552,7 @@ public:
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // invoked after travering a translation unit
-        visitor.checkForDuplicates();
+        visitor.checkForRedundantCalls();
 
         // clear visited calls after every translation unit
         MPICall::visitedCalls.clear();

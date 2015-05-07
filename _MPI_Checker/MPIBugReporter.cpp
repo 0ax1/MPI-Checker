@@ -90,7 +90,8 @@ void MPIBugReporter::reportDuplicate(
     std::vector<std::string> strs = util::split(lineNo, ':');
     lineNo = strs.at(strs.size() - 2);
 
-    SmallVector<SourceRange, 8> sourceRanges{
+    // build source ranges vector
+    SmallVector<SourceRange, 10> sourceRanges{
         matchedCall->getCallee()->getSourceRange(),
         duplicateCall->getCallee()->getSourceRange()};
 

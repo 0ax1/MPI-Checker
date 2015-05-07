@@ -45,9 +45,13 @@ private:
     // validation functions
     bool areComponentsOfArgumentEqual(const MPICall &, const MPICall &,
                                       const size_t) const;
+    bool areDatatypesEqual(const MPICall &, const MPICall &, const size_t) const;
+    bool areCommunicationTypesEqual(const MPICall &, const MPICall &) const;
 
     void checkForInvalidArgs(const MPICall &) const;
-    void checkForDuplicatePointToPoint(const MPICall &) const;
+
+    void checkForRedundantCall(const MPICall &) const;
+    bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     void selectTypeMatcher(const mpi::TypeVisitor &, const MPICall &,
@@ -85,7 +89,7 @@ public:
     bool VisitCallExpr(clang::CallExpr *);
     bool VisitIfStmt(clang::IfStmt *);
 
-    void checkForDuplicates() const;
+    void checkForRedundantCalls() const;
 };
 
 }  // end of namespace: mpi

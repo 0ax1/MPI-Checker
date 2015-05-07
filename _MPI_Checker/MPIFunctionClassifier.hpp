@@ -20,9 +20,12 @@ public:
     bool isPointToPointType(const clang::IdentifierInfo *) const;
     bool isCollectiveType(const clang::IdentifierInfo *) const;
 
+    bool isMPI_Scatter(const clang::IdentifierInfo *) const;
+
     // bool isPointToCollType(const clang::IdentifierInfo *) const;
     // bool isCollToPointType(const clang::IdentifierInfo *) const;
     // bool isCollToCollType(const clang::IdentifierInfo *) const;
+
 
 private:
     void identifierInit(clang::ento::AnalysisManager &);

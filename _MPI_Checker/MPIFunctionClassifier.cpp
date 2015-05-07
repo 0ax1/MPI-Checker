@@ -196,7 +196,6 @@ void MPIFunctionClassifier::initCollectiveIdentifiers(
 
 void MPIFunctionClassifier::initAdditionalIdentifiers(
     clang::ento::AnalysisManager &analysisManager) {
-
     ASTContext &context = analysisManager.getASTContext();
     identInfo_MPI_Comm_rank_ = &context.Idents.get("MPI_Comm_rank");
     mpiType_.push_back(identInfo_MPI_Comm_rank_);
@@ -260,28 +259,33 @@ bool MPIFunctionClassifier::isCollectiveType(
     return cont::isContained(mpiCollectiveTypes_, identInfo);
 }
 
+bool MPIFunctionClassifier::isMPI_Scatter(
+    const IdentifierInfo *identInfo) const {
+    return identInfo == identInfo_MPI_Scatter_;
+}
+
 /**
  * Check if MPI point to collective function
  */
 // bool MPIFunctionClassifier::isPointToCollType(
-    // const IdentifierInfo *identInfo) const {
-    // return cont::isContained(mpiPointToCollTypes_, identInfo);
+// const IdentifierInfo *identInfo) const {
+// return cont::isContained(mpiPointToCollTypes_, identInfo);
 // }
 
 /**
  * Check if MPI collective to point function
  */
 // bool MPIFunctionClassifier::isCollToPointType(
-    // const IdentifierInfo *identInfo) const {
-    // return cont::isContained(mpiCollToPointTypes_, identInfo);
+// const IdentifierInfo *identInfo) const {
+// return cont::isContained(mpiCollToPointTypes_, identInfo);
 // }
 
 /**
  * Check if MPI collective to collective function
  */
 // bool MPIFunctionClassifier::isCollToCollType(
-    // const IdentifierInfo *identInfo) const {
-    // return cont::isContained(mpiCollToCollTypes_, identInfo);
+// const IdentifierInfo *identInfo) const {
+// return cont::isContained(mpiCollToCollTypes_, identInfo);
 // }
 
 }  // end of namespace: mpi
