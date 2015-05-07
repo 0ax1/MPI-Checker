@@ -33,7 +33,6 @@ struct MPICall;
 // Cyan          - ValueKindColor, ObjectKindColor
 // Bold Cyan     - ValueColor, DeclNameColor
 
-
 /**
  * Main visitor class to collect information about MPI calls traversing
  * the AST and checking invariants during the traversal.
@@ -44,26 +43,26 @@ struct MPICall;
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
 private:
     // validation functions
-    bool fullArgumentComparison(const MPICall &, const MPICall &, size_t) const;
+    bool areComponentsOfArgumentEqual(const MPICall &, const MPICall &,
+                                      const size_t) const;
 
     void checkForInvalidArgs(const MPICall &) const;
     void checkForDuplicatePointToPoint(const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
-    void matchBoolType(clang::CallExpr *, vis::TypeVisitor &,
-                       llvm::StringRef) const;
-    void matchCharType(clang::CallExpr *, vis::TypeVisitor &,
-                       llvm::StringRef) const;
-    void matchSignedType(clang::CallExpr *, vis::TypeVisitor &,
-                         llvm::StringRef) const;
-    void matchUnsignedType(clang::CallExpr *, vis::TypeVisitor &,
-                           llvm::StringRef) const;
-    void matchFloatType(clang::CallExpr *, vis::TypeVisitor &,
-                        llvm::StringRef) const;
-    void matchComplexType(clang::CallExpr *, vis::TypeVisitor &,
-                          llvm::StringRef) const;
-    void matchExactWidthType(clang::CallExpr *, vis::TypeVisitor &,
-                             llvm::StringRef) const;
+    void selectTypeMatcher(const mpi::TypeVisitor &, const MPICall &,
+                           const StringRef,
+                           const std::pair<size_t, size_t> &) const;
+    bool matchBoolType(const mpi::TypeVisitor &, const llvm::StringRef) const;
+    bool matchCharType(const mpi::TypeVisitor &, const llvm::StringRef) const;
+    bool matchSignedType(const mpi::TypeVisitor &, const llvm::StringRef) const;
+    bool matchUnsignedType(const mpi::TypeVisitor &,
+                           const llvm::StringRef) const;
+    bool matchFloatType(const mpi::TypeVisitor &, const llvm::StringRef) const;
+    bool matchComplexType(const mpi::TypeVisitor &,
+                          const llvm::StringRef) const;
+    bool matchExactWidthType(const mpi::TypeVisitor &,
+                             const llvm::StringRef) const;
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;

@@ -19,7 +19,8 @@ const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
  * Reports mismach between buffer type and mpi datatype.
  * @param callExpr
  */
-void MPIBugReporter::reportTypeMismatch(CallExpr *callExpr) const {
+void MPIBugReporter::reportTypeMismatch(
+    const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair) const {
     auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), adc);
@@ -29,7 +30,8 @@ void MPIBugReporter::reportTypeMismatch(CallExpr *callExpr) const {
     bugReporter_.EmitBasicReport(
         adc->getDecl(), &checkerBase_, bugTypeArgumentTypeMismatch,
         bugGroupMPIError, "buffer type and specified mpi type do not match",
-        location, range);
+        location, {range, callExpr->getArg(idxPair.first)->getSourceRange(),
+                   callExpr->getArg(idxPair.second)->getSourceRange()});
 }
 
 /**
@@ -40,13 +42,14 @@ void MPIBugReporter::reportTypeMismatch(CallExpr *callExpr) const {
  * @param type
  */
 void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
+                                               SourceRange invalidSourceRange,
                                                InvalidArgType type) const {
     auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), d);
 
     std::string indexAsString{std::to_string(idx)};
-    SourceRange range = callExpr->getCallee()->getSourceRange();
+    SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
 
     std::string typeAsString;
     switch (type) {
@@ -67,11 +70,13 @@ void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
         d->getDecl(), &checkerBase_, bugTypeInvalidArgumentType,
         bugGroupMPIError,
         typeAsString + " used at index " + indexAsString + " is not valid",
-        location, range);
+        location, {callExprRange, invalidSourceRange});
 }
 
-void MPIBugReporter::reportDuplicate(const CallExpr *matchedCall,
-                                     const CallExpr *duplicateCall) const {
+void MPIBugReporter::reportDuplicate(
+    const CallExpr *matchedCall, const CallExpr *duplicateCall,
+    const llvm::SmallVectorImpl<size_t>& indices) const {
+
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 

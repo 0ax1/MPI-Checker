@@ -8,8 +8,13 @@
 
 #include "Typedefs.hpp"
 
-namespace vis {
+namespace mpi {
 
+/**
+ * Visitor class to traverse a call-expression argument.
+ * On the way it collects binary operators, variable decls, function decls,
+ * integer literals, floating literals.
+ */
 class SingleArgVisitor : public clang::RecursiveASTVisitor<SingleArgVisitor> {
 public:
     SingleArgVisitor(clang::CallExpr *argExpression, size_t idx)
@@ -17,6 +22,7 @@ public:
         TraverseStmt(expr_);
     }
 
+    // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitBinaryOperator(clang::BinaryOperator *);
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
@@ -28,20 +34,22 @@ public:
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
-    llvm::SmallVector<llvm::APInt, 1> integerLiterals_;
-    llvm::SmallVector<llvm::APFloat, 0> floatingLiterals_;
-    // if all operands are static
-    bool isArgumentStatic_{true};
-    // no operator, single literal or variable
-    bool isSimpleExpression_{true};
+    llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
+    llvm::SmallVector<clang::FloatingLiteral*, 0> floatingLiterals_;
+    llvm::SmallVector<llvm::APInt, 1> intValues_;
+    llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 };
 
+/**
+ * Class to find out type information for a given qualified type.
+ * Detects if a QualType has a typedef, is a complex type,
+ * is a builtin type. For matches the type information is stored.
+ */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
-    TypeVisitor(clang::QualType qualType) {
-        TraverseType(qualType);
-    }
+    TypeVisitor(clang::QualType qualType) { TraverseType(qualType); }
 
+    // must be public to trigger callbacks
     bool VisitTypedefType(clang::TypedefType *tdt) {
         typedefTypeName_ = tdt->getDecl()->getQualifiedNameAsString();
         isTypedefType_ = true;
@@ -67,9 +75,8 @@ public:
     clang::BuiltinType *builtinType_{nullptr};
     clang::ComplexType *complexType_{nullptr};
 
-    // clang::BuiltinType *builtinType_{nullptr};
 };
 
-}  // end of namespace: vis
+}  // end of namespace: mpi
 
 #endif  // end of include guard: SUPPORTINGVISITORS_HPP_NWUC3OWQ

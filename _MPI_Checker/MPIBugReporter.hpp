@@ -20,11 +20,12 @@ public:
           checkerBase_{checkerBase},
           analysisManager_{analysisManager} {}
 
-    void reportTypeMismatch(clang::CallExpr *) const;
+    void reportTypeMismatch(const clang::CallExpr *,
+                            const std::pair<size_t, size_t> &) const;
     void reportInvalidArgumentType(clang::CallExpr *, size_t,
-                                   InvalidArgType) const;
-    void reportDuplicate(const clang::CallExpr *,
-                         const clang::CallExpr *) const;
+                                   clang::SourceRange, InvalidArgType) const;
+    void reportDuplicate(const clang::CallExpr *, const clang::CallExpr *,
+                         const llvm::SmallVectorImpl<size_t> &) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 };
