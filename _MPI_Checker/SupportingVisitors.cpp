@@ -34,4 +34,12 @@ bool SingleArgVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     return true;
 }
 
+bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
+    if (clang::VarDecl *var =
+            clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
+        vars_.push_back(var);
+    }
+    return true;
+}
+
 }  // end of namespace: mpi

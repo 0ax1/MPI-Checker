@@ -6,7 +6,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Typedefs.hpp"
+// #include "Typedefs.hpp"
 
 namespace mpi {
 
@@ -38,6 +38,20 @@ public:
     llvm::SmallVector<clang::FloatingLiteral*, 0> floatingLiterals_;
     llvm::SmallVector<llvm::APInt, 1> intValues_;
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
+};
+
+class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
+public:
+    ArrayVisitor(clang::VarDecl *varDecl) : arrayVarDecl_{varDecl} {
+        TraverseVarDecl(arrayVarDecl_);
+    }
+    // must be public to trigger callbacks
+    bool VisitDeclRefExpr(clang::DeclRefExpr *);
+
+    // complete VarDecl expression
+    clang::VarDecl *arrayVarDecl_;
+    // extracted components
+    llvm::SmallVector<clang::VarDecl *, 4> vars_;
 };
 
 /**

@@ -135,7 +135,19 @@ size_t indexPred(const T &container, P predicate) {
  */
 template <typename T, typename T2>
 void copy(const T &source, T2 &dest) {
-      std::copy(source.begin(), source.end(), dest.begin());
+      std::copy(source.begin(), source.end(), std::back_inserter(dest));
+}
+
+/**
+ * Find an element by predicate. Return an iterator.
+ *
+ * @param container
+ * @param predicate
+ * @return iterator
+ */
+template <typename T, typename P>
+typename T::iterator findPred(T &cont, P pred) {
+      return std::find_if(cont.begin(), cont.end(), pred);
 }
 
 }  // end of namespace: cont

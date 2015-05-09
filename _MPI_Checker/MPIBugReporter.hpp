@@ -7,11 +7,6 @@
 namespace mpi {
 
 class MPIBugReporter {
-private:
-    clang::ento::BugReporter &bugReporter_;
-    const clang::ento::CheckerBase &checkerBase_;
-    clang::ento::AnalysisManager &analysisManager_;
-
 public:
     MPIBugReporter(clang::ento::BugReporter &bugReporter,
                    const clang::ento::CheckerBase &checkerBase,
@@ -24,12 +19,22 @@ public:
                             const std::pair<size_t, size_t> &) const;
     void reportInvalidArgumentType(clang::CallExpr *, size_t,
                                    clang::SourceRange, InvalidArgType) const;
-    void reportDuplicate(const clang::CallExpr *, const clang::CallExpr *,
-                         const llvm::SmallVectorImpl<size_t> &) const;
+    void reportRedundantCall(const clang::CallExpr *, const clang::CallExpr *,
+                             const llvm::SmallVectorImpl<size_t> &) const;
+    void reportDoubleRequestUse(const clang::CallExpr *, const clang::VarDecl *,
+                                const clang::CallExpr *) const;
+    void reportUnmatchedWait(const clang::CallExpr *,
+                             const clang::VarDecl *) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
+
+private:
+    std::string lineNumberForCallExpr(const clang::CallExpr *) const;
+
+    clang::ento::BugReporter &bugReporter_;
+    const clang::ento::CheckerBase &checkerBase_;
+    clang::ento::AnalysisManager &analysisManager_;
 };
 
 }  // end of namespace: mpi
-
 #endif  // end of include guard: MPIBUGREPORTER_HPP_57XZJI4L

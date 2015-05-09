@@ -20,11 +20,37 @@ public:
     bool isPointToPointType(const clang::IdentifierInfo *) const;
     bool isCollectiveType(const clang::IdentifierInfo *) const;
 
-    bool isMPI_Scatter(const clang::IdentifierInfo *) const;
+    bool isScatterType(const clang::IdentifierInfo *) const;
+    bool isGatherType(const clang::IdentifierInfo *) const;
+    bool isAllgatherType(const clang::IdentifierInfo *) const;
+    bool isAlltoallType(const clang::IdentifierInfo *) const;
+    bool isReduceType(const clang::IdentifierInfo *) const;
+    bool isBcastType(const clang::IdentifierInfo *) const;
 
-    // bool isPointToCollType(const clang::IdentifierInfo *) const;
-    // bool isCollToPointType(const clang::IdentifierInfo *) const;
-    // bool isCollToCollType(const clang::IdentifierInfo *) const;
+    bool isMPI_Wait(const clang::IdentifierInfo *) const;
+    bool isMPI_Waitall(const clang::IdentifierInfo *) const;
+    bool isWaitType(const clang::IdentifierInfo *) const;
+
+    bool isMPI_Scatter(const clang::IdentifierInfo *) const;
+    bool isMPI_Iscatter(const clang::IdentifierInfo *) const;
+    bool isMPI_Gather(const clang::IdentifierInfo *) const;
+    bool isMPI_Igather(const clang::IdentifierInfo *) const;
+    bool isMPI_Allgather(const clang::IdentifierInfo *) const;
+    bool isMPI_Iallgather(const clang::IdentifierInfo *) const;
+    bool isMPI_Alltoall(const clang::IdentifierInfo *) const;
+    bool isMPI_Ialltoall(const clang::IdentifierInfo *) const;
+    bool isMPI_Bcast(const clang::IdentifierInfo *) const;
+    bool isMPI_Ibcast(const clang::IdentifierInfo *) const;
+    bool isMPI_Reduce(const clang::IdentifierInfo *) const;
+    bool isMPI_Ireduce(const clang::IdentifierInfo *) const;
+    bool isMPI_Allreduce(const clang::IdentifierInfo *) const;
+    bool isMPI_Iallreduce(const clang::IdentifierInfo *) const;
+    bool isMPI_Barrier(const clang::IdentifierInfo *) const;
+    bool isMPI_Comm_rank(const clang::IdentifierInfo *) const;
+
+    bool isPointToCollType(const clang::IdentifierInfo *) const;
+    bool isCollToPointType(const clang::IdentifierInfo *) const;
+    bool isCollToCollType(const clang::IdentifierInfo *) const;
 
 
 private:
@@ -43,10 +69,9 @@ private:
     std::vector<clang::IdentifierInfo *> mpiPointToPointTypes_;
     std::vector<clang::IdentifierInfo *> mpiCollectiveTypes_;
 
-    // TODO distinction needed ?
-    // std::vector<clang::IdentifierInfo *> mpiPointToCollTypes_;
-    // std::vector<clang::IdentifierInfo *> mpiCollToPointTypes_;
-    // std::vector<clang::IdentifierInfo *> mpiCollToCollTypes_;
+    std::vector<clang::IdentifierInfo *> mpiPointToCollTypes_;
+    std::vector<clang::IdentifierInfo *> mpiCollToPointTypes_;
+    std::vector<clang::IdentifierInfo *> mpiCollToCollTypes_;
 
     std::vector<clang::IdentifierInfo *> mpiType_;
 
@@ -70,7 +95,7 @@ private:
 
     // additional functions
     clang::IdentifierInfo *identInfo_MPI_Comm_rank_{nullptr},
-        *identInfo_MPI_Wait_{nullptr};
+        *identInfo_MPI_Wait_{nullptr}, *identInfo_MPI_Waitall_{nullptr};
 };
 
 }  // end of namespace: mpi

@@ -90,6 +90,8 @@ public:
     bool VisitIfStmt(clang::IfStmt *);
 
     void checkForRedundantCalls() const;
+    void checkRequestUsage(const MPICall &) const;
+    void trackRankVariables(const MPICall &) const ;
 };
 
 }  // end of namespace: mpi

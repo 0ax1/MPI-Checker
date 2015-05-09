@@ -1,6 +1,8 @@
 #ifndef TYPEDEFS_HPP_IFNUH41O
 #define TYPEDEFS_HPP_IFNUH41O
 
+namespace mpi {
+
 // argument schema enums ––––––––––––––––––––––––––––––––––––––
 // scope enums, but keep weak typing
 namespace MPIPointToPoint {
@@ -21,4 +23,5 @@ enum { kComm, kRank };
 // used for argument identification
 enum class InvalidArgType { kLiteral, kVariable, kReturnType };
 
+}  // end of namespace: mpi
 #endif  // end of include guard: TYPEDEFS_HPP_IFNUH41O

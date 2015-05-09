@@ -12,6 +12,8 @@ const std::string bugGroupMPIWarning{"MPI Warning"};
 const std::string bugTypeEfficiency{"schema efficiency"};
 const std::string bugTypeInvalidArgumentType{"invalid argument type"};
 const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
+const std::string bugTypeRequestUsage{"invalid request usage"};
+const std::string bugTypeUnmatchedWait{"unmatched wait function"};
 
 // bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -29,7 +31,7 @@ void MPIBugReporter::reportTypeMismatch(
 
     bugReporter_.EmitBasicReport(
         adc->getDecl(), &checkerBase_, bugTypeArgumentTypeMismatch,
-        bugGroupMPIError, "buffer type and specified mpi type do not match",
+        bugGroupMPIError, "Buffer type and specified MPI type do not match. ",
         location, {range, callExpr->getArg(idxPair.first)->getSourceRange(),
                    callExpr->getArg(idxPair.second)->getSourceRange()});
 }
@@ -54,26 +56,26 @@ void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
     std::string typeAsString;
     switch (type) {
         case InvalidArgType::kLiteral:
-            typeAsString = "literal";
+            typeAsString = "Literal";
             break;
 
         case InvalidArgType::kVariable:
-            typeAsString = "variable";
+            typeAsString = "Variable";
             break;
 
         case InvalidArgType::kReturnType:
-            typeAsString = "return value from function";
+            typeAsString = "Return value from function";
             break;
     }
 
     bugReporter_.EmitBasicReport(
         d->getDecl(), &checkerBase_, bugTypeInvalidArgumentType,
         bugGroupMPIError,
-        typeAsString + " used at index " + indexAsString + " is not valid",
+        typeAsString + " used at index " + indexAsString + " is not valid. ",
         location, {callExprRange, invalidSourceRange});
 }
 
-void MPIBugReporter::reportDuplicate(
+void MPIBugReporter::reportRedundantCall(
     const CallExpr *matchedCall, const CallExpr *duplicateCall,
     const llvm::SmallVectorImpl<size_t> &indices) const {
     auto analysisDeclCtx =
@@ -82,13 +84,7 @@ void MPIBugReporter::reportDuplicate(
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
-    std::string lineNo =
-        matchedCall->getCallee()->getSourceRange().getBegin().printToString(
-            bugReporter_.getSourceManager());
-
-    // split written string into parts
-    std::vector<std::string> strs = util::split(lineNo, ':');
-    lineNo = strs.at(strs.size() - 2);
+    std::string lineNo = lineNumberForCallExpr(matchedCall);
 
     // build source ranges vector
     SmallVector<SourceRange, 10> sourceRanges{
@@ -103,10 +99,60 @@ void MPIBugReporter::reportDuplicate(
     bugReporter_.EmitBasicReport(
         analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
         bugGroupMPIWarning,
-        "identical communication arguments used in " +
+        "Identical communication arguments used in " +
             matchedCall->getDirectCallee()->getNameAsString() + " in line " +
-            lineNo + "\nconsider to summarize these calls",
+            lineNo + ".\nConsider to summarize these calls. ",
         location, sourceRanges);
+}
+
+std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
+    std::string lineNo =
+        call->getCallee()->getSourceRange().getBegin().printToString(
+            bugReporter_.getSourceManager());
+
+    // split written string into parts
+    std::vector<std::string> strs = util::split(lineNo, ':');
+    return strs.at(strs.size() - 2);
+}
+
+void MPIBugReporter::reportDoubleRequestUse(const CallExpr *newCall,
+                                            const VarDecl *requestVar,
+                                            const CallExpr *prevCall) const {
+    auto analysisDeclCtx =
+        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        newCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+
+    std::string lineNo = lineNumberForCallExpr(prevCall);
+
+    bugReporter_.EmitBasicReport(
+        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeRequestUsage,
+        bugGroupMPIError,
+        "Same request variable used in " +
+            prevCall->getDirectCallee()->getNameAsString() + " in line " +
+            lineNo +
+            ".\nUse different request variables or\nmatch the "
+            "preceeding call with a wait function before. ",
+        location, {newCall->getSourceRange(), requestVar->getSourceRange(),
+                   prevCall->getSourceRange()});
+}
+
+void MPIBugReporter::reportUnmatchedWait(const CallExpr *waitCall,
+        const VarDecl *varDecl) const {
+    auto analysisDeclCtx =
+        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        waitCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+
+    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 bugTypeUnmatchedWait, bugGroupMPIError,
+                                 "No immediate call is matching request "
+                                 + varDecl->getNameAsString() +
+                                 ". This will result in an endless wait. ",
+                                 location, {waitCall->getSourceRange(),
+                                 varDecl->getSourceRange()});
 }
 
 }  // end of namespace: mpi
