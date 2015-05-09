@@ -15,16 +15,17 @@ namespace mpi {
 // TODO deadlock detection
 // TODO send/recv pair match
 
+// types to model function calls and variables –––––––––––––––––––––––––––
 struct MPICall {
 public:
     MPICall(CallExpr *callExpr,
-            llvm::SmallVector<mpi::SingleArgVisitor, 8> &&arguments)
+            llvm::SmallVector<mpi::ExprVisitor, 8> &&arguments)
         : callExpr_{callExpr}, arguments_{std::move(arguments)} {
         const FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
         identInfo_ = functionDeclNew->getIdentifier();
     };
     CallExpr *callExpr_;
-    llvm::SmallVector<mpi::SingleArgVisitor, 8> arguments_;
+    llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
     IdentifierInfo *identInfo_;
     unsigned long id_{id++};
     mutable bool isMarked_;
@@ -43,13 +44,13 @@ struct MPIRequest {
     const CallExpr *callUsingTheRequest_;
     static llvm::SmallVector<MPIRequest, 4> visitedRequests;
 };
-llvm::SmallVector<MPIRequest, 4> MPIRequest::MPIRequest::visitedRequests;
+llvm::SmallVector<MPIRequest, 4> MPIRequest::visitedRequests;
 
 namespace MPIRank {
 llvm::SmallSet<VarDecl *, 4> visitedRankVariables;
 }
 
-// visitor –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIVisitor::VisitDecl(Decl *declaration) {
     // std::cout << declaration->getDeclKindName() << std::endl;
     return true;
@@ -67,7 +68,38 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 bool MPIVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
 
 // check if branch is entered depedent on rank variable
-bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
+bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
+    ExprVisitor exprVisitor{ifStmt->getCond()};
+
+    bool isRankBranch{false};
+    for (const VarDecl *const varDecl : exprVisitor.vars_) {
+        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
+            isRankBranch = true;
+            break;
+        }
+    }
+
+    if (isRankBranch) {
+        Expr *ifCondition = ifStmt->getCond();
+        Stmt *then = ifStmt->getThen();
+
+        // initial else(if)
+        Stmt *elseStmt = ifStmt->getElse();
+
+        // iterate all else if branches
+        while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
+            const Expr *elseIfCond = elseIf->getCond();
+            elseIfCond->dumpColor();
+            elseStmt = elseIf->getElse();
+        }
+        // check if there's an else branch
+        if (elseStmt) {
+            llvm::outs() << "else" << "\n";
+        }
+    }
+
+    return true;
+}
 
 /**
  * Visited when function calls to execute are visited.
@@ -81,20 +113,21 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
     if (funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
         // build argument vector
-        llvm::SmallVector<mpi::SingleArgVisitor, 8> arguments;
+        llvm::SmallVector<mpi::ExprVisitor, 8> arguments;
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // triggers SingleArgVisitor ctor, ctor executes expr traversal
-            arguments.emplace_back(callExpr, i);
+            // triggers ExprVisitor ctor, ctor executes expr traversal
+            arguments.emplace_back(callExpr->getArg(i));
         }
 
         MPICall mpiCall{callExpr, std::move(arguments)};
 
         checkBufferTypeMatch(mpiCall);
         checkForInvalidArgs(mpiCall);
-        checkRequestUsage(mpiCall);
+        // checkRequestUsage(mpiCall);  // vllt. hier rausziehen
         trackRankVariables(mpiCall);
 
-        MPICall::visitedCalls.push_back(std::move(mpiCall));
+        // FIXME track in ifstmt with rank
+        // MPICall::visitedCalls.push_back(std::move(mpiCall));
     }
 
     return true;

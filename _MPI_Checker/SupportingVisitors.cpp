@@ -6,7 +6,7 @@ using namespace ento;
 namespace mpi {
 
 // variables or functions can be a declrefexpr
-bool SingleArgVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
+bool ExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
@@ -17,18 +17,18 @@ bool SingleArgVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     return true;
 }
 
-bool SingleArgVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
+bool ExprVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
     return true;
 }
 
-bool SingleArgVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
+bool ExprVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     intValues_.push_back(intLiteral->getValue());
     return true;
 }
 
-bool SingleArgVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
+bool ExprVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     floatValues_.push_back(floatLiteral->getValue());
     return true;

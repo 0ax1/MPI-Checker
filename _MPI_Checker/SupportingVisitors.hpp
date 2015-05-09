@@ -11,16 +11,13 @@
 namespace mpi {
 
 /**
- * Visitor class to traverse a call-expression argument.
+ * Visitor class to traverse an expression.
  * On the way it collects binary operators, variable decls, function decls,
  * integer literals, floating literals.
  */
-class SingleArgVisitor : public clang::RecursiveASTVisitor<SingleArgVisitor> {
+class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
 public:
-    SingleArgVisitor(clang::CallExpr *argExpression, size_t idx)
-        : expr_{argExpression->getArg(idx)} {
-        TraverseStmt(expr_);
-    }
+    ExprVisitor(clang::Expr *expr) : expr_{expr} { TraverseStmt(expr_); }
 
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
@@ -28,7 +25,7 @@ public:
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
 
-    // complete argument expression
+    // complete expression
     clang::Expr *expr_;
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
