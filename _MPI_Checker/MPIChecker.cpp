@@ -41,10 +41,13 @@ unsigned long MPICall::id{0};
 struct MPIRequest {
     const VarDecl *requestVariable_;
     const CallExpr *callUsingTheRequest_;
+    static llvm::SmallVector<MPIRequest, 4> visitedRequests;
 };
-llvm::SmallVector<MPIRequest, 4> visitedRequests;
+llvm::SmallVector<MPIRequest, 4> MPIRequest::MPIRequest::visitedRequests;
 
+namespace MPIRank {
 llvm::SmallSet<VarDecl *, 4> visitedRankVariables;
+}
 
 // visitor –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIVisitor::VisitDecl(Decl *declaration) {
@@ -64,9 +67,7 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 bool MPIVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
 
 // check if branch is entered depedent on rank variable
-bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
-    return true;
-}
+bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) { return true; }
 
 /**
  * Visited when function calls to execute are visited.
@@ -99,13 +100,12 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     return true;
 }
 
-
 //––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
     if (funcClassifier_.isMPI_Comm_rank(mpiCall.identInfo_)) {
         VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-        visitedRankVariables.insert(varDecl);
+        MPIRank::visitedRankVariables.insert(varDecl);
     }
 }
 
@@ -600,13 +600,14 @@ void MPIVisitor::checkRequestUsage(const MPICall &mpiCall) const {
         auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
         auto requestVar = arg.vars_.front();
 
-        const auto iterator =
-            cont::findPred(visitedRequests, [requestVar](const MPIRequest &r) {
+        const auto iterator = cont::findPred(
+            MPIRequest::visitedRequests, [requestVar](const MPIRequest &r) {
                 return r.requestVariable_ == requestVar;
             });
 
-        if (iterator == visitedRequests.end()) {
-            visitedRequests.push_back({requestVar, mpiCall.callExpr_});
+        if (iterator == MPIRequest::visitedRequests.end()) {
+            MPIRequest::visitedRequests.push_back(
+                {requestVar, mpiCall.callExpr_});
         } else {
             bugReporter_.reportDoubleRequestUse(mpiCall.callExpr_, requestVar,
                                                 iterator->callUsingTheRequest_);
@@ -629,16 +630,16 @@ void MPIVisitor::checkRequestUsage(const MPICall &mpiCall) const {
 
         for (VarDecl *requestVar : requestVector) {
             const auto iterator = cont::findPred(
-                visitedRequests, [requestVar](const MPIRequest &r) {
+                MPIRequest::visitedRequests, [requestVar](const MPIRequest &r) {
                     return r.requestVariable_ == requestVar;
                 });
 
             // if not found -> endless wait
-            if (iterator == visitedRequests.end()) {
+            if (iterator == MPIRequest::visitedRequests.end()) {
                 bugReporter_.reportUnmatchedWait(mpiCall.callExpr_, requestVar);
             } else {
                 // request var used, remove from container
-                cont::erasePred(visitedRequests,
+                cont::erasePred(MPIRequest::visitedRequests,
                                 [requestVar](const MPIRequest &r) {
                                     return r.requestVariable_ == requestVar;
                                 });
@@ -668,6 +669,7 @@ public:
 
         // clear visited calls after every translation unit
         MPICall::visitedCalls.clear();
+        MPIRequest::MPIRequest::visitedRequests.clear();
     }
 };
 
