@@ -29,6 +29,8 @@ public:
     void reportUnmatchedWait(const clang::CallExpr *const,
                              const clang::VarDecl *const) const;
 
+    void reportCollCallInBranch(const clang::CallExpr *const) const;
+
     clang::Decl *currentFunctionDecl_{nullptr};
 
 private:

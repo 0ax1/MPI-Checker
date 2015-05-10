@@ -5,10 +5,7 @@
 
 namespace mpi {
 
-// callback functions a checker can register for
-// http://clang.llvm.org/doxygen/CheckerDocumentation_8cpp_source.html
-
-// dump-color legend
+// ast dump-color legend
 // Red           - CastColor
 // Green         - TypeColor
 // Bold Green    - DeclKindNameColor, UndeserializedColor
@@ -21,8 +18,8 @@ namespace mpi {
 
 /**
  * Main visitor class to collect information about MPI calls traversing
- * the AST and checking invariants during the traversal through
- * MPICheckerImpl.
+ * the AST of a translation unit, checking invariants during the traversal
+ * through MPICheckerImpl.
  *
  */
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {

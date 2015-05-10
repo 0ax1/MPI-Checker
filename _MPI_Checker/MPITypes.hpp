@@ -15,7 +15,9 @@ enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 
 struct MPICall {
 public:
-    MPICall(clang::CallExpr *callExpr) : callExpr_{callExpr} { init(callExpr); };
+    MPICall(clang::CallExpr *callExpr) : callExpr_{callExpr} {
+        init(callExpr);
+    };
 
     MPICall(clang::CallExpr *callExpr, const clang::Stmt *const rankCondition,
             bool isInsideElseBranch)
@@ -28,7 +30,7 @@ public:
     const clang::CallExpr *const callExpr_;
     const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
     const clang::IdentifierInfo *identInfo_;
-    const unsigned long id_{id++}; // unique call identification
+    const unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_;
@@ -46,7 +48,8 @@ private:
      * @param callExpr mpi call captured
      */
     void init(clang::CallExpr *callExpr) {
-        const clang::FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
+        const clang::FunctionDecl *functionDeclNew =
+            callExpr_->getDirectCallee();
         identInfo_ = functionDeclNew->getIdentifier();
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {

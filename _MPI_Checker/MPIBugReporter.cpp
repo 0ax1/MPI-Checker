@@ -14,6 +14,25 @@ const std::string bugTypeInvalidArgumentType{"invalid argument type"};
 const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
 const std::string bugTypeRequestUsage{"invalid request usage"};
 const std::string bugTypeUnmatchedWait{"unmatched wait function"};
+const std::string bugTypeCollCallInBranch{"collective call inside rank branch"};
+
+/**
+ * Get line number for call expression
+ *
+ * @param call
+ *
+ * @return line number as string
+ */
+std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
+    std::string lineNo =
+        call->getCallee()->getSourceRange().getBegin().printToString(
+            bugReporter_.getSourceManager());
+
+    // split written string into parts
+    std::vector<std::string> strs = util::split(lineNo, ':');
+    return strs.at(strs.size() - 2);
+}
+
 
 // bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -34,6 +53,25 @@ void MPIBugReporter::reportTypeMismatch(
         bugGroupMPIError, "Buffer type and specified MPI type do not match. ",
         location, {range, callExpr->getArg(idxPair.first)->getSourceRange(),
                    callExpr->getArg(idxPair.second)->getSourceRange()});
+}
+
+/**
+ * Reports mismach between buffer type and mpi datatype.
+ * @param callExpr
+ */
+void MPIBugReporter::reportCollCallInBranch(
+    const CallExpr * const callExpr) const {
+    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), adc);
+
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+
+    bugReporter_.EmitBasicReport(
+        adc->getDecl(), &checkerBase_, bugTypeCollCallInBranch,
+        bugGroupMPIError, "Collective call used inside rank branch."
+        "Collective calls must be executed by all processes.",
+        location, range);
 }
 
 /**
@@ -89,16 +127,6 @@ void MPIBugReporter::reportRedundantCall(
             matchedCall->getDirectCallee()->getNameAsString() + " in line " +
             lineNo + ".\nConsider to summarize these calls. ",
         location, sourceRanges);
-}
-
-std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
-    std::string lineNo =
-        call->getCallee()->getSourceRange().getBegin().printToString(
-            bugReporter_.getSourceManager());
-
-    // split written string into parts
-    std::vector<std::string> strs = util::split(lineNo, ':');
-    return strs.at(strs.size() - 2);
 }
 
 void MPIBugReporter::reportDoubleRequestUse(

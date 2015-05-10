@@ -2,12 +2,12 @@
 #define MPIVISITOR_CPP_H6L3JFDT
 
 #include "MPIVisitor.hpp"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 using namespace ento;
 
 namespace mpi {
-
 
 // TODO deadlock detection
 // TODO send/recv pair match
@@ -40,31 +40,43 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         }
     }
 
-    if (isRankBranch) {
-        Expr *ifCondition = ifStmt->getCond();
-        Stmt *then = ifStmt->getThen();
-
-        StmtVisitor stmtVisitor{then};
-
-        for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-            if (checker_.funcClassifier_.isMPIType(
-                    callExpr->getDirectCallee()->getIdentifier())) {
-                MPICall mpiCall{callExpr, ifCondition, false};
+    llvm::SmallVector<MPICall, 16> visitedCallsBranch;
+    auto collectExpr =
+        [this](llvm::SmallVector<MPICall, 16> &v, Stmt *then, Stmt *condition) {
+            StmtVisitor stmtVisitor{then};  // collect call exprs
+            for (CallExpr *callExpr : stmtVisitor.callExprs_) {
+                // filter mpi calls
+                if (checker_.funcClassifier_.isMPIType(
+                        callExpr->getDirectCallee()->getIdentifier())) {
+                    MPICall mpiCall{callExpr, condition, false};
+                    v.push_back(mpiCall);
+                }
             }
-        }
+        };
 
-        // initial else(if)
-        Stmt *elseStmt = ifStmt->getElse();
+    if (isRankBranch) {
+        // collect mpi calls in if
+        collectExpr(visitedCallsBranch, ifStmt->getThen(), ifStmt->getCond());
 
-        // iterate all else if branches
+        // collect mpi calls in all else if
+        Stmt *elseStmt = ifStmt->getElse();  // else(if)
         while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-            const Expr *elseIfCond = elseIf->getCond();
-            elseIfCond->dumpColor();
+            collectExpr(visitedCallsBranch, elseIf->getThen(),
+                        elseIf->getCond());
             elseStmt = elseIf->getElse();
         }
-        // check if there's an else branch
+
+        // collect mpi calls in else
         if (elseStmt) {
+            collectExpr(visitedCallsBranch, elseStmt, nullptr);
         }
+
+        // check if collective calls are used in rank branch
+        for (const MPICall &call : visitedCallsBranch) {
+            checker_.checkCollCallInBranch(call);
+        }
+
+        // TODO evaluate calls
     }
 
     return true;
@@ -95,7 +107,6 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
     return true;
 }
-
 
 void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
     if (checker_.funcClassifier_.isMPI_Comm_rank(mpiCall.identInfo_)) {

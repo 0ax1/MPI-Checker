@@ -5,6 +5,13 @@ using namespace ento;
 
 namespace mpi {
 
+
+void MPICheckerImpl::checkCollCallInBranch(const MPICall &mpiCall) const {
+    if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
+        bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
+    }
+}
+
 /**
  * Checks if buffer type and specified mpi datatype matches.
  *

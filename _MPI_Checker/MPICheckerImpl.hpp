@@ -57,6 +57,7 @@ public:
 
     void checkForRedundantCalls() const;
     void checkRequestUsage(const MPICall &) const;
+    void checkCollCallInBranch(const MPICall &) const;
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
