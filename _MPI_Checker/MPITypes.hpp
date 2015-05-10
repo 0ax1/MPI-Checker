@@ -28,7 +28,7 @@ public:
     const clang::CallExpr *const callExpr_;
     const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
     const clang::IdentifierInfo *identInfo_;
-    const unsigned long id_{id++};
+    const unsigned long id_{id++}; // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_;
@@ -43,7 +43,6 @@ public:
 private:
     /**
      * Init function shared by ctors.
-     *
      * @param callExpr mpi call captured
      */
     void init(clang::CallExpr *callExpr) {
@@ -60,12 +59,14 @@ private:
     static unsigned long id;
 };
 
+// to capture request variables
 struct MPIRequest {
     const clang::VarDecl *requestVariable_;
     const clang::CallExpr *callUsingTheRequest_;
     static llvm::SmallVector<MPIRequest, 4> visitedRequests;
 };
 
+// to capture rank variables
 namespace MPIRank {
 extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }

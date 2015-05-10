@@ -662,7 +662,7 @@ public:
         visitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
-        // invoked after travering a translation unit
+        // invoked after travering the translation unit
         visitor.checkForRedundantCalls();
 
         // clear visited calls after every translation unit
