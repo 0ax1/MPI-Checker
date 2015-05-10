@@ -43,7 +43,8 @@ void MPIBugReporter::reportTypeMismatch(
  * @param idx
  * @param type
  */
-void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
+void MPIBugReporter::reportInvalidArgumentType(const CallExpr *const callExpr,
+                                               size_t idx,
                                                SourceRange invalidSourceRange,
                                                InvalidArgType type) const {
     auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
@@ -76,7 +77,7 @@ void MPIBugReporter::reportInvalidArgumentType(CallExpr *callExpr, size_t idx,
 }
 
 void MPIBugReporter::reportRedundantCall(
-    const CallExpr *matchedCall, const CallExpr *duplicateCall,
+    const CallExpr *const matchedCall, const CallExpr *const duplicateCall,
     const llvm::SmallVectorImpl<size_t> &indices) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
@@ -115,9 +116,9 @@ std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
     return strs.at(strs.size() - 2);
 }
 
-void MPIBugReporter::reportDoubleRequestUse(const CallExpr *newCall,
-                                            const VarDecl *requestVar,
-                                            const CallExpr *prevCall) const {
+void MPIBugReporter::reportDoubleRequestUse(
+    const CallExpr *const newCall, const VarDecl *const requestVar,
+    const CallExpr *const prevCall) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
@@ -138,21 +139,20 @@ void MPIBugReporter::reportDoubleRequestUse(const CallExpr *newCall,
                    prevCall->getSourceRange()});
 }
 
-void MPIBugReporter::reportUnmatchedWait(const CallExpr *waitCall,
-        const VarDecl *varDecl) const {
+void MPIBugReporter::reportUnmatchedWait(const CallExpr *const waitCall,
+                                         const VarDecl *const varDecl) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         waitCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
-    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
-                                 bugTypeUnmatchedWait, bugGroupMPIError,
-                                 "No immediate call is matching request "
-                                 + varDecl->getNameAsString() +
-                                 ". This will result in an endless wait. ",
-                                 location, {waitCall->getSourceRange(),
-                                 varDecl->getSourceRange()});
+    bugReporter_.EmitBasicReport(
+        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeUnmatchedWait,
+        bugGroupMPIError,
+        "No immediate call is matching request " + varDecl->getNameAsString() +
+            ". This will result in an endless wait. ",
+        location, {waitCall->getSourceRange(), varDecl->getSourceRange()});
 }
 
 }  // end of namespace: mpi

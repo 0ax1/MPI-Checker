@@ -18,22 +18,48 @@ namespace mpi {
 // types to model function calls and variables –––––––––––––––––––––––––––
 struct MPICall {
 public:
-    MPICall(CallExpr *callExpr,
-            llvm::SmallVector<mpi::ExprVisitor, 8> &&arguments)
-        : callExpr_{callExpr}, arguments_{std::move(arguments)} {
-        const FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
-        identInfo_ = functionDeclNew->getIdentifier();
+    MPICall(CallExpr *callExpr) : callExpr_{callExpr} { init(callExpr); };
+
+    MPICall(CallExpr *callExpr, const clang::Stmt *const rankCondition,
+            bool isInsideElseBranch)
+        : callExpr_{callExpr},
+          rankCondition_{rankCondition},
+          isInsideElseBranch_{isInsideElseBranch} {
+        init(callExpr);
     };
-    CallExpr *callExpr_;
-    llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
-    IdentifierInfo *identInfo_;
-    unsigned long id_{id++};
+
+    const CallExpr *const callExpr_;
+    const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
+    const IdentifierInfo *identInfo_;
+    const unsigned long id_{id++};
+    // marking can be changed freely by clients
+    // semantic depends on context of usage
     mutable bool isMarked_;
 
-    // captures all visited calls traversing the ast
+    // rank condition entered to execute this function
+    const clang::Stmt *const rankCondition_{nullptr};
+    const bool isInsideElseBranch_{false};
+
+    // to capture all visited calls traversing the ast
     static llvm::SmallVector<MPICall, 16> visitedCalls;
 
 private:
+    /**
+     * Init function shared by ctors.
+     *
+     * @param callExpr mpi call captured
+     */
+    void init(CallExpr *callExpr) {
+        const FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
+        identInfo_ = functionDeclNew->getIdentifier();
+        // build argument vector
+        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
+            // emplace triggers ExprVisitor ctor
+            const_cast<llvm::SmallVector<mpi::ExprVisitor, 8> &>(arguments_)
+                .emplace_back(callExpr->getArg(i));
+        }
+    }
+
     static unsigned long id;
 };
 llvm::SmallVector<MPICall, 16> MPICall::visitedCalls;
@@ -47,15 +73,10 @@ struct MPIRequest {
 llvm::SmallVector<MPIRequest, 4> MPIRequest::visitedRequests;
 
 namespace MPIRank {
-llvm::SmallSet<VarDecl *, 4> visitedRankVariables;
+llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
 }
 
 // visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
-bool MPIVisitor::VisitDecl(Decl *declaration) {
-    // std::cout << declaration->getDeclKindName() << std::endl;
-    return true;
-}
-
 bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
@@ -65,9 +86,13 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     return true;
 }
 
-bool MPIVisitor::VisitDeclRefExpr(DeclRefExpr *expression) { return true; }
-
-// check if branch is entered depedent on rank variable
+/**
+ * Visits branches. Checks if a rank variable is involved.
+ *
+ * @param ifStmt
+ *
+ * @return
+ */
 bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     ExprVisitor exprVisitor{ifStmt->getCond()};
 
@@ -83,6 +108,15 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         Expr *ifCondition = ifStmt->getCond();
         Stmt *then = ifStmt->getThen();
 
+        StmtVisitor stmtVisitor{then};
+
+        for (CallExpr *callExpr : stmtVisitor.callExprs_) {
+            if (funcClassifier_.isMPIType(
+                    callExpr->getDirectCallee()->getIdentifier())) {
+                MPICall mpiCall{callExpr, ifCondition, false};
+            }
+        }
+
         // initial else(if)
         Stmt *elseStmt = ifStmt->getElse();
 
@@ -94,7 +128,6 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         }
         // check if there's an else branch
         if (elseStmt) {
-            llvm::outs() << "else" << "\n";
         }
     }
 
@@ -102,7 +135,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 }
 
 /**
- * Visited when function calls to execute are visited.
+ * Visited for each function call.
  *
  * @param callExpr
  *
@@ -112,22 +145,16 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
 
     if (funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
-        // build argument vector
-        llvm::SmallVector<mpi::ExprVisitor, 8> arguments;
-        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // triggers ExprVisitor ctor, ctor executes expr traversal
-            arguments.emplace_back(callExpr->getArg(i));
-        }
-
-        MPICall mpiCall{callExpr, std::move(arguments)};
+        MPICall mpiCall{callExpr};
 
         checkBufferTypeMatch(mpiCall);
         checkForInvalidArgs(mpiCall);
-        // checkRequestUsage(mpiCall);  // vllt. hier rausziehen
         trackRankVariables(mpiCall);
 
-        // FIXME track in ifstmt with rank
-        // MPICall::visitedCalls.push_back(std::move(mpiCall));
+        if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
+            MPICall::visitedCalls.push_back(std::move(mpiCall));
+            checkRequestUsage(mpiCall);
+        }
     }
 
     return true;

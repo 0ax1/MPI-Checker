@@ -6,9 +6,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-// #include "Typedefs.hpp"
-
 namespace mpi {
+
 
 /**
  * Visitor class to traverse an expression.
@@ -32,7 +31,7 @@ public:
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
-    llvm::SmallVector<clang::FloatingLiteral*, 0> floatingLiterals_;
+    llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
     llvm::SmallVector<llvm::APInt, 1> intValues_;
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 };
@@ -85,7 +84,21 @@ public:
 
     clang::BuiltinType *builtinType_{nullptr};
     clang::ComplexType *complexType_{nullptr};
+};
 
+class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
+public:
+    StmtVisitor(clang::Stmt *stmt)  {
+        TraverseStmt(stmt);
+    }
+    // must be public to trigger callbacks
+    bool VisitCallExpr(clang::CallExpr *callExpr) {
+        callExprs_.push_back(callExpr);
+        return true;
+    };
+
+    // complete stmt expression
+    llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
 };
 
 }  // end of namespace: mpi

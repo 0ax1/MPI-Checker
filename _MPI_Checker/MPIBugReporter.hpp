@@ -15,16 +15,18 @@ public:
           checkerBase_{checkerBase},
           analysisManager_{analysisManager} {}
 
-    void reportTypeMismatch(const clang::CallExpr *,
+    void reportTypeMismatch(const clang::CallExpr *const,
                             const std::pair<size_t, size_t> &) const;
-    void reportInvalidArgumentType(clang::CallExpr *, size_t,
+    void reportInvalidArgumentType(const clang::CallExpr *const, size_t,
                                    clang::SourceRange, InvalidArgType) const;
-    void reportRedundantCall(const clang::CallExpr *, const clang::CallExpr *,
+    void reportRedundantCall(const clang::CallExpr *const,
+                             const clang::CallExpr *const,
                              const llvm::SmallVectorImpl<size_t> &) const;
-    void reportDoubleRequestUse(const clang::CallExpr *, const clang::VarDecl *,
-                                const clang::CallExpr *) const;
-    void reportUnmatchedWait(const clang::CallExpr *,
-                             const clang::VarDecl *) const;
+    void reportDoubleRequestUse(const clang::CallExpr *const,
+                                const clang::VarDecl *,
+                                const clang::CallExpr *const) const;
+    void reportUnmatchedWait(const clang::CallExpr *const,
+                             const clang::VarDecl *const) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 

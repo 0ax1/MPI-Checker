@@ -45,7 +45,8 @@ private:
     // validation functions
     bool areComponentsOfArgumentEqual(const MPICall &, const MPICall &,
                                       const size_t) const;
-    bool areDatatypesEqual(const MPICall &, const MPICall &, const size_t) const;
+    bool areDatatypesEqual(const MPICall &, const MPICall &,
+                           const size_t) const;
     bool areCommunicationTypesEqual(const MPICall &, const MPICall &) const;
 
     void checkForInvalidArgs(const MPICall &) const;
@@ -68,6 +69,9 @@ private:
     bool matchExactWidthType(const mpi::TypeVisitor &,
                              const llvm::StringRef) const;
 
+    llvm::SmallVectorImpl<mpi::ExprVisitor> &&argumentBuilder(
+        clang::CallExpr *) const;
+
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
     clang::ento::AnalysisManager &analysisManager_;
@@ -83,15 +87,13 @@ public:
           analysisManager_{analysisManager} {}
 
     // visitor callbacks
-    bool VisitDecl(clang::Decl *);
     bool VisitFunctionDecl(clang::FunctionDecl *);
-    bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitCallExpr(clang::CallExpr *);
     bool VisitIfStmt(clang::IfStmt *);
 
     void checkForRedundantCalls() const;
     void checkRequestUsage(const MPICall &) const;
-    void trackRankVariables(const MPICall &) const ;
+    void trackRankVariables(const MPICall &) const;
 };
 
 }  // end of namespace: mpi
