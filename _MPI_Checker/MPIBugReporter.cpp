@@ -69,8 +69,8 @@ void MPIBugReporter::reportCollCallInBranch(
 
     bugReporter_.EmitBasicReport(
         adc->getDecl(), &checkerBase_, bugTypeCollCallInBranch,
-        bugGroupMPIError, "Collective call used inside rank branch."
-        "Collective calls must be executed by all processes.",
+        bugGroupMPIError, "Collective calls must be executed by all processes."
+        " Move this call out of the rank branch. " ,
         location, range);
 }
 

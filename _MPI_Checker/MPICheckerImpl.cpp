@@ -6,7 +6,7 @@ using namespace ento;
 namespace mpi {
 
 
-void MPICheckerImpl::checkCollCallInBranch(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkForColletiveInBranch(const MPICall &mpiCall) const {
     if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
         bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
     }

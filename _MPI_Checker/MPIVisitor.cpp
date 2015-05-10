@@ -1,6 +1,7 @@
 #ifndef MPIVISITOR_CPP_H6L3JFDT
 #define MPIVISITOR_CPP_H6L3JFDT
 
+#include <functional>
 #include "MPIVisitor.hpp"
 #include "llvm/ADT/SmallVector.h"
 
@@ -40,41 +41,49 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         }
     }
 
-    llvm::SmallVector<MPICall, 16> visitedCallsBranch;
-    auto collectExpr =
-        [this](llvm::SmallVector<MPICall, 16> &v, Stmt *then, Stmt *condition) {
-            StmtVisitor stmtVisitor{then};  // collect call exprs
-            for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-                // filter mpi calls
-                if (checker_.funcClassifier_.isMPIType(
-                        callExpr->getDirectCallee()->getIdentifier())) {
-                    MPICall mpiCall{callExpr, condition, false};
-                    v.push_back(mpiCall);
-                }
+    llvm::SmallVector<std::vector<std::reference_wrapper<MPICall>>, 4> branches;
+
+    auto collectExpr = [this](Stmt * then, Stmt * condition)
+                           -> std::vector<std::reference_wrapper<MPICall>> && {
+        std::vector<std::reference_wrapper<MPICall>> v;
+        StmtVisitor stmtVisitor{then};  // collect call exprs
+        for (CallExpr *callExpr : stmtVisitor.callExprs_) {
+            // filter mpi calls
+            if (checker_.funcClassifier_.isMPIType(
+                    callExpr->getDirectCallee()->getIdentifier())) {
+                MPICall mpiCall{callExpr, condition, false};
+
+                // add to global vector
+                MPICall::visitedCalls.emplace_back(callExpr, condition, false);
+                // add reference to branch vector
+                v.push_back(MPICall::visitedCalls.back());
             }
-        };
+        }
+        return std::move(v);
+    };
 
     if (isRankBranch) {
         // collect mpi calls in if
-        collectExpr(visitedCallsBranch, ifStmt->getThen(), ifStmt->getCond());
+        branches.emplace_back(
+            collectExpr(ifStmt->getThen(), ifStmt->getCond()));
 
         // collect mpi calls in all else if
         Stmt *elseStmt = ifStmt->getElse();  // else(if)
         while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-            collectExpr(visitedCallsBranch, elseIf->getThen(),
-                        elseIf->getCond());
+            branches.emplace_back(
+                collectExpr(elseIf->getThen(), elseIf->getCond()));
             elseStmt = elseIf->getElse();
         }
 
         // collect mpi calls in else
-        if (elseStmt) {
-            collectExpr(visitedCallsBranch, elseStmt, nullptr);
-        }
+        if (elseStmt) branches.emplace_back(collectExpr(elseStmt, nullptr));
 
         // check if collective calls are used in rank branch
-        for (const MPICall &call : visitedCallsBranch) {
-            checker_.checkCollCallInBranch(call);
-        }
+        // for (auto &branch : branches) {
+        // for (const MPICall &call : branch) {
+        // checker_.checkForColletiveInBranch(call);
+        // }
+        // }
 
         // TODO evaluate calls
     }

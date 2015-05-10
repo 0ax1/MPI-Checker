@@ -86,6 +86,9 @@ public:
     clang::ComplexType *complexType_{nullptr};
 };
 
+/**
+ * Visitor class to collect call expressions.
+ */
 class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
     StmtVisitor(clang::Stmt *stmt)  {
