@@ -8,12 +8,13 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
-  _MPI_Checker/MPIChecker.cpp
+  _MPI_Checker/MPIVisitor.cpp
   _MPI_Checker/MPIBugReporter.cpp
   _MPI_Checker/MPIFunctionClassifier.cpp
   _MPI_Checker/Utility.cpp
   _MPI_Checker/SupportingVisitors.cpp
   _MPI_Checker/MPITypes.cpp
+  _MPI_Checker/MPICheckerImpl.cpp
   ReactorChecker.cpp
   SimpleStreamChecker.cpp
   AllocationDiagnostics.cpp

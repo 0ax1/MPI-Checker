@@ -1,121 +1,18 @@
-#include <utility>
-#include "llvm/ADT/SmallVector.h"
-#include "clang/Lex/Lexer.h"
-
-#include "MPIChecker.hpp"
-#include "Container.hpp"
-#include "Utility.hpp"
-#include "MPITypes.hpp"
+#include "MPICheckerImpl.hpp"
 
 using namespace clang;
 using namespace ento;
 
 namespace mpi {
 
-// TODO deadlock detection
-// TODO send/recv pair match
-
-// visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
-bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
-    // to keep track which function implementation is currently analysed
-    if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
-        // to make display of function in diagnostics available
-        bugReporter_.currentFunctionDecl_ = functionDecl;
-    }
-    return true;
-}
-
-/**
- * Visits branches. Checks if a rank variable is involved.
- *
- * @param ifStmt
- *
- * @return
- */
-bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
-    ExprVisitor exprVisitor{ifStmt->getCond()};
-
-    bool isRankBranch{false};
-    for (const VarDecl *const varDecl : exprVisitor.vars_) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
-            isRankBranch = true;
-            break;
-        }
-    }
-
-    if (isRankBranch) {
-        Expr *ifCondition = ifStmt->getCond();
-        Stmt *then = ifStmt->getThen();
-
-        StmtVisitor stmtVisitor{then};
-
-        for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-            if (funcClassifier_.isMPIType(
-                    callExpr->getDirectCallee()->getIdentifier())) {
-                MPICall mpiCall{callExpr, ifCondition, false};
-            }
-        }
-
-        // initial else(if)
-        Stmt *elseStmt = ifStmt->getElse();
-
-        // iterate all else if branches
-        while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-            const Expr *elseIfCond = elseIf->getCond();
-            elseIfCond->dumpColor();
-            elseStmt = elseIf->getElse();
-        }
-        // check if there's an else branch
-        if (elseStmt) {
-        }
-    }
-
-    return true;
-}
-
-/**
- * Visited for each function call.
- *
- * @param callExpr
- *
- * @return
- */
-bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
-    const FunctionDecl *functionDecl = callExpr->getDirectCallee();
-
-    if (funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
-        MPICall mpiCall{callExpr};
-
-        checkBufferTypeMatch(mpiCall);
-        checkForInvalidArgs(mpiCall);
-        trackRankVariables(mpiCall);
-
-        if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
-            MPICall::visitedCalls.push_back(std::move(mpiCall));
-            checkRequestUsage(mpiCall);
-        }
-    }
-
-    return true;
-}
-
-//––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-
-void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
-    if (funcClassifier_.isMPI_Comm_rank(mpiCall.identInfo_)) {
-        VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-        MPIRank::visitedRankVariables.insert(varDecl);
-    }
-}
-
 /**
  * Checks if buffer type and specified mpi datatype matches.
  *
  * @param mpiCall call to check type correspondence for
  */
-void MPIVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // one pair consists of {bufferIdx, mpiDatatypeIdx}
-    SmallVector<std::pair<size_t, size_t>, 2> indexPairs;
+    llvm::SmallVector<std::pair<size_t, size_t>, 2> indexPairs;
 
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         indexPairs.push_back(
@@ -166,7 +63,7 @@ void MPIVisitor::checkBufferTypeMatch(const MPICall &mpiCall) const {
  * @param mpiDatatypeString
  * @param idxPair bufferIdx, mpiDatatypeIdx
  */
-void MPIVisitor::selectTypeMatcher(
+void MPICheckerImpl::selectTypeMatcher(
     const mpi::TypeVisitor &typeVisitor, const MPICall &mpiCall,
     const StringRef mpiDatatypeString,
     const std::pair<size_t, size_t> &idxPair) const {
@@ -200,12 +97,12 @@ void MPIVisitor::selectTypeMatcher(
         bugReporter_.reportTypeMismatch(mpiCall.callExpr_, idxPair);
 }
 
-bool MPIVisitor::matchBoolType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchBoolType(const mpi::TypeVisitor &visitor,
                                const llvm::StringRef mpiDatatype) const {
     return (mpiDatatype == "MPI_C_BOOL");
 }
 
-bool MPIVisitor::matchCharType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchCharType(const mpi::TypeVisitor &visitor,
                                const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
     switch (visitor.builtinType_->getKind()) {
@@ -237,7 +134,7 @@ bool MPIVisitor::matchCharType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPIVisitor::matchSignedType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchSignedType(const mpi::TypeVisitor &visitor,
                                  const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
@@ -262,7 +159,7 @@ bool MPIVisitor::matchSignedType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPIVisitor::matchUnsignedType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchUnsignedType(const mpi::TypeVisitor &visitor,
                                    const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
@@ -286,7 +183,7 @@ bool MPIVisitor::matchUnsignedType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPIVisitor::matchFloatType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchFloatType(const mpi::TypeVisitor &visitor,
                                 const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
@@ -306,7 +203,7 @@ bool MPIVisitor::matchFloatType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPIVisitor::matchComplexType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchComplexType(const mpi::TypeVisitor &visitor,
                                   const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
@@ -328,7 +225,7 @@ bool MPIVisitor::matchComplexType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPIVisitor::matchExactWidthType(const mpi::TypeVisitor &visitor,
+bool MPICheckerImpl::matchExactWidthType(const mpi::TypeVisitor &visitor,
                                      const llvm::StringRef mpiDatatype) const {
     // check typedef type match
     // no break needs to be specified for string switch
@@ -355,7 +252,7 @@ bool MPIVisitor::matchExactWidthType(const mpi::TypeVisitor &visitor,
  *
  * @param mpiCall to check the arguments for
  */
-void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkForInvalidArgs(const MPICall &mpiCall) const {
     if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
         const auto indicesToCheck = {MPIPointToPoint::kCount,
                                      MPIPointToPoint::kRank,
@@ -409,7 +306,7 @@ void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
  *
  * @return areEqual
  */
-bool MPIVisitor::areComponentsOfArgumentEqual(const MPICall &callOne,
+bool MPICheckerImpl::areComponentsOfArgumentEqual(const MPICall &callOne,
                                               const MPICall &callTwo,
                                               const size_t idx) const {
     auto argOne = callOne.arguments_[idx];
@@ -440,7 +337,7 @@ bool MPIVisitor::areComponentsOfArgumentEqual(const MPICall &callOne,
     return true;
 }
 
-bool MPIVisitor::areDatatypesEqual(const MPICall &callOne,
+bool MPICheckerImpl::areDatatypesEqual(const MPICall &callOne,
                                    const MPICall &callTwo,
                                    const size_t idx) const {
     const VarDecl *mpiTypeNew = callOne.arguments_[idx].vars_.front();
@@ -457,7 +354,7 @@ bool MPIVisitor::areDatatypesEqual(const MPICall &callOne,
  *
  * @return
  */
-bool MPIVisitor::areCommunicationTypesEqual(const MPICall &callOne,
+bool MPICheckerImpl::areCommunicationTypesEqual(const MPICall &callOne,
                                             const MPICall &callTwo) const {
     return ((funcClassifier_.isPointToPointType(callOne.identInfo_) &&
              funcClassifier_.isPointToPointType(callTwo.identInfo_)) ||
@@ -474,7 +371,7 @@ bool MPIVisitor::areCommunicationTypesEqual(const MPICall &callOne,
  *
  * @return
  */
-bool MPIVisitor::qualifyRedundancyCheck(const MPICall &callToCheck,
+bool MPICheckerImpl::qualifyRedundancyCheck(const MPICall &callToCheck,
                                         const MPICall &comparedCall) const {
     if (comparedCall.isMarked_) return false;  // to omit double matching
     // do not compare with the call itself
@@ -513,7 +410,7 @@ bool MPIVisitor::qualifyRedundancyCheck(const MPICall &callToCheck,
  *
  * @param callToCheck
  */
-void MPIVisitor::checkForRedundantCall(const MPICall &callToCheck) const {
+void MPICheckerImpl::checkForRedundantCall(const MPICall &callToCheck) const {
     SmallVector<size_t, 3> indicesToCheckComponents;
     SmallVector<size_t, 2> indicesToCheckAsString;
 
@@ -581,7 +478,7 @@ void MPIVisitor::checkForRedundantCall(const MPICall &callToCheck) const {
  *
  * @return is equal call in list
  */
-void MPIVisitor::checkForRedundantCalls() const {
+void MPICheckerImpl::checkForRedundantCalls() const {
     for (const MPICall &mpiCall : MPICall::visitedCalls) {
         checkForRedundantCall(mpiCall);
     }
@@ -592,7 +489,7 @@ void MPIVisitor::checkForRedundantCalls() const {
     }
 }
 
-void MPIVisitor::checkRequestUsage(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkRequestUsage(const MPICall &mpiCall) const {
     if (funcClassifier_.isNonBlockingType(mpiCall.identInfo_)) {
         // last argument is always the request
         auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
@@ -646,33 +543,4 @@ void MPIVisitor::checkRequestUsage(const MPICall &mpiCall) const {
     }
 }
 
-// host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-/**
- * Checker host class. Registers checker functionality.
- * Class name determines checker name to specify when the command line
- * is invoked for static analysis.
- * Receives callback for every translation unit about to visit.
- */
-class MPIChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
-public:
-    void checkASTDecl(const TranslationUnitDecl *tuDecl,
-                      AnalysisManager &analysisManager,
-                      BugReporter &bugReporter) const {
-        MPIVisitor visitor{bugReporter, *this, analysisManager};
-        visitor.TraverseTranslationUnitDecl(
-            const_cast<TranslationUnitDecl *>(tuDecl));
-
-        // invoked after travering the translation unit
-        visitor.checkForRedundantCalls();
-
-        // clear visited calls after every translation unit
-        MPICall::visitedCalls.clear();
-        MPIRequest::MPIRequest::visitedRequests.clear();
-    }
-};
-
 }  // end of namespace: mpi
-
-void ento::registerMPIChecker(CheckerManager &mgr) {
-    mgr.registerChecker<mpi::MPIChecker>();
-}

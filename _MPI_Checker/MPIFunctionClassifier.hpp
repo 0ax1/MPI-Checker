@@ -1,5 +1,5 @@
-#ifndef MPIFUNCTIONCLASSIFIER_HPP_U21GIA4Y
-#define MPIFUNCTIONCLASSIFIER_HPP_U21GIA4Y
+#ifndef MPIFUNCTIONCLASSIFIER_HPP_Q3AOUNFC
+#define MPIFUNCTIONCLASSIFIER_HPP_Q3AOUNFC
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -100,4 +100,4 @@ private:
 
 }  // end of namespace: mpi
 
-#endif  // end of include guard: MPIFUNCTIONCLASSIFIER_HPP_U21GIA4Y
+#endif  // end of include guard: MPIFUNCTIONCLASSIFIER_HPP_Q3AOUNFC
