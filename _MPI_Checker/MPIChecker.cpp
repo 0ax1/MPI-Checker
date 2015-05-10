@@ -5,7 +5,7 @@
 #include "MPIChecker.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
-#include "Typedefs.hpp"
+#include "MPITypes.hpp"
 
 using namespace clang;
 using namespace ento;
@@ -14,67 +14,6 @@ namespace mpi {
 
 // TODO deadlock detection
 // TODO send/recv pair match
-
-// types to model function calls and variables –––––––––––––––––––––––––––
-struct MPICall {
-public:
-    MPICall(CallExpr *callExpr) : callExpr_{callExpr} { init(callExpr); };
-
-    MPICall(CallExpr *callExpr, const clang::Stmt *const rankCondition,
-            bool isInsideElseBranch)
-        : callExpr_{callExpr},
-          rankCondition_{rankCondition},
-          isInsideElseBranch_{isInsideElseBranch} {
-        init(callExpr);
-    };
-
-    const CallExpr *const callExpr_;
-    const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
-    const IdentifierInfo *identInfo_;
-    const unsigned long id_{id++};
-    // marking can be changed freely by clients
-    // semantic depends on context of usage
-    mutable bool isMarked_;
-
-    // rank condition entered to execute this function
-    const clang::Stmt *const rankCondition_{nullptr};
-    const bool isInsideElseBranch_{false};
-
-    // to capture all visited calls traversing the ast
-    static llvm::SmallVector<MPICall, 16> visitedCalls;
-
-private:
-    /**
-     * Init function shared by ctors.
-     *
-     * @param callExpr mpi call captured
-     */
-    void init(CallExpr *callExpr) {
-        const FunctionDecl *functionDeclNew = callExpr_->getDirectCallee();
-        identInfo_ = functionDeclNew->getIdentifier();
-        // build argument vector
-        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // emplace triggers ExprVisitor ctor
-            const_cast<llvm::SmallVector<mpi::ExprVisitor, 8> &>(arguments_)
-                .emplace_back(callExpr->getArg(i));
-        }
-    }
-
-    static unsigned long id;
-};
-llvm::SmallVector<MPICall, 16> MPICall::visitedCalls;
-unsigned long MPICall::id{0};
-
-struct MPIRequest {
-    const VarDecl *requestVariable_;
-    const CallExpr *callUsingTheRequest_;
-    static llvm::SmallVector<MPIRequest, 4> visitedRequests;
-};
-llvm::SmallVector<MPIRequest, 4> MPIRequest::visitedRequests;
-
-namespace MPIRank {
-llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
-}
 
 // visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
@@ -433,7 +372,7 @@ void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
                     !typeVisitor.builtinType_->isIntegerType()) {
                     bugReporter_.reportInvalidArgumentType(
                         mpiCall.callExpr_, idx, var->getSourceRange(),
-                        InvalidArgType::kVariable);
+                        "Variable");
                 }
             }
 
@@ -441,8 +380,7 @@ void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
             if (arg.floatingLiterals_.size()) {
                 bugReporter_.reportInvalidArgumentType(
                     mpiCall.callExpr_, idx,
-                    arg.floatingLiterals_.front()->getSourceRange(),
-                    InvalidArgType::kLiteral);
+                    arg.floatingLiterals_.front()->getSourceRange(), "Literal");
             }
 
             // check for invalid return types from functions
@@ -453,7 +391,7 @@ void MPIVisitor::checkForInvalidArgs(const MPICall &mpiCall) const {
                     !typeVisitor.builtinType_->isIntegerType()) {
                     bugReporter_.reportInvalidArgumentType(
                         mpiCall.callExpr_, idx, function->getSourceRange(),
-                        InvalidArgType::kReturnType);
+                        "Return value from function");
                 }
             }
         }

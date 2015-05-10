@@ -2,7 +2,7 @@
 #define MPIBUGREPORTER_HPP_57XZJI4L
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "Typedefs.hpp"
+#include "MPITypes.hpp"
 
 namespace mpi {
 
@@ -17,8 +17,9 @@ public:
 
     void reportTypeMismatch(const clang::CallExpr *const,
                             const std::pair<size_t, size_t> &) const;
-    void reportInvalidArgumentType(const clang::CallExpr *const, size_t,
-                                   clang::SourceRange, InvalidArgType) const;
+    void reportInvalidArgumentType(const clang::CallExpr *const, const size_t,
+                                   const clang::SourceRange,
+                                   const std::string &) const;
     void reportRedundantCall(const clang::CallExpr *const,
                              const clang::CallExpr *const,
                              const llvm::SmallVectorImpl<size_t> &) const;

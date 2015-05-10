@@ -12,7 +12,7 @@
 #include "SupportingVisitors.hpp"
 #include "MPIFunctionClassifier.cpp"
 #include "MPIBugReporter.hpp"
-#include "Typedefs.hpp"
+#include "MPITypes.hpp"
 
 namespace mpi {
 

@@ -43,31 +43,16 @@ void MPIBugReporter::reportTypeMismatch(
  * @param idx
  * @param type
  */
-void MPIBugReporter::reportInvalidArgumentType(const CallExpr *const callExpr,
-                                               size_t idx,
-                                               SourceRange invalidSourceRange,
-                                               InvalidArgType type) const {
+void MPIBugReporter::reportInvalidArgumentType(
+    const CallExpr *const callExpr, const size_t idx,
+    const SourceRange invalidSourceRange,
+    const std::string &typeAsString) const {
     auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), d);
 
     std::string indexAsString{std::to_string(idx)};
     SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
-
-    std::string typeAsString;
-    switch (type) {
-        case InvalidArgType::kLiteral:
-            typeAsString = "Literal";
-            break;
-
-        case InvalidArgType::kVariable:
-            typeAsString = "Variable";
-            break;
-
-        case InvalidArgType::kReturnType:
-            typeAsString = "Return value from function";
-            break;
-    }
 
     bugReporter_.EmitBasicReport(
         d->getDecl(), &checkerBase_, bugTypeInvalidArgumentType,

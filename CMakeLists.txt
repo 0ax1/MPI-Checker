@@ -13,6 +13,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   _MPI_Checker/MPIFunctionClassifier.cpp
   _MPI_Checker/Utility.cpp
   _MPI_Checker/SupportingVisitors.cpp
+  _MPI_Checker/MPITypes.cpp
   ReactorChecker.cpp
   SimpleStreamChecker.cpp
   AllocationDiagnostics.cpp
