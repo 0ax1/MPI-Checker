@@ -27,6 +27,9 @@ public:
         init(callExpr);
     };
 
+    // implicit conversion function
+    operator const clang::IdentifierInfo *() const { return identInfo_; }
+
     const clang::CallExpr *const callExpr_;
     const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
     const clang::IdentifierInfo *identInfo_;

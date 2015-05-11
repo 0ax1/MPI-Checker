@@ -65,8 +65,7 @@ void MPIVisitor::stripMatchingCalls(MPIrankCase &rankCase1,
     size_t i2 = 0;
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
-        if (!checker_.funcClassifier_.isPointToPointType(
-                rankCase1[i2].get().identInfo_)) {
+        if (!checker_.funcClassifier_.isPointToPointType(rankCase1[i2].get())) {
             i2++;
 
         } else if (checker_.isSendRecvPair(rankCase1[i2], rankCase2[i])) {
@@ -75,8 +74,7 @@ void MPIVisitor::stripMatchingCalls(MPIrankCase &rankCase1,
             cont::eraseIndex(rankCase2, i--);
         }
         // if non-matching, blocking function is hit, break
-        else if (checker_.funcClassifier_.isBlockingType(
-                     rankCase2[i].get().identInfo_)) {
+        else if (checker_.funcClassifier_.isBlockingType(rankCase2[i].get())) {
             break;
         }
     }
@@ -149,7 +147,7 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
         checker_.checkForInvalidArgs(mpiCall);
         trackRankVariables(mpiCall);
 
-        if (checker_.funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
+        if (checker_.funcClassifier_.isCollectiveType(mpiCall)) {
             MPICall::visitedCalls.push_back(std::move(mpiCall));
         }
         checker_.checkRequestUsage(mpiCall);
@@ -159,7 +157,7 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 }
 
 void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
-    if (checker_.funcClassifier_.isMPI_Comm_rank(mpiCall.identInfo_)) {
+    if (checker_.funcClassifier_.isMPI_Comm_rank(mpiCall)) {
         VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
         MPIRank::visitedRankVariables.insert(varDecl);
     }

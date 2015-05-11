@@ -6,7 +6,7 @@ using namespace ento;
 namespace mpi {
 
 void MPICheckerImpl::checkForCollectiveCall(const MPICall &mpiCall) const {
-    if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
+    if (funcClassifier_.isCollectiveType(mpiCall)) {
         bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
     }
 }
@@ -20,11 +20,11 @@ void MPICheckerImpl::checkForCollectiveCall(const MPICall &mpiCall) const {
 void MPICheckerImpl::checkUnmatchedCalls(
     const llvm::SmallVectorImpl<MPIrankCase> &rankCases) const {
     for (const MPIrankCase &rankCase : rankCases) {
-        for (const MPICall &b : rankCase) {
-            if (funcClassifier_.isSendType(b.identInfo_)) {
-                bugReporter_.reportUnmatchedCall(b.callExpr_, "receive");
-            } else if (funcClassifier_.isRecvType(b.identInfo_)) {
-                bugReporter_.reportUnmatchedCall(b.callExpr_, "send");
+        for (const MPICall &call : rankCase) {
+            if (funcClassifier_.isSendType(call)) {
+                bugReporter_.reportUnmatchedCall(call.callExpr_, "receive");
+            } else if (funcClassifier_.isRecvType(call)) {
+                bugReporter_.reportUnmatchedCall(call.callExpr_, "send");
             }
         }
     }
@@ -40,8 +40,8 @@ void MPICheckerImpl::checkUnmatchedCalls(
  */
 bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
                                     const MPICall &recvCall) const {
-    if (!funcClassifier_.isSendType(sendCall.identInfo_)) return false;
-    if (!funcClassifier_.isRecvType(recvCall.identInfo_)) return false;
+    if (!funcClassifier_.isSendType(sendCall)) return false;
+    if (!funcClassifier_.isRecvType(recvCall)) return false;
 
     // compare mpi datatype
     llvm::StringRef sendType = util::sourceRangeAsStringRef(
@@ -98,11 +98,11 @@ void MPICheckerImpl::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // one pair consists of {bufferIdx, mpiDatatypeIdx}
     llvm::SmallVector<std::pair<size_t, size_t>, 2> indexPairs;
 
-    if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
+    if (funcClassifier_.isPointToPointType(mpiCall)) {
         indexPairs.push_back(
             {MPIPointToPoint::kBuf, MPIPointToPoint::kDatatype});
-    } else if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
-        if (funcClassifier_.isReduceType(mpiCall.identInfo_)) {
+    } else if (funcClassifier_.isCollectiveType(mpiCall)) {
+        if (funcClassifier_.isReduceType(mpiCall)) {
             // only check buffer type if not inplace
             if (util::sourceRangeAsStringRef(
                     mpiCall.callExpr_->getArg(0)->getSourceRange(),
@@ -110,12 +110,12 @@ void MPICheckerImpl::checkBufferTypeMatch(const MPICall &mpiCall) const {
                 indexPairs.push_back({0, 3});
             }
             indexPairs.push_back({1, 3});
-        } else if (funcClassifier_.isScatterType(mpiCall.identInfo_) ||
-                   funcClassifier_.isGatherType(mpiCall.identInfo_) ||
-                   funcClassifier_.isAlltoallType(mpiCall.identInfo_)) {
+        } else if (funcClassifier_.isScatterType(mpiCall) ||
+                   funcClassifier_.isGatherType(mpiCall) ||
+                   funcClassifier_.isAlltoallType(mpiCall)) {
             indexPairs.push_back({0, 2});
             indexPairs.push_back({3, 5});
-        } else if (funcClassifier_.isBcastType(mpiCall.identInfo_)) {
+        } else if (funcClassifier_.isBcastType(mpiCall)) {
             indexPairs.push_back({0, 2});
         }
     }
@@ -337,7 +337,7 @@ bool MPICheckerImpl::matchExactWidthType(
  * @param mpiCall to check the arguments for
  */
 void MPICheckerImpl::checkForInvalidArgs(const MPICall &mpiCall) const {
-    if (funcClassifier_.isPointToPointType(mpiCall.identInfo_)) {
+    if (funcClassifier_.isPointToPointType(mpiCall)) {
         const auto indicesToCheck = {MPIPointToPoint::kCount,
                                      MPIPointToPoint::kRank,
                                      MPIPointToPoint::kTag};
@@ -433,23 +433,6 @@ bool MPICheckerImpl::areDatatypesEqual(const MPICall &callOne,
 }
 
 /**
- * Check if two calls are both point to point or collective calls.
- *
- * @param callOne
- * @param callTwo
- *
- * @return
- */
-bool MPICheckerImpl::areCommunicationTypesEqual(const MPICall &callOne,
-                                                const MPICall &callTwo) const {
-    return ((funcClassifier_.isPointToPointType(callOne.identInfo_) &&
-             funcClassifier_.isPointToPointType(callTwo.identInfo_)) ||
-
-            (funcClassifier_.isCollectiveType(callOne.identInfo_) &&
-             funcClassifier_.isCollectiveType(callTwo.identInfo_)));
-}
-
-/**
  * Check if two calls qualify for a redundancy check.
  *
  * @param callToCheck
@@ -462,31 +445,35 @@ bool MPICheckerImpl::qualifyRedundancyCheck(const MPICall &callToCheck,
     if (comparedCall.isMarked_) return false;  // to omit double matching
     // do not compare with the call itself
     if (callToCheck.id_ == comparedCall.id_) return false;
-    if (!areCommunicationTypesEqual(callToCheck, comparedCall)) return false;
+    if (!((funcClassifier_.isPointToPointType(callToCheck) &&
+           funcClassifier_.isPointToPointType(comparedCall)) ||
+          (funcClassifier_.isCollectiveType(callToCheck) &&
+           funcClassifier_.isCollectiveType(comparedCall))))
+        return false;
 
-    if (funcClassifier_.isPointToPointType(callToCheck.identInfo_)) {
+    if (funcClassifier_.isPointToPointType(callToCheck)) {
         // both must be send or recv types
-        return (funcClassifier_.isSendType(callToCheck.identInfo_) &&
-                funcClassifier_.isSendType(comparedCall.identInfo_)) ||
-               (funcClassifier_.isRecvType(callToCheck.identInfo_) &&
-                funcClassifier_.isRecvType(comparedCall.identInfo_));
+        return (funcClassifier_.isSendType(callToCheck) &&
+                funcClassifier_.isSendType(comparedCall)) ||
+               (funcClassifier_.isRecvType(callToCheck) &&
+                funcClassifier_.isRecvType(comparedCall));
 
-    } else if (funcClassifier_.isCollectiveType(callToCheck.identInfo_)) {
+    } else if (funcClassifier_.isCollectiveType(callToCheck)) {
         // calls must be of the same type
-        return (funcClassifier_.isScatterType(callToCheck.identInfo_) &&
-                funcClassifier_.isScatterType(comparedCall.identInfo_)) ||
+        return (funcClassifier_.isScatterType(callToCheck) &&
+                funcClassifier_.isScatterType(comparedCall)) ||
 
-               (funcClassifier_.isGatherType(callToCheck.identInfo_) &&
-                funcClassifier_.isGatherType(comparedCall.identInfo_)) ||
+               (funcClassifier_.isGatherType(callToCheck) &&
+                funcClassifier_.isGatherType(comparedCall)) ||
 
-               (funcClassifier_.isAlltoallType(callToCheck.identInfo_) &&
-                funcClassifier_.isAlltoallType(comparedCall.identInfo_)) ||
+               (funcClassifier_.isAlltoallType(callToCheck) &&
+                funcClassifier_.isAlltoallType(comparedCall)) ||
 
-               (funcClassifier_.isBcastType(callToCheck.identInfo_) &&
-                funcClassifier_.isBcastType(comparedCall.identInfo_)) ||
+               (funcClassifier_.isBcastType(callToCheck) &&
+                funcClassifier_.isBcastType(comparedCall)) ||
 
-               (funcClassifier_.isReduceType(callToCheck.identInfo_) &&
-                funcClassifier_.isReduceType(comparedCall.identInfo_));
+               (funcClassifier_.isReduceType(callToCheck) &&
+                funcClassifier_.isReduceType(comparedCall));
     }
     return false;
 }
@@ -500,20 +487,20 @@ void MPICheckerImpl::checkForRedundantCall(const MPICall &callToCheck) const {
     SmallVector<size_t, 3> indicesToCheckComponents;
     SmallVector<size_t, 2> indicesToCheckAsString;
 
-    if (funcClassifier_.isPointToPointType(callToCheck.identInfo_)) {
+    if (funcClassifier_.isPointToPointType(callToCheck)) {
         indicesToCheckComponents = {MPIPointToPoint::kCount,
                                     MPIPointToPoint::kRank,
                                     MPIPointToPoint::kTag};
         indicesToCheckAsString = {MPIPointToPoint::kDatatype};
-    } else if (funcClassifier_.isReduceType(callToCheck.identInfo_)) {
+    } else if (funcClassifier_.isReduceType(callToCheck)) {
         indicesToCheckComponents = {2};
         indicesToCheckAsString = {3, 4};
-    } else if (funcClassifier_.isScatterType(callToCheck.identInfo_) ||
-               funcClassifier_.isGatherType(callToCheck.identInfo_) ||
-               funcClassifier_.isAlltoallType(callToCheck.identInfo_)) {
+    } else if (funcClassifier_.isScatterType(callToCheck) ||
+               funcClassifier_.isGatherType(callToCheck) ||
+               funcClassifier_.isAlltoallType(callToCheck)) {
         indicesToCheckComponents = {1, 4, 6};
         indicesToCheckAsString = {2, 5};
-    } else if (funcClassifier_.isBcastType(callToCheck.identInfo_)) {
+    } else if (funcClassifier_.isBcastType(callToCheck)) {
         indicesToCheckComponents = {1, 3};
         indicesToCheckAsString = {2};
     }
@@ -576,7 +563,7 @@ void MPICheckerImpl::checkForRedundantCalls() const {
 }
 
 void MPICheckerImpl::checkRequestUsage(const MPICall &mpiCall) const {
-    if (funcClassifier_.isNonBlockingType(mpiCall.identInfo_)) {
+    if (funcClassifier_.isNonBlockingType(mpiCall)) {
         // last argument is always the request
         auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
         auto requestVar = arg.vars_.front();
@@ -595,12 +582,12 @@ void MPICheckerImpl::checkRequestUsage(const MPICall &mpiCall) const {
         }
     }
 
-    if (funcClassifier_.isWaitType(mpiCall.identInfo_)) {
+    if (funcClassifier_.isWaitType(mpiCall)) {
         llvm::SmallVector<VarDecl *, 1> requestVector;
 
-        if (funcClassifier_.isMPI_Wait(mpiCall.identInfo_)) {
+        if (funcClassifier_.isMPI_Wait(mpiCall)) {
             requestVector.push_back(mpiCall.arguments_[0].vars_.front());
-        } else if (funcClassifier_.isMPI_Waitall(mpiCall.identInfo_)) {
+        } else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
             ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
             arrayVisitor.vars_.resize(arrayVisitor.vars_.size() / 2);  // hack
 
