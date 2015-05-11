@@ -6,16 +6,8 @@ using namespace ento;
 
 namespace mpi {
 
-const std::string bugGroupMPIError{"MPI Error"};
-const std::string bugGroupMPIWarning{"MPI Warning"};
-
-const std::string bugTypeEfficiency{"schema efficiency"};
-const std::string bugTypeInvalidArgumentType{"invalid argument type"};
-const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
-const std::string bugTypeRequestUsage{"invalid request usage"};
-const std::string bugTypeUnmatchedWait{"unmatched wait function"};
-const std::string bugTypeUnmatchedCall{"unmatched function"};
-const std::string bugTypeCollCallInBranch{"collective call inside rank branch"};
+const std::string MPIError{"MPI Error"};
+const std::string MPIWarning{"MPI Warning"};
 
 /**
  * Get line number for call expression
@@ -44,13 +36,15 @@ void MPIBugReporter::reportTypeMismatch(
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), adc);
 
-    SourceRange range = callExpr->getCallee()->getSourceRange();
+    SourceRange callRange = callExpr->getCallee()->getSourceRange();
+    std::string bugName{"buffer type mismatch"};
+    std::string errorText{"Buffer type and specified MPI type do not match. "};
 
-    bugReporter_.EmitBasicReport(
-        adc->getDecl(), &checkerBase_, bugTypeArgumentTypeMismatch,
-        bugGroupMPIError, "Buffer type and specified MPI type do not match. ",
-        location, {range, callExpr->getArg(idxPair.first)->getSourceRange(),
-                   callExpr->getArg(idxPair.second)->getSourceRange()});
+    std::vector<SourceRange> sourceRanges{
+        callRange, callExpr->getArg(idxPair.first)->getSourceRange(),
+        callExpr->getArg(idxPair.second)->getSourceRange()};
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+                                 MPIError, errorText, location, sourceRanges);
 }
 
 /**
@@ -64,13 +58,13 @@ void MPIBugReporter::reportCollCallInBranch(
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
-
-    bugReporter_.EmitBasicReport(
-        adc->getDecl(), &checkerBase_, bugTypeCollCallInBranch,
-        bugGroupMPIError,
+    std::string bugName{"collective call inside rank branch"};
+    std::string errorText{
         "Collective calls must be executed by all processes."
-        " Move this call out of the rank branch. ",
-        location, range);
+        " Move this call out of the rank branch. "};
+
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+                                 MPIError, errorText, location, range);
 }
 
 /**
@@ -86,10 +80,11 @@ void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
+    std::string bugName{"unmatched function"};
+    std::string errorText{"No matching " + missingType + " function found. "};
 
-    bugReporter_.EmitBasicReport(
-        adc->getDecl(), &checkerBase_, bugTypeUnmatchedCall, bugGroupMPIError,
-        "No matching " + missingType + " function found. ", location, range);
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+                                 MPIError, errorText, location, range);
 }
 
 /**
@@ -109,12 +104,13 @@ void MPIBugReporter::reportInvalidArgumentType(
 
     std::string indexAsString{std::to_string(idx)};
     SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
+    std::string bugName{"invalid argument type"};
+    std::string errorText{typeAsString + " used at index " + indexAsString +
+                          " is not valid. "};
 
-    bugReporter_.EmitBasicReport(
-        d->getDecl(), &checkerBase_, bugTypeInvalidArgumentType,
-        bugGroupMPIError,
-        typeAsString + " used at index " + indexAsString + " is not valid. ",
-        location, {callExprRange, invalidSourceRange});
+    bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugName, MPIError,
+                                 errorText, location,
+                                 {callExprRange, invalidSourceRange});
 }
 
 /**
@@ -145,13 +141,17 @@ void MPIBugReporter::reportRedundantCall(
         sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
     }
 
-    bugReporter_.EmitBasicReport(
-        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeEfficiency,
-        bugGroupMPIWarning,
-        "Identical communication arguments used in " +
-            matchedCall->getDirectCallee()->getNameAsString() + " in line " +
-            lineNo + ".\nConsider to summarize these calls. ",
-        location, sourceRanges);
+    std::string redundantCallName{
+        matchedCall->getDirectCallee()->getNameAsString()};
+
+    std::string bugName{"schema efficiency"};
+    std::string errorText{"Identical communication arguments used in " +
+                          redundantCallName + " in line " + lineNo +
+                          ".\nConsider to summarize these calls. "};
+
+    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 bugName, MPIWarning, errorText, location,
+                                 sourceRanges);
 }
 
 /**
@@ -172,17 +172,17 @@ void MPIBugReporter::reportDoubleRequestUse(
         newCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
     std::string lineNo = lineNumberForCallExpr(prevCall);
+    std::string prevCallName{prevCall->getDirectCallee()->getNameAsString()};
+    std::string errorText{"Same request variable used in " + prevCallName +
+                          " in line " + lineNo + "before matching wait. "};
+    std::vector<SourceRange> sourceRanges{newCall->getSourceRange(),
+                                          requestVar->getSourceRange(),
+                                          prevCall->getSourceRange()};
+    std::string bugName{"invalid request usage"};
 
-    bugReporter_.EmitBasicReport(
-        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeRequestUsage,
-        bugGroupMPIError,
-        "Same request variable used in " +
-            prevCall->getDirectCallee()->getNameAsString() + " in line " +
-            lineNo +
-            ".\nUse different request variables or\nmatch the "
-            "preceeding call with a wait function before. ",
-        location, {newCall->getSourceRange(), requestVar->getSourceRange(),
-                   prevCall->getSourceRange()});
+    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 bugName, MPIError, errorText, location,
+                                 sourceRanges);
 }
 
 /**
@@ -199,12 +199,17 @@ void MPIBugReporter::reportUnmatchedWait(
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         waitCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
-    bugReporter_.EmitBasicReport(
-        analysisDeclCtx->getDecl(), &checkerBase_, bugTypeUnmatchedWait,
-        bugGroupMPIError, "No immediate call is matching request " +
-                              requestVar->getNameAsString() +
-                              ". This will result in an endless wait. ",
-        location, {waitCall->getSourceRange(), requestVar->getSourceRange()});
+    std::string bugName{"unmatched wait function"};
+    std::string errorText{"No immediate call is matching request " +
+                          requestVar->getNameAsString() +
+                          ". This will result in an endless wait. "};
+
+    std::vector<SourceRange> sourceRanges{waitCall->getSourceRange(),
+                                          requestVar->getSourceRange()};
+
+    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 bugName, MPIError, errorText, location,
+                                 sourceRanges);
 }
 
 }  // end of namespace: mpi
