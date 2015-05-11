@@ -19,9 +19,7 @@ const std::string bugTypeCollCallInBranch{"collective call inside rank branch"};
 
 /**
  * Get line number for call expression
- *
  * @param call
- *
  * @return line number as string
  */
 std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
@@ -75,6 +73,12 @@ void MPIBugReporter::reportCollCallInBranch(
         location, range);
 }
 
+/**
+ * Report unmatched call for point to point send/recv functions.
+ *
+ * @param callExpr
+ * @param missingType
+ */
 void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
                                          std::string missingType) const {
     auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
@@ -113,6 +117,13 @@ void MPIBugReporter::reportInvalidArgumentType(
         location, {callExprRange, invalidSourceRange});
 }
 
+/**
+ * Report calls with quasi identical arguments.
+ *
+ * @param matchedCall
+ * @param duplicateCall
+ * @param indices identical arguments
+ */
 void MPIBugReporter::reportRedundantCall(
     const CallExpr *const matchedCall, const CallExpr *const duplicateCall,
     const llvm::SmallVectorImpl<size_t> &indices) const {
@@ -143,6 +154,14 @@ void MPIBugReporter::reportRedundantCall(
         location, sourceRanges);
 }
 
+/**
+ * Report double usage of request vars by immediate functions before
+ * matching waits.
+ *
+ * @param newCall
+ * @param requestVar
+ * @param prevCall
+ */
 void MPIBugReporter::reportDoubleRequestUse(
     const CallExpr *const newCall, const VarDecl *const requestVar,
     const CallExpr *const prevCall) const {
@@ -166,8 +185,14 @@ void MPIBugReporter::reportDoubleRequestUse(
                    prevCall->getSourceRange()});
 }
 
-void MPIBugReporter::reportUnmatchedWait(const CallExpr *const waitCall,
-                                         const VarDecl *const varDecl) const {
+/**
+ * Report wait without matching immediate send function.
+ *
+ * @param waitCall
+ * @param requestVar request variable used in wait
+ */
+void MPIBugReporter::reportUnmatchedWait(
+    const CallExpr *const waitCall, const VarDecl *const requestVar) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
@@ -176,10 +201,10 @@ void MPIBugReporter::reportUnmatchedWait(const CallExpr *const waitCall,
 
     bugReporter_.EmitBasicReport(
         analysisDeclCtx->getDecl(), &checkerBase_, bugTypeUnmatchedWait,
-        bugGroupMPIError,
-        "No immediate call is matching request " + varDecl->getNameAsString() +
-            ". This will result in an endless wait. ",
-        location, {waitCall->getSourceRange(), varDecl->getSourceRange()});
+        bugGroupMPIError, "No immediate call is matching request " +
+                              requestVar->getNameAsString() +
+                              ". This will result in an endless wait. ",
+        location, {waitCall->getSourceRange(), requestVar->getSourceRange()});
 }
 
 }  // end of namespace: mpi
