@@ -5,19 +5,109 @@ using namespace ento;
 
 namespace mpi {
 
-
-void MPICheckerImpl::checkForCollectiveInCase(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkForCollectiveCall(const MPICall &mpiCall) const {
     if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
         bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
     }
 }
 
-bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
-        const MPICall &recvCall) const {
+/**
+ * Iterates rank cases looking for point to point send or receive
+ * functions. If found report them as unmatched.
+ *
+ * @param rankCases
+ */
+void MPICheckerImpl::checkUnmatchedCalls(
+    const llvm::SmallVectorImpl<MPIrankCase> &rankCases) const {
+    for (const MPIrankCase &rankCase : rankCases) {
+        for (const MPICall &b : rankCase) {
+            if (funcClassifier_.isPointToPointType(b.identInfo_)) {
+                if (funcClassifier_.isSendType(b.identInfo_)) {
+                    bugReporter_.reportUnmatchedCall(b.callExpr_, "receive");
+                }
+                else if (funcClassifier_.isRecvType(b.identInfo_)) {
+                    bugReporter_.reportUnmatchedCall(b.callExpr_, "send");
+                }
+            }
+        }
+    }
+}
 
-    // bool isPairMatching{true};
+/**
+ * Check if two calls are a send/recv pair.
+ *
+ * @param sendCall
+ * @param recvCall
+ *
+ * @return if they are send/recv pair
+ */
+bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
+                                    const MPICall &recvCall) const {
     if (!funcClassifier_.isSendType(sendCall.identInfo_)) return false;
     if (!funcClassifier_.isRecvType(recvCall.identInfo_)) return false;
+
+    // compare mpi datatype
+    llvm::StringRef sendType = util::sourceRangeAsStringRef(
+        sendCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
+        analysisManager_);
+
+    llvm::StringRef recvType = util::sourceRangeAsStringRef(
+        recvCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
+        analysisManager_);
+
+    if (sendType != recvType) return false;
+
+    // compare count, tag
+    for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
+        if (!areComponentsOfArgumentEqual(sendCall, recvCall, idx)) {
+            return false;
+        }
+    }
+
+    // compare rank
+    auto rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
+    auto rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+
+    auto operatorsSend = rankArgSend.binaryOperators_;
+    auto operatorsRecv = rankArgRecv.binaryOperators_;
+
+    // // if send is single rank literal
+    if (rankArgSend.intValues_.size() == 1 &&
+        !rankArgSend.binaryOperators_.size()) {
+        if (rankArgRecv.intValues_.size() != 1) return false;
+
+        if (operatorsRecv.size() == 1) {
+            if (rankArgRecv.intValues_.size() == 1 &&
+                !(BinaryOperatorKind::BO_Sub == operatorsRecv.front()))
+                return false;
+        }
+
+        // send rank must be != recv rank
+        if (rankArgSend.intValues_.front() == rankArgRecv.intValues_.front())
+            return false;
+    }
+
+    // if rank is dynamic and uses literal
+    if (rankArgSend.vars_.size() && rankArgRecv.intValues_.size()) {
+        // literals must match
+        if (!util::isPermutation(rankArgSend.integerLiterals_,
+                                 rankArgRecv.integerLiterals_))
+            return false;
+    }
+
+    if (!util::isPermutation(rankArgSend.functions_, rankArgRecv.functions_))
+        return false;
+
+    // // if only one operator is used expect it to be inverse
+    // if (operatorsSend.size() == 1 && operatorsRecv.size() == 1) {
+    // if (BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+    // !(BinaryOperatorKind::BO_Sub == operatorsRecv.front())) {
+    // return false;
+    // } else if (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+    // !(BinaryOperatorKind::BO_Add == operatorsRecv.front())) {
+    // return false;
+    // }
+    // }
 
     return true;
 }
@@ -115,12 +205,12 @@ void MPICheckerImpl::selectTypeMatcher(
 }
 
 bool MPICheckerImpl::matchBoolType(const mpi::TypeVisitor &visitor,
-                               const llvm::StringRef mpiDatatype) const {
+                                   const llvm::StringRef mpiDatatype) const {
     return (mpiDatatype == "MPI_C_BOOL");
 }
 
 bool MPICheckerImpl::matchCharType(const mpi::TypeVisitor &visitor,
-                               const llvm::StringRef mpiDatatype) const {
+                                   const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
     switch (visitor.builtinType_->getKind()) {
         case BuiltinType::SChar:
@@ -152,7 +242,7 @@ bool MPICheckerImpl::matchCharType(const mpi::TypeVisitor &visitor,
 }
 
 bool MPICheckerImpl::matchSignedType(const mpi::TypeVisitor &visitor,
-                                 const llvm::StringRef mpiDatatype) const {
+                                     const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -176,8 +266,8 @@ bool MPICheckerImpl::matchSignedType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPICheckerImpl::matchUnsignedType(const mpi::TypeVisitor &visitor,
-                                   const llvm::StringRef mpiDatatype) const {
+bool MPICheckerImpl::matchUnsignedType(
+    const mpi::TypeVisitor &visitor, const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -201,7 +291,7 @@ bool MPICheckerImpl::matchUnsignedType(const mpi::TypeVisitor &visitor,
 }
 
 bool MPICheckerImpl::matchFloatType(const mpi::TypeVisitor &visitor,
-                                const llvm::StringRef mpiDatatype) const {
+                                    const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -221,7 +311,7 @@ bool MPICheckerImpl::matchFloatType(const mpi::TypeVisitor &visitor,
 }
 
 bool MPICheckerImpl::matchComplexType(const mpi::TypeVisitor &visitor,
-                                  const llvm::StringRef mpiDatatype) const {
+                                      const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -242,8 +332,8 @@ bool MPICheckerImpl::matchComplexType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPICheckerImpl::matchExactWidthType(const mpi::TypeVisitor &visitor,
-                                     const llvm::StringRef mpiDatatype) const {
+bool MPICheckerImpl::matchExactWidthType(
+    const mpi::TypeVisitor &visitor, const llvm::StringRef mpiDatatype) const {
     // check typedef type match
     // no break needs to be specified for string switch
     bool isTypeMatching = llvm::StringSwitch<bool>(visitor.typedefTypeName_)
@@ -324,8 +414,8 @@ void MPICheckerImpl::checkForInvalidArgs(const MPICall &mpiCall) const {
  * @return areEqual
  */
 bool MPICheckerImpl::areComponentsOfArgumentEqual(const MPICall &callOne,
-                                              const MPICall &callTwo,
-                                              const size_t idx) const {
+                                                  const MPICall &callTwo,
+                                                  const size_t idx) const {
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
 
@@ -355,8 +445,8 @@ bool MPICheckerImpl::areComponentsOfArgumentEqual(const MPICall &callOne,
 }
 
 bool MPICheckerImpl::areDatatypesEqual(const MPICall &callOne,
-                                   const MPICall &callTwo,
-                                   const size_t idx) const {
+                                       const MPICall &callTwo,
+                                       const size_t idx) const {
     const VarDecl *mpiTypeNew = callOne.arguments_[idx].vars_.front();
     const VarDecl *mpiTypePrev = callTwo.arguments_[idx].vars_.front();
 
@@ -372,7 +462,7 @@ bool MPICheckerImpl::areDatatypesEqual(const MPICall &callOne,
  * @return
  */
 bool MPICheckerImpl::areCommunicationTypesEqual(const MPICall &callOne,
-                                            const MPICall &callTwo) const {
+                                                const MPICall &callTwo) const {
     return ((funcClassifier_.isPointToPointType(callOne.identInfo_) &&
              funcClassifier_.isPointToPointType(callTwo.identInfo_)) ||
 
@@ -389,7 +479,7 @@ bool MPICheckerImpl::areCommunicationTypesEqual(const MPICall &callOne,
  * @return
  */
 bool MPICheckerImpl::qualifyRedundancyCheck(const MPICall &callToCheck,
-                                        const MPICall &comparedCall) const {
+                                            const MPICall &comparedCall) const {
     if (comparedCall.isMarked_) return false;  // to omit double matching
     // do not compare with the call itself
     if (callToCheck.id_ == comparedCall.id_) return false;

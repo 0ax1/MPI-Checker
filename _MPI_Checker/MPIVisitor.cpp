@@ -35,9 +35,8 @@ bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     return isInRankBranch;
 }
 
-std::vector<std::reference_wrapper<MPICall>>
-MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
-    std::vector<std::reference_wrapper<MPICall>> ifCaseVector;
+MPIrankCase MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
+    MPIrankCase rankCaseVector;
     StmtVisitor stmtVisitor{then};  // collect call exprs
     for (CallExpr *callExpr : stmtVisitor.callExprs_) {
         // filter mpi calls
@@ -45,83 +44,91 @@ MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
                 callExpr->getDirectCallee()->getIdentifier())) {
             // add to global vector
             MPICall::visitedCalls.emplace_back(callExpr, condition, false);
-            // add reference to ifCase vector
-            ifCaseVector.push_back(MPICall::visitedCalls.back());
+            // add reference to rankCase vector
+            rankCaseVector.push_back(MPICall::visitedCalls.back());
         }
     }
-    return ifCaseVector;
+    return rankCaseVector;
 }
 
 /**
- * Visits ifCases. Checks if a rank variable is involved.
+ * Strips calls from two different rank cases where the mpi send and receive
+ * functions match. This respects the order of functions inside the cases. While
+ * nonblocking calls are just skipped in case of a mismatch, blocking calls on
+ * the recv side that do not match quit the loop.
+ *
+ * @param rankCase1
+ * @param rankCase2
+ */
+void MPIVisitor::stripMatchingCalls(MPIrankCase &rankCase1,
+                                    MPIrankCase &rankCase2) {
+    size_t i2 = 0;
+    for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
+        // skip non point to point
+        if (!checker_.funcClassifier_.isPointToPointType(
+                rankCase1[i2].get().identInfo_)) {
+            i2++;
+
+        } else if (checker_.isSendRecvPair(rankCase1[i2], rankCase2[i])) {
+            // remove matched calls
+            cont::eraseIndex(rankCase1, i2);
+            cont::eraseIndex(rankCase2, i--);
+        }
+        // if non-matching, blocking function is hit, break
+        else if (checker_.funcClassifier_.isBlockingType(
+                     rankCase2[i].get().identInfo_)) {
+            break;
+        }
+    }
+}
+
+/**
+ * Visits rankCases. Checks if a rank variable is involved.
  *
  * @param ifStmt
  *
  * @return
  */
 bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
-    // vector element must be assignable -> use std:vector is inside
-    llvm::SmallVector<std::vector<std::reference_wrapper<MPICall>>, 4> ifCases;
+    if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
 
-    // only inspect rank ifCases
-    if (!isRankBranch(ifStmt)) return true;
+    // vector element must be assignable -> use std:vector is inside
+    llvm::SmallVector<MPIrankCase, 4> rankCases;
 
     // collect mpi calls in if
-    ifCases.emplace_back(
+    rankCases.emplace_back(
         collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond()));
 
     // collect mpi calls in all else if
     Stmt *elseStmt = ifStmt->getElse();
     while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-        ifCases.emplace_back(
+        rankCases.emplace_back(
             collectMPICallsInCase(elseIf->getThen(), elseIf->getCond()));
         elseStmt = elseIf->getElse();
     }
 
     // collect mpi calls in else
     if (elseStmt)
-        ifCases.emplace_back(collectMPICallsInCase(elseStmt, nullptr));
+        rankCases.emplace_back(collectMPICallsInCase(elseStmt, nullptr));
 
-    // check if collective calls are used in rank ifCase
-    for (auto &ifCase : ifCases) {
-        for (const MPICall &call : ifCase) {
-            checker_.checkForCollectiveInCase(call);
+    // check if collective calls are used in rank rankCase
+    for (const MPIrankCase &rankCase : rankCases) {
+        for (const MPICall &call : rankCase) {
+            checker_.checkForCollectiveCall(call);
         }
     }
 
     for (size_t i = 0; i < 2; ++i) {
-        for (auto &ifCase1 : ifCases) {
-            for (auto &ifCase2 : ifCases) {
-                // compare by pointer of vector
-                if (&ifCase1 == &ifCase2) continue;
-                size_t i2 = 0;
-                for (size_t i = 0; i < ifCase2.size() && ifCase1.size(); ++i) {
-                    // skip non point to point
-                    if (!checker_.funcClassifier_.isPointToPointType(
-                            ifCase1[i2].get().identInfo_)) {
-                        i2++;
-
-                    } else if (checker_.isSendRecvPair(ifCase1[i2],
-                                                       ifCase2[i])) {
-                        // remove matched calls
-                        cont::eraseIndex(ifCase1, i2);
-                        cont::eraseIndex(ifCase2, i--);
-                    } else if (checker_.funcClassifier_.isBlockingType(
-                                   ifCase2[i].get().identInfo_)) {
-                        break;
-                    }
-                }
+        for (MPIrankCase &rankCase1 : rankCases) {
+            for (MPIrankCase &rankCase2 : rankCases) {
+                // compare by pointer
+                if (&rankCase1 == &rankCase2) continue;
+                stripMatchingCalls(rankCase1, rankCase2);
             }
         }
     }
 
-    for (auto &ifCase : ifCases) {
-        for (const MPICall &b : ifCase) {
-            if (checker_.funcClassifier_.isPointToPointType(b.identInfo_)) {
-                llvm::outs() << "unmatched " + b.identInfo_->getName() << "\n";
-            }
-        }
-    }
+    checker_.checkUnmatchedCalls(rankCases);
     return true;
 }
 

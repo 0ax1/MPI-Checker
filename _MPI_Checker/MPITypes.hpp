@@ -74,5 +74,7 @@ namespace MPIRank {
 extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
+typedef std::vector<std::reference_wrapper<MPICall>> MPIrankCase;
+
 }  // end of namespace: mpi
 #endif  // end of include guard: MPITYPES_HPP_IC7XR2MI

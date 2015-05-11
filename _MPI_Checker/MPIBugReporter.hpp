@@ -30,6 +30,8 @@ public:
                              const clang::VarDecl *const) const;
 
     void reportCollCallInBranch(const clang::CallExpr *const) const;
+    void reportUnmatchedCall(const clang::CallExpr *const,
+            std::string) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 

@@ -14,6 +14,7 @@ const std::string bugTypeInvalidArgumentType{"invalid argument type"};
 const std::string bugTypeArgumentTypeMismatch{"buffer type mismatch"};
 const std::string bugTypeRequestUsage{"invalid request usage"};
 const std::string bugTypeUnmatchedWait{"unmatched wait function"};
+const std::string bugTypeUnmatchedCall{"unmatched function"};
 const std::string bugTypeCollCallInBranch{"collective call inside rank branch"};
 
 /**
@@ -32,7 +33,6 @@ std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
     std::vector<std::string> strs = util::split(lineNo, ':');
     return strs.at(strs.size() - 2);
 }
-
 
 // bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -56,11 +56,11 @@ void MPIBugReporter::reportTypeMismatch(
 }
 
 /**
- * Reports mismach between buffer type and mpi datatype.
- * @param callExpr
+ * Reports if a collective call is used inside a rank branch.
+ * @param callExpr collective call
  */
 void MPIBugReporter::reportCollCallInBranch(
-    const CallExpr * const callExpr) const {
+    const CallExpr *const callExpr) const {
     auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), adc);
@@ -69,9 +69,23 @@ void MPIBugReporter::reportCollCallInBranch(
 
     bugReporter_.EmitBasicReport(
         adc->getDecl(), &checkerBase_, bugTypeCollCallInBranch,
-        bugGroupMPIError, "Collective calls must be executed by all processes."
-        " Move this call out of the rank branch. " ,
+        bugGroupMPIError,
+        "Collective calls must be executed by all processes."
+        " Move this call out of the rank branch. ",
         location, range);
+}
+
+void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
+                                         std::string missingType) const {
+    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), adc);
+
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+
+    bugReporter_.EmitBasicReport(
+        adc->getDecl(), &checkerBase_, bugTypeUnmatchedCall, bugGroupMPIError,
+        "No matching " + missingType + " function found. ", location, range);
 }
 
 /**
