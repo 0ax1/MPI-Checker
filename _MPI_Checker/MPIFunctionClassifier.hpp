@@ -60,20 +60,20 @@ private:
     void initAdditionalIdentifiers(clang::ento::AnalysisManager &);
 
     // to enable classification of mpi-functions during analysis
-    std::vector<clang::IdentifierInfo *> mpiSendTypes_;
-    std::vector<clang::IdentifierInfo *> mpiRecvTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 8> mpiSendTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 2> mpiRecvTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiBlockingTypes_;
-    std::vector<clang::IdentifierInfo *> mpiNonBlockingTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 12> mpiBlockingTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 12> mpiNonBlockingTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiPointToPointTypes_;
-    std::vector<clang::IdentifierInfo *> mpiCollectiveTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 10> mpiPointToPointTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 16> mpiCollectiveTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiPointToCollTypes_;
-    std::vector<clang::IdentifierInfo *> mpiCollToPointTypes_;
-    std::vector<clang::IdentifierInfo *> mpiCollToCollTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 4> mpiPointToCollTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 4> mpiCollToPointTypes_;
+    llvm::SmallVector<clang::IdentifierInfo *, 6> mpiCollToCollTypes_;
 
-    std::vector<clang::IdentifierInfo *> mpiType_;
+    llvm::SmallVector<clang::IdentifierInfo *, 32> mpiType_;
 
     // point to point functions
     clang::IdentifierInfo *identInfo_MPI_Send_{nullptr},

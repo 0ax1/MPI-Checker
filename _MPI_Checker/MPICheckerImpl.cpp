@@ -24,8 +24,7 @@ void MPICheckerImpl::checkUnmatchedCalls(
             if (funcClassifier_.isPointToPointType(b.identInfo_)) {
                 if (funcClassifier_.isSendType(b.identInfo_)) {
                     bugReporter_.reportUnmatchedCall(b.callExpr_, "receive");
-                }
-                else if (funcClassifier_.isRecvType(b.identInfo_)) {
+                } else if (funcClassifier_.isRecvType(b.identInfo_)) {
                     bugReporter_.reportUnmatchedCall(b.callExpr_, "send");
                 }
             }
@@ -57,9 +56,9 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
 
     if (sendType != recvType) return false;
 
-    // compare count, tag
+    // compare count, tag (expected to be static)
     for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!areComponentsOfArgumentEqual(sendCall, recvCall, idx)) {
+        if (!areComponentsOfArgEqual(sendCall, recvCall, idx)) {
             return false;
         }
     }
@@ -68,46 +67,26 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
     auto rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
     auto rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
 
-    auto operatorsSend = rankArgSend.binaryOperators_;
-    auto operatorsRecv = rankArgRecv.binaryOperators_;
+    // if has std form rank +/- literal
+    if (rankArgSend.binaryOperators_.size() == 1 &&
+        rankArgRecv.binaryOperators_.size() == 1 &&
+        rankArgSend.intValues_.size() == 1 &&
+        rankArgRecv.intValues_.size() == 1 && rankArgSend.vars_.size() == 1 &&
+        rankArgRecv.vars_.size() == 1) {
+        auto operatorsSend = rankArgSend.binaryOperators_;
+        auto operatorsRecv = rankArgRecv.binaryOperators_;
 
-    // // if send is single rank literal
-    if (rankArgSend.intValues_.size() == 1 &&
-        !rankArgSend.binaryOperators_.size()) {
-        if (rankArgRecv.intValues_.size() != 1) return false;
+        // operators must be inverse, literal must match
+        if (!(((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+                BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
 
-        if (operatorsRecv.size() == 1) {
-            if (rankArgRecv.intValues_.size() == 1 &&
-                !(BinaryOperatorKind::BO_Sub == operatorsRecv.front()))
-                return false;
-        }
+               (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+                BinaryOperatorKind::BO_Add == operatorsRecv.front())) &&
 
-        // send rank must be != recv rank
-        if (rankArgSend.intValues_.front() == rankArgRecv.intValues_.front())
+              rankArgSend.intValues_.front() == rankArgRecv.intValues_.front()))
+
             return false;
     }
-
-    // if rank is dynamic and uses literal
-    if (rankArgSend.vars_.size() && rankArgRecv.intValues_.size()) {
-        // literals must match
-        if (!util::isPermutation(rankArgSend.integerLiterals_,
-                                 rankArgRecv.integerLiterals_))
-            return false;
-    }
-
-    if (!util::isPermutation(rankArgSend.functions_, rankArgRecv.functions_))
-        return false;
-
-    // // if only one operator is used expect it to be inverse
-    // if (operatorsSend.size() == 1 && operatorsRecv.size() == 1) {
-    // if (BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-    // !(BinaryOperatorKind::BO_Sub == operatorsRecv.front())) {
-    // return false;
-    // } else if (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-    // !(BinaryOperatorKind::BO_Add == operatorsRecv.front())) {
-    // return false;
-    // }
-    // }
 
     return true;
 }
@@ -413,9 +392,9 @@ void MPICheckerImpl::checkForInvalidArgs(const MPICall &mpiCall) const {
  *
  * @return areEqual
  */
-bool MPICheckerImpl::areComponentsOfArgumentEqual(const MPICall &callOne,
-                                                  const MPICall &callTwo,
-                                                  const size_t idx) const {
+bool MPICheckerImpl::areComponentsOfArgEqual(const MPICall &callOne,
+                                             const MPICall &callTwo,
+                                             const size_t idx) const {
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
 
@@ -423,19 +402,21 @@ bool MPICheckerImpl::areComponentsOfArgumentEqual(const MPICall &callOne,
     if (!util::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
         return false;
 
-    // variables
-    if (!util::isPermutation(argOne.vars_, argTwo.vars_)) return false;
+    // variables (are compared by name, to make them comparable
+    // beyond their scope, across different branches, functions)
+    llvm::SmallVector<std::string, 2> varNames1;
+    llvm::SmallVector<std::string, 2> varNames2;
+    for (const auto &var : argOne.vars_) {
+        varNames1.push_back(var->getNameAsString());
+    }
+    for (const auto &var : argTwo.vars_) {
+        varNames2.push_back(var->getNameAsString());
+    }
+    if (!util::isPermutation(varNames1, varNames2)) return false;
 
     // int literals
     if (!util::isPermutation(argOne.intValues_, argTwo.intValues_))
         return false;
-
-    // float literals
-    // just compare count, floats should not be compared by value
-    // https://tinyurl.com/ks8smw4
-    if (argOne.floatValues_.size() != argTwo.floatValues_.size()) {
-        return false;
-    }
 
     // functions
     if (!util::isPermutation(argOne.functions_, argTwo.functions_))
@@ -545,7 +526,7 @@ void MPICheckerImpl::checkForRedundantCall(const MPICall &callToCheck) const {
         // argument types which are compared by all 'components' –––––––
         bool identical = true;
         for (const size_t idx : indicesToCheckComponents) {
-            if (!areComponentsOfArgumentEqual(callToCheck, comparedCall, idx)) {
+            if (!areComponentsOfArgEqual(callToCheck, comparedCall, idx)) {
                 identical = false;
                 break;  // end inner loop
             }

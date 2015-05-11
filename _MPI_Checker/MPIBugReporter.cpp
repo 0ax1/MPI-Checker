@@ -40,7 +40,7 @@ void MPIBugReporter::reportTypeMismatch(
     std::string bugName{"buffer type mismatch"};
     std::string errorText{"Buffer type and specified MPI type do not match. "};
 
-    std::vector<SourceRange> sourceRanges{
+    llvm::SmallVector<SourceRange, 2> sourceRanges{
         callRange, callExpr->getArg(idxPair.first)->getSourceRange(),
         callExpr->getArg(idxPair.second)->getSourceRange()};
     bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
@@ -80,7 +80,7 @@ void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"unmatched function"};
+    std::string bugName{"unmatched point to point function"};
     std::string errorText{"No matching " + missingType + " function found. "};
 
     bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
@@ -144,7 +144,7 @@ void MPIBugReporter::reportRedundantCall(
     std::string redundantCallName{
         matchedCall->getDirectCallee()->getNameAsString()};
 
-    std::string bugName{"schema efficiency"};
+    std::string bugName{"duplicate calls"};
     std::string errorText{"Identical communication arguments used in " +
                           redundantCallName + " in line " + lineNo +
                           ".\nConsider to summarize these calls. "};
@@ -174,10 +174,10 @@ void MPIBugReporter::reportDoubleRequestUse(
     std::string lineNo = lineNumberForCallExpr(prevCall);
     std::string prevCallName{prevCall->getDirectCallee()->getNameAsString()};
     std::string errorText{"Same request variable used in " + prevCallName +
-                          " in line " + lineNo + "before matching wait. "};
-    std::vector<SourceRange> sourceRanges{newCall->getSourceRange(),
-                                          requestVar->getSourceRange(),
-                                          prevCall->getSourceRange()};
+                          " in line " + lineNo + " before matching wait. "};
+    llvm::SmallVector<SourceRange, 2> sourceRanges{newCall->getSourceRange(),
+                                                   requestVar->getSourceRange(),
+                                                   prevCall->getSourceRange()};
     std::string bugName{"invalid request usage"};
 
     bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
@@ -204,8 +204,8 @@ void MPIBugReporter::reportUnmatchedWait(
                           requestVar->getNameAsString() +
                           ". This will result in an endless wait. "};
 
-    std::vector<SourceRange> sourceRanges{waitCall->getSourceRange(),
-                                          requestVar->getSourceRange()};
+    llvm::SmallVector<SourceRange, 2> sourceRanges{
+        waitCall->getSourceRange(), requestVar->getSourceRange()};
 
     bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
                                  bugName, MPIError, errorText, location,
