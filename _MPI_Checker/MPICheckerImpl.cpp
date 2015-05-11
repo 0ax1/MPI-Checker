@@ -44,15 +44,15 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
     if (!funcClassifier_.isRecvType(recvCall)) return false;
 
     // compare mpi datatype
-    llvm::StringRef sendType = util::sourceRangeAsStringRef(
+    llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
         sendCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
         analysisManager_);
 
-    llvm::StringRef recvType = util::sourceRangeAsStringRef(
+    llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
         recvCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
         analysisManager_);
 
-    if (sendType != recvType) return false;
+    if (sendDataType != recvDataType) return false;
 
     // compare count, tag (expected to be static)
     for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
@@ -71,7 +71,7 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
         rankArgSend.intValues_.size() == 1 &&
         rankArgRecv.intValues_.size() == 1 && rankArgSend.vars_.size() == 1 &&
         rankArgRecv.vars_.size() == 1) {
-        // TODO check vars are rank vars
+        // TODO check if vars are rank vars
         // if var is lhs
         // if operators are +/-
         // if no functions are used
@@ -80,16 +80,18 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
     auto operatorsSend = rankArgSend.binaryOperators_;
     auto operatorsRecv = rankArgRecv.binaryOperators_;
 
-    // operators must be inverse, literal must match
-    if (!(((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+    // operators must be inverse
+    if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
             BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
 
            (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-            BinaryOperatorKind::BO_Add == operatorsRecv.front())) &&
-
-          rankArgSend.intValues_.front() == rankArgRecv.intValues_.front()))
-
+            BinaryOperatorKind::BO_Add == operatorsRecv.front())))
         return false;
+
+    // literal must match
+    if (rankArgSend.intValues_.front() != rankArgRecv.intValues_.front()) {
+        return false;
+    }
 
     return true;
 }

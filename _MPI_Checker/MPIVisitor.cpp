@@ -10,9 +10,6 @@ using namespace ento;
 
 namespace mpi {
 
-// TODO deadlock detection
-// TODO send/recv pair match
-
 // visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
