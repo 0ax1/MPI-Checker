@@ -6,10 +6,20 @@ using namespace ento;
 namespace mpi {
 
 
-void MPICheckerImpl::checkForColletiveInBranch(const MPICall &mpiCall) const {
+void MPICheckerImpl::checkForCollectiveInCase(const MPICall &mpiCall) const {
     if (funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
         bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
     }
+}
+
+bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
+        const MPICall &recvCall) const {
+
+    // bool isPairMatching{true};
+    if (!funcClassifier_.isSendType(sendCall.identInfo_)) return false;
+    if (!funcClassifier_.isRecvType(recvCall.identInfo_)) return false;
+
+    return true;
 }
 
 /**

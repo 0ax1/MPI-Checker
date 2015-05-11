@@ -23,71 +23,105 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     return true;
 }
 
+bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
+    bool isInRankBranch{false};
+    ExprVisitor exprVisitor{ifStmt->getCond()};
+    for (const VarDecl *const varDecl : exprVisitor.vars_) {
+        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
+            isInRankBranch = true;
+            break;
+        }
+    }
+    return isInRankBranch;
+}
+
+std::vector<std::reference_wrapper<MPICall>>
+MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
+    std::vector<std::reference_wrapper<MPICall>> ifCaseVector;
+    StmtVisitor stmtVisitor{then};  // collect call exprs
+    for (CallExpr *callExpr : stmtVisitor.callExprs_) {
+        // filter mpi calls
+        if (checker_.funcClassifier_.isMPIType(
+                callExpr->getDirectCallee()->getIdentifier())) {
+            // add to global vector
+            MPICall::visitedCalls.emplace_back(callExpr, condition, false);
+            // add reference to ifCase vector
+            ifCaseVector.push_back(MPICall::visitedCalls.back());
+        }
+    }
+    return ifCaseVector;
+}
+
 /**
- * Visits branches. Checks if a rank variable is involved.
+ * Visits ifCases. Checks if a rank variable is involved.
  *
  * @param ifStmt
  *
  * @return
  */
 bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
-    ExprVisitor exprVisitor{ifStmt->getCond()};
+    // vector element must be assignable -> use std:vector is inside
+    llvm::SmallVector<std::vector<std::reference_wrapper<MPICall>>, 4> ifCases;
 
-    bool isRankBranch{false};
-    for (const VarDecl *const varDecl : exprVisitor.vars_) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
-            isRankBranch = true;
-            break;
+    // only inspect rank ifCases
+    if (!isRankBranch(ifStmt)) return true;
+
+    // collect mpi calls in if
+    ifCases.emplace_back(
+        collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond()));
+
+    // collect mpi calls in all else if
+    Stmt *elseStmt = ifStmt->getElse();
+    while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
+        ifCases.emplace_back(
+            collectMPICallsInCase(elseIf->getThen(), elseIf->getCond()));
+        elseStmt = elseIf->getElse();
+    }
+
+    // collect mpi calls in else
+    if (elseStmt)
+        ifCases.emplace_back(collectMPICallsInCase(elseStmt, nullptr));
+
+    // check if collective calls are used in rank ifCase
+    for (auto &ifCase : ifCases) {
+        for (const MPICall &call : ifCase) {
+            checker_.checkForCollectiveInCase(call);
         }
     }
 
-    llvm::SmallVector<std::vector<std::reference_wrapper<MPICall>>, 4> branches;
+    for (size_t i = 0; i < 2; ++i) {
+        for (auto &ifCase1 : ifCases) {
+            for (auto &ifCase2 : ifCases) {
+                // compare by pointer of vector
+                if (&ifCase1 == &ifCase2) continue;
+                size_t i2 = 0;
+                for (size_t i = 0; i < ifCase2.size() && ifCase1.size(); ++i) {
+                    // skip non point to point
+                    if (!checker_.funcClassifier_.isPointToPointType(
+                            ifCase1[i2].get().identInfo_)) {
+                        i2++;
 
-    auto collectExpr = [this](Stmt * then, Stmt * condition)
-                           -> std::vector<std::reference_wrapper<MPICall>> && {
-        std::vector<std::reference_wrapper<MPICall>> v;
-        StmtVisitor stmtVisitor{then};  // collect call exprs
-        for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-            // filter mpi calls
-            if (checker_.funcClassifier_.isMPIType(
-                    callExpr->getDirectCallee()->getIdentifier())) {
-                MPICall mpiCall{callExpr, condition, false};
-
-                // add to global vector
-                MPICall::visitedCalls.emplace_back(callExpr, condition, false);
-                // add reference to branch vector
-                v.push_back(MPICall::visitedCalls.back());
+                    } else if (checker_.isSendRecvPair(ifCase1[i2],
+                                                       ifCase2[i])) {
+                        // remove matched calls
+                        cont::eraseIndex(ifCase1, i2);
+                        cont::eraseIndex(ifCase2, i--);
+                    } else if (checker_.funcClassifier_.isBlockingType(
+                                   ifCase2[i].get().identInfo_)) {
+                        break;
+                    }
+                }
             }
         }
-        return std::move(v);
-    };
-
-    if (isRankBranch) {
-        // collect mpi calls in if
-        branches.emplace_back(
-            collectExpr(ifStmt->getThen(), ifStmt->getCond()));
-
-        // collect mpi calls in all else if
-        Stmt *elseStmt = ifStmt->getElse();  // else(if)
-        while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-            branches.emplace_back(
-                collectExpr(elseIf->getThen(), elseIf->getCond()));
-            elseStmt = elseIf->getElse();
-        }
-
-        // collect mpi calls in else
-        if (elseStmt) branches.emplace_back(collectExpr(elseStmt, nullptr));
-
-        // check if collective calls are used in rank branch
-        // for (auto &branch : branches) {
-        // for (const MPICall &call : branch) {
-        // checker_.checkForColletiveInBranch(call);
-        // }
-        // }
-
-        // TODO evaluate calls
     }
 
+    for (auto &ifCase : ifCases) {
+        for (const MPICall &b : ifCase) {
+            if (checker_.funcClassifier_.isPointToPointType(b.identInfo_)) {
+                llvm::outs() << "unmatched " + b.identInfo_->getName() << "\n";
+            }
+        }
+    }
     return true;
 }
 
@@ -110,8 +144,8 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
         if (checker_.funcClassifier_.isCollectiveType(mpiCall.identInfo_)) {
             MPICall::visitedCalls.push_back(std::move(mpiCall));
-            checker_.checkRequestUsage(mpiCall);
         }
+        checker_.checkRequestUsage(mpiCall);
     }
 
     return true;

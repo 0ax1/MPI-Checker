@@ -57,7 +57,8 @@ public:
 
     void checkForRedundantCalls() const;
     void checkRequestUsage(const MPICall &) const;
-    void checkForColletiveInBranch(const MPICall &) const;
+    void checkForCollectiveInCase(const MPICall &) const;
+    bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;

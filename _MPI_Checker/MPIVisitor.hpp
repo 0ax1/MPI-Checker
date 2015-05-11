@@ -23,7 +23,6 @@ namespace mpi {
  *
  */
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
-
 public:
     enum class MatchType { kMatch, kMismatch, kNoMatch };
 
@@ -39,6 +38,11 @@ public:
 
     void trackRankVariables(const MPICall &) const;
     MPICheckerImpl checker_;
+
+private:
+    bool isRankBranch(clang::IfStmt *ifStmt);
+    std::vector<std::reference_wrapper<MPICall>> collectMPICallsInCase(
+        clang::Stmt *, clang::Stmt *);
 };
 
 }  // end of namespace: mpi
