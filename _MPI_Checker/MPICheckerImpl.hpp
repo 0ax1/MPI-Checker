@@ -60,6 +60,8 @@ public:
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
     void checkUnmatchedCalls(const llvm::SmallVectorImpl<MPIrankCase> &) const;
+    void checkPointToPointSchema();
+    void stripPointToPointMatches(MPIrankCase &, MPIrankCase &);
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;

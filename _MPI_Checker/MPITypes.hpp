@@ -19,11 +19,16 @@ public:
         init(callExpr);
     };
 
+    MPICall(clang::CallExpr *callExpr, const clang::Stmt *const rankCondition)
+        : callExpr_{callExpr}, rankCondition_{rankCondition} {
+        init(callExpr);
+    };
+
     MPICall(clang::CallExpr *callExpr, const clang::Stmt *const rankCondition,
-            bool isInsideElseBranch)
+            llvm::SmallVector<clang::Stmt *, 4> unmatchedRankConditions)
         : callExpr_{callExpr},
           rankCondition_{rankCondition},
-          isInsideElseBranch_{isInsideElseBranch} {
+          unmatchedRankConditions_{unmatchedRankConditions} {
         init(callExpr);
     };
 
@@ -38,9 +43,10 @@ public:
     // semantic depends on context of usage
     mutable bool isMarked_;
 
-    // rank condition entered to execute this function
+    // if mpi call is executed in (if)/(else if) case
     const clang::Stmt *const rankCondition_{nullptr};
-    const bool isInsideElseBranch_{false};
+    // if mpi call is executed in (else) case
+    const llvm::SmallVector<clang::Stmt *, 4> unmatchedRankConditions_;
 
     // to capture all visited calls traversing the ast
     static llvm::SmallVector<MPICall, 16> visitedCalls;

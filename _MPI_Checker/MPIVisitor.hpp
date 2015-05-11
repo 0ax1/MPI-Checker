@@ -42,8 +42,8 @@ public:
 private:
     bool isRankBranch(clang::IfStmt *ifStmt);
     std::vector<std::reference_wrapper<MPICall>> collectMPICallsInCase(
-        clang::Stmt *, clang::Stmt *);
-    void stripPointToPointMatches(MPIrankCase &, MPIrankCase &);
+        clang::Stmt *, clang::Stmt *,
+        llvm::SmallVector<clang::Stmt *, 4> unmatchedCases);
 };
 
 }  // end of namespace: mpi

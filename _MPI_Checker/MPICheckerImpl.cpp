@@ -31,6 +31,50 @@ void MPICheckerImpl::checkUnmatchedCalls(
 }
 
 /**
+ * Strips calls from two different rank cases where the mpi send and receive
+ * functions match. This respects the order of functions inside the cases. While
+ * nonblocking calls are just skipped in case of a mismatch, blocking calls on
+ * the recv side that do not match quit the loop.
+ *
+ * @param rankCase1
+ * @param rankCase2
+ */
+void MPICheckerImpl::stripPointToPointMatches(MPIrankCase &rankCase1,
+                                          MPIrankCase &rankCase2) {
+    size_t i2 = 0;
+    for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
+        // skip non point to point
+        if (!funcClassifier_.isPointToPointType(rankCase1[i2].get())) {
+            i2++;
+
+        } else if (isSendRecvPair(rankCase1[i2], rankCase2[i])) {
+            // remove matched pair
+            cont::eraseIndex(rankCase1, i2);
+            cont::eraseIndex(rankCase2, i--);
+        }
+        // if non-matching, blocking function is hit, break
+        else if (funcClassifier_.isBlockingType(rankCase2[i].get())) {
+            break;
+        }
+    }
+}
+
+void MPICheckerImpl::checkPointToPointSchema() {
+    auto rankCases = MPIRankCases::visitedRankCases;
+
+    for (size_t i = 0; i < 2; ++i) {
+        for (MPIrankCase &rankCase1 : rankCases) {
+            for (MPIrankCase &rankCase2 : rankCases) {
+                // compare by pointer
+                if (&rankCase1 == &rankCase2) continue;
+                stripPointToPointMatches(rankCase1, rankCase2);
+            }
+        }
+    }
+    checkUnmatchedCalls(rankCases);
+}
+
+/**
  * Check if two calls are a send/recv pair.
  *
  * @param sendCall
@@ -75,23 +119,24 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
         // if var is lhs
         // if operators are +/-
         // if no functions are used
+
+        auto operatorsSend = rankArgSend.binaryOperators_;
+        auto operatorsRecv = rankArgRecv.binaryOperators_;
+
+        // operators must be inverse
+        if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+                BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
+
+               (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+                BinaryOperatorKind::BO_Add == operatorsRecv.front())))
+            return false;
+
+        // literal must match
+        if (rankArgSend.intValues_.front() != rankArgRecv.intValues_.front()) {
+            return false;
+        }
     }
 
-    auto operatorsSend = rankArgSend.binaryOperators_;
-    auto operatorsRecv = rankArgRecv.binaryOperators_;
-
-    // operators must be inverse
-    if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-            BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
-
-           (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-            BinaryOperatorKind::BO_Add == operatorsRecv.front())))
-        return false;
-
-    // literal must match
-    if (rankArgSend.intValues_.front() != rankArgRecv.intValues_.front()) {
-        return false;
-    }
 
     return true;
 }

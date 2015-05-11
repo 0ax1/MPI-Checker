@@ -24,57 +24,13 @@ bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
     ExprVisitor exprVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : exprVisitor.vars_) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
+        if (cont::isContained(MPIRank::visitedRankVariables, varDecl) ||
+                varDecl->getNameAsString() == "rank") {
             isInRankBranch = true;
             break;
         }
     }
     return isInRankBranch;
-}
-
-MPIrankCase MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
-    MPIrankCase rankCaseVector;
-    StmtVisitor stmtVisitor{then};  // collect call exprs
-    for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-        // filter mpi calls
-        if (checker_.funcClassifier_.isMPIType(
-                callExpr->getDirectCallee()->getIdentifier())) {
-            // add to global vector
-            MPICall::visitedCalls.emplace_back(callExpr, condition, false);
-            // add reference to rankCase vector
-            rankCaseVector.push_back(MPICall::visitedCalls.back());
-        }
-    }
-    return rankCaseVector;
-}
-
-/**
- * Strips calls from two different rank cases where the mpi send and receive
- * functions match. This respects the order of functions inside the cases. While
- * nonblocking calls are just skipped in case of a mismatch, blocking calls on
- * the recv side that do not match quit the loop.
- *
- * @param rankCase1
- * @param rankCase2
- */
-void MPIVisitor::stripPointToPointMatches(MPIrankCase &rankCase1,
-                                          MPIrankCase &rankCase2) {
-    size_t i2 = 0;
-    for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
-        // skip non point to point
-        if (!checker_.funcClassifier_.isPointToPointType(rankCase1[i2].get())) {
-            i2++;
-
-        } else if (checker_.isSendRecvPair(rankCase1[i2], rankCase2[i])) {
-            // remove matched pair
-            cont::eraseIndex(rankCase1, i2);
-            cont::eraseIndex(rankCase2, i--);
-        }
-        // if non-matching, blocking function is hit, break
-        else if (checker_.funcClassifier_.isBlockingType(rankCase2[i].get())) {
-            break;
-        }
-    }
 }
 
 /**
@@ -90,23 +46,28 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // vector element must be assignable -> use std:vector is inside
     llvm::SmallVector<MPIrankCase, 4> rankCases;
 
+    llvm::SmallVector<Stmt *, 4> unmatchedCases;
+    unmatchedCases.push_back(ifStmt->getCond());
+
     // collect mpi calls in if
     rankCases.emplace_back(
-        collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond()));
+        collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond(), {}));
 
     // collect mpi calls in all else if
     Stmt *elseStmt = ifStmt->getElse();
     while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
         rankCases.emplace_back(
-            collectMPICallsInCase(elseIf->getThen(), elseIf->getCond()));
+            collectMPICallsInCase(elseIf->getThen(), elseIf->getCond(), {}));
+        unmatchedCases.push_back(elseIf->getCond());
         elseStmt = elseIf->getElse();
     }
 
     // collect mpi calls in else
     if (elseStmt)
-        rankCases.emplace_back(collectMPICallsInCase(elseStmt, nullptr));
+        rankCases.emplace_back(
+            collectMPICallsInCase(elseStmt, nullptr, unmatchedCases));
 
-    // save rank cases for complete translation unit analysis
+    // copy rank cases for complete translation unit analysis
     cont::copy(rankCases, MPIRankCases::visitedRankCases);
 
     // check if collective calls are used in rank rankCase
@@ -116,17 +77,6 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         }
     }
 
-    for (size_t i = 0; i < 2; ++i) {
-        for (MPIrankCase &rankCase1 : rankCases) {
-            for (MPIrankCase &rankCase2 : rankCases) {
-                // compare by pointer
-                if (&rankCase1 == &rankCase2) continue;
-                stripPointToPointMatches(rankCase1, rankCase2);
-            }
-        }
-    }
-
-    checker_.checkUnmatchedCalls(rankCases);
     return true;
 }
 
@@ -163,6 +113,29 @@ void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
     }
 }
 
+MPIrankCase MPIVisitor::collectMPICallsInCase(
+    Stmt *then, Stmt *condition, llvm::SmallVector<Stmt *, 4> unmatchedCases) {
+    MPIrankCase rankCaseVector;
+    StmtVisitor stmtVisitor{then};  // collect call exprs
+    for (CallExpr *callExpr : stmtVisitor.callExprs_) {
+        // filter mpi calls
+        if (checker_.funcClassifier_.isMPIType(
+                callExpr->getDirectCallee()->getIdentifier())) {
+            if (unmatchedCases.size()) {
+                MPICall::visitedCalls.emplace_back(callExpr, condition,
+                                                   unmatchedCases);
+            } else {
+                MPICall::visitedCalls.emplace_back(callExpr, condition);
+            }
+
+            // add reference to rankCase vector
+            rankCaseVector.push_back(MPICall::visitedCalls.back());
+        }
+    }
+    return rankCaseVector;
+}
+
+
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Checker host class. Registers checker functionality.
@@ -181,6 +154,8 @@ public:
 
         // invoked after travering the translation unit
         visitor.checker_.checkForRedundantCalls();
+        visitor.checker_.checkPointToPointSchema();
+
 
         // clear after every translation unit
         MPICall::visitedCalls.clear();
