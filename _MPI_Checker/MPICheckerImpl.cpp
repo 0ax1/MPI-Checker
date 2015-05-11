@@ -21,12 +21,10 @@ void MPICheckerImpl::checkUnmatchedCalls(
     const llvm::SmallVectorImpl<MPIrankCase> &rankCases) const {
     for (const MPIrankCase &rankCase : rankCases) {
         for (const MPICall &b : rankCase) {
-            if (funcClassifier_.isPointToPointType(b.identInfo_)) {
-                if (funcClassifier_.isSendType(b.identInfo_)) {
-                    bugReporter_.reportUnmatchedCall(b.callExpr_, "receive");
-                } else if (funcClassifier_.isRecvType(b.identInfo_)) {
-                    bugReporter_.reportUnmatchedCall(b.callExpr_, "send");
-                }
+            if (funcClassifier_.isSendType(b.identInfo_)) {
+                bugReporter_.reportUnmatchedCall(b.callExpr_, "receive");
+            } else if (funcClassifier_.isRecvType(b.identInfo_)) {
+                bugReporter_.reportUnmatchedCall(b.callExpr_, "send");
             }
         }
     }

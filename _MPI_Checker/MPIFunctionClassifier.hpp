@@ -10,16 +10,19 @@ public:
     MPIFunctionClassifier(clang::ento::AnalysisManager &analysisManager) {
         identifierInit(analysisManager);
     }
-    // to enable classification of mpi-functions during analysis
-    // to inspect properties of mpi functions
+
+    // general identifiers–––––––––––––––––––––––––––––––––––––––––––––––––
     bool isMPIType(const clang::IdentifierInfo *) const;
-    bool isSendType(const clang::IdentifierInfo *) const;
-    bool isRecvType(const clang::IdentifierInfo *) const;
     bool isBlockingType(const clang::IdentifierInfo *) const;
     bool isNonBlockingType(const clang::IdentifierInfo *) const;
-    bool isPointToPointType(const clang::IdentifierInfo *) const;
-    bool isCollectiveType(const clang::IdentifierInfo *) const;
 
+    // point to point identifiers––––––––––––––––––––––––––––––––––––––––––
+    bool isPointToPointType(const clang::IdentifierInfo *) const;
+    bool isSendType(const clang::IdentifierInfo *) const;
+    bool isRecvType(const clang::IdentifierInfo *) const;
+
+    // collective identifiers––––––––––––––––––––––––––––––––––––––––––––––
+    bool isCollectiveType(const clang::IdentifierInfo *) const;
     bool isScatterType(const clang::IdentifierInfo *) const;
     bool isGatherType(const clang::IdentifierInfo *) const;
     bool isAllgatherType(const clang::IdentifierInfo *) const;
@@ -27,31 +30,11 @@ public:
     bool isReduceType(const clang::IdentifierInfo *) const;
     bool isBcastType(const clang::IdentifierInfo *) const;
 
+    // additional identifiers ––––––––––––––––––––––––––––––––––––––––––––––
+    bool isMPI_Comm_rank(const clang::IdentifierInfo *) const;
     bool isMPI_Wait(const clang::IdentifierInfo *) const;
     bool isMPI_Waitall(const clang::IdentifierInfo *) const;
     bool isWaitType(const clang::IdentifierInfo *) const;
-
-    bool isMPI_Scatter(const clang::IdentifierInfo *) const;
-    bool isMPI_Iscatter(const clang::IdentifierInfo *) const;
-    bool isMPI_Gather(const clang::IdentifierInfo *) const;
-    bool isMPI_Igather(const clang::IdentifierInfo *) const;
-    bool isMPI_Allgather(const clang::IdentifierInfo *) const;
-    bool isMPI_Iallgather(const clang::IdentifierInfo *) const;
-    bool isMPI_Alltoall(const clang::IdentifierInfo *) const;
-    bool isMPI_Ialltoall(const clang::IdentifierInfo *) const;
-    bool isMPI_Bcast(const clang::IdentifierInfo *) const;
-    bool isMPI_Ibcast(const clang::IdentifierInfo *) const;
-    bool isMPI_Reduce(const clang::IdentifierInfo *) const;
-    bool isMPI_Ireduce(const clang::IdentifierInfo *) const;
-    bool isMPI_Allreduce(const clang::IdentifierInfo *) const;
-    bool isMPI_Iallreduce(const clang::IdentifierInfo *) const;
-    bool isMPI_Barrier(const clang::IdentifierInfo *) const;
-    bool isMPI_Comm_rank(const clang::IdentifierInfo *) const;
-
-    bool isPointToCollType(const clang::IdentifierInfo *) const;
-    bool isCollToPointType(const clang::IdentifierInfo *) const;
-    bool isCollToCollType(const clang::IdentifierInfo *) const;
-
 
 private:
     void identifierInit(clang::ento::AnalysisManager &);

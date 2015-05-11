@@ -225,96 +225,46 @@ void MPIFunctionClassifier::initAdditionalIdentifiers(
     assert(identInfo_MPI_Barrier_);
 }
 
-/**
- * Check if MPI send function
- */
+// general identifiers–––––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIFunctionClassifier::isMPIType(const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiType_, identInfo);
 }
 
-/**
- * Check if MPI send function
- */
-bool MPIFunctionClassifier::isSendType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiSendTypes_, identInfo);
-}
-
-/**
- * Check if MPI recv function
- */
-bool MPIFunctionClassifier::isRecvType(const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiRecvTypes_, identInfo);
-}
-
-/**
- * Check if MPI blocking function
- */
 bool MPIFunctionClassifier::isBlockingType(
     const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiBlockingTypes_, identInfo);
 }
 
-/**
- * Check if MPI nonblocking function
- */
 bool MPIFunctionClassifier::isNonBlockingType(
     const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiNonBlockingTypes_, identInfo);
 }
 
-/**
- * Check if MPI point to point function
- */
+// point to point identifiers––––––––––––––––––––––––––––––––––––––––––
 bool MPIFunctionClassifier::isPointToPointType(
     const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiPointToPointTypes_, identInfo);
 }
 
-/**
- * Check if MPI point to point function
- */
+
+bool MPIFunctionClassifier::isSendType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiSendTypes_, identInfo);
+}
+
+bool MPIFunctionClassifier::isRecvType(const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiRecvTypes_, identInfo);
+}
+
+// collective identifiers––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIFunctionClassifier::isCollectiveType(
     const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiCollectiveTypes_, identInfo);
-}
-
-// point to point identifiers––––––––––––––––––––––––––––––––––––––––––
-
-// collective identifiers––––––––––––––––––––––––––––––––––––––––––––––
-bool MPIFunctionClassifier::isMPI_Scatter(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Scatter_;
-}
-
-bool MPIFunctionClassifier::isMPI_Iscatter(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Iscatter_;
 }
 
 bool MPIFunctionClassifier::isScatterType(
     const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Scatter_ ||
            identInfo == identInfo_MPI_Iscatter_;
-}
-
-bool MPIFunctionClassifier::isMPI_Gather(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Gather_;
-}
-
-bool MPIFunctionClassifier::isMPI_Igather(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Igather_;
-}
-
-bool MPIFunctionClassifier::isMPI_Allgather(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Allgather_;
-}
-
-bool MPIFunctionClassifier::isMPI_Iallgather(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Iallgather_;
 }
 
 bool MPIFunctionClassifier::isGatherType(
@@ -331,49 +281,15 @@ bool MPIFunctionClassifier::isAllgatherType(
            identInfo == identInfo_MPI_Iallgather_;
 }
 
-bool MPIFunctionClassifier::isMPI_Alltoall(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Alltoall_;
-}
-
-bool MPIFunctionClassifier::isMPI_Ialltoall(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Ialltoall_;
-}
-
 bool MPIFunctionClassifier::isAlltoallType(
     const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Alltoall_ ||
            identInfo == identInfo_MPI_Ialltoall_;
 }
 
-bool MPIFunctionClassifier::isMPI_Bcast(const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Bcast_;
-}
-
 bool MPIFunctionClassifier::isBcastType(const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Bcast_ ||
            identInfo == identInfo_MPI_Ibcast_;
-}
-
-bool MPIFunctionClassifier::isMPI_Reduce(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Reduce_;
-}
-
-bool MPIFunctionClassifier::isMPI_Ireduce(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Ireduce_;
-}
-
-bool MPIFunctionClassifier::isMPI_Allreduce(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Allreduce_;
-}
-
-bool MPIFunctionClassifier::isMPI_Iallreduce(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Allreduce_;
 }
 
 bool MPIFunctionClassifier::isReduceType(
@@ -384,11 +300,7 @@ bool MPIFunctionClassifier::isReduceType(
            identInfo == identInfo_MPI_Iallreduce_;
 }
 
-bool MPIFunctionClassifier::isMPI_Barrier(
-    const IdentifierInfo *identInfo) const {
-    return identInfo == identInfo_MPI_Barrier_;
-}
-
+// additional identifiers ––––––––––––––––––––––––––––––––––––––––––––––
 bool MPIFunctionClassifier::isMPI_Comm_rank(
     const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Comm_rank_;
@@ -402,34 +314,9 @@ bool MPIFunctionClassifier::isMPI_Waitall(const IdentifierInfo *identInfo) const
     return identInfo == identInfo_MPI_Waitall_;
 }
 
-
 bool MPIFunctionClassifier::isWaitType(const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Wait_ ||
            identInfo == identInfo_MPI_Waitall_;
-}
-
-/**
- * Check if MPI point to collective function
- */
-bool MPIFunctionClassifier::isPointToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiPointToCollTypes_, identInfo);
-}
-
-/**
- * Check if MPI collective to point function
- */
-bool MPIFunctionClassifier::isCollToPointType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToPointTypes_, identInfo);
-}
-
-/**
- * Check if MPI collective to collective function
- */
-bool MPIFunctionClassifier::isCollToCollType(
-    const IdentifierInfo *identInfo) const {
-    return cont::isContained(mpiCollToCollTypes_, identInfo);
 }
 
 }  // end of namespace: mpi
