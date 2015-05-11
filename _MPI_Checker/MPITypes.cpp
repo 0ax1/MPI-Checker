@@ -11,4 +11,8 @@ namespace MPIRank {
 llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
+namespace MPIRankCases {
+llvm::SmallVector<MPIrankCase, 8> visitedRankCases;
+}
+
 }  // end of namespace: mpi

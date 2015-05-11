@@ -18,34 +18,6 @@
 namespace util {
 
 /**
- * Checks if two containers are permutations of each other.
- *
- * @tparam T1 type of container 1
- * @tparam T2 type of container 2
- * @param first container
- * @param second container
- *
- * @return isPermutation
- */
-template <typename T1, typename T2>
-bool isPermutation(const T1 &first, const T2 &second) {
-    // size must match
-    if (first.size() != second.size()) return false;
-
-    // copy because matches get erased
-    auto copy = first;
-    for (auto &componentFromSecond : second) {
-        if (!cont::isContained(copy, componentFromSecond)) {
-            return false;
-        } else {
-            // to omit double matching
-            cont::erase(copy, componentFromSecond);
-        }
-    }
-    return true;
-}
-
-/**
  * Returns part of the code specified by range unmodified as string ref.
  *
  * @param source range

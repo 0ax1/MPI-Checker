@@ -150,6 +150,35 @@ typename T::iterator findPred(T &cont, P pred) {
       return std::find_if(cont.begin(), cont.end(), pred);
 }
 
+/**
+ * Checks if two containers are permutations of each other.
+ *
+ * @tparam T1 type of container 1
+ * @tparam T2 type of container 2
+ * @param first container
+ * @param second container
+ *
+ * @return isPermutation
+ */
+template <typename T1, typename T2>
+bool isPermutation(const T1 &first, const T2 &second) {
+    // size must match
+    if (first.size() != second.size()) return false;
+
+    // copy because matches get erased
+    auto copy = first;
+    for (auto &componentFromSecond : second) {
+        if (!cont::isContained(copy, componentFromSecond)) {
+            return false;
+        } else {
+            // to omit double matching
+            cont::erase(copy, componentFromSecond);
+        }
+    }
+    return true;
+}
+
+
 }  // end of namespace: cont
 
 #endif  // end of include guard: CONTAINER_HPP_XM1FDRVJ

@@ -60,8 +60,8 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(Stmt *then, Stmt *condition) {
  * @param rankCase1
  * @param rankCase2
  */
-void MPIVisitor::stripMatchingCalls(MPIrankCase &rankCase1,
-                                    MPIrankCase &rankCase2) {
+void MPIVisitor::stripPointToPointMatches(MPIrankCase &rankCase1,
+                                          MPIrankCase &rankCase2) {
     size_t i2 = 0;
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
@@ -69,7 +69,7 @@ void MPIVisitor::stripMatchingCalls(MPIrankCase &rankCase1,
             i2++;
 
         } else if (checker_.isSendRecvPair(rankCase1[i2], rankCase2[i])) {
-            // remove matched calls
+            // remove matched pair
             cont::eraseIndex(rankCase1, i2);
             cont::eraseIndex(rankCase2, i--);
         }
@@ -109,6 +109,9 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (elseStmt)
         rankCases.emplace_back(collectMPICallsInCase(elseStmt, nullptr));
 
+    // save rank cases for complete translation unit analysis
+    cont::copy(rankCases, MPIRankCases::visitedRankCases);
+
     // check if collective calls are used in rank rankCase
     for (const MPIrankCase &rankCase : rankCases) {
         for (const MPICall &call : rankCase) {
@@ -121,7 +124,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
             for (MPIrankCase &rankCase2 : rankCases) {
                 // compare by pointer
                 if (&rankCase1 == &rankCase2) continue;
-                stripMatchingCalls(rankCase1, rankCase2);
+                stripPointToPointMatches(rankCase1, rankCase2);
             }
         }
     }
@@ -182,9 +185,10 @@ public:
         // invoked after travering the translation unit
         visitor.checker_.checkForRedundantCalls();
 
-        // clear visited calls after every translation unit
+        // clear after every translation unit
         MPICall::visitedCalls.clear();
-        MPIRequest::MPIRequest::visitedRequests.clear();
+        MPIRequest::visitedRequests.clear();
+        MPIRankCases::visitedRankCases.clear();
     }
 };
 

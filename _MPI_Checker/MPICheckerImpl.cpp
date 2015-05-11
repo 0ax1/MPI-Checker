@@ -65,26 +65,31 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
     auto rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
     auto rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
 
-    // if has std form rank +/- literal
+    // if has standard form: rank +/- literal
     if (rankArgSend.binaryOperators_.size() == 1 &&
         rankArgRecv.binaryOperators_.size() == 1 &&
         rankArgSend.intValues_.size() == 1 &&
         rankArgRecv.intValues_.size() == 1 && rankArgSend.vars_.size() == 1 &&
         rankArgRecv.vars_.size() == 1) {
-        auto operatorsSend = rankArgSend.binaryOperators_;
-        auto operatorsRecv = rankArgRecv.binaryOperators_;
-
-        // operators must be inverse, literal must match
-        if (!(((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-                BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
-
-               (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-                BinaryOperatorKind::BO_Add == operatorsRecv.front())) &&
-
-              rankArgSend.intValues_.front() == rankArgRecv.intValues_.front()))
-
-            return false;
+        // TODO check vars are rank vars
+        // if var is lhs
+        // if operators are +/-
+        // if no functions are used
     }
+
+    auto operatorsSend = rankArgSend.binaryOperators_;
+    auto operatorsRecv = rankArgRecv.binaryOperators_;
+
+    // operators must be inverse, literal must match
+    if (!(((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+            BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
+
+           (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+            BinaryOperatorKind::BO_Add == operatorsRecv.front())) &&
+
+          rankArgSend.intValues_.front() == rankArgRecv.intValues_.front()))
+
+        return false;
 
     return true;
 }
@@ -397,7 +402,7 @@ bool MPICheckerImpl::areComponentsOfArgEqual(const MPICall &callOne,
     auto argTwo = callTwo.arguments_[idx];
 
     // operators
-    if (!util::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
+    if (!cont::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
         return false;
 
     // variables (are compared by name, to make them comparable
@@ -410,14 +415,14 @@ bool MPICheckerImpl::areComponentsOfArgEqual(const MPICall &callOne,
     for (const auto &var : argTwo.vars_) {
         varNames2.push_back(var->getNameAsString());
     }
-    if (!util::isPermutation(varNames1, varNames2)) return false;
+    if (!cont::isPermutation(varNames1, varNames2)) return false;
 
     // int literals
-    if (!util::isPermutation(argOne.intValues_, argTwo.intValues_))
+    if (!cont::isPermutation(argOne.intValues_, argTwo.intValues_))
         return false;
 
     // functions
-    if (!util::isPermutation(argOne.functions_, argTwo.functions_))
+    if (!cont::isPermutation(argOne.functions_, argTwo.functions_))
         return false;
 
     return true;
