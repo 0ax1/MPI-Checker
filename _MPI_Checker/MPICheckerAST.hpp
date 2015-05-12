@@ -1,5 +1,5 @@
-#ifndef MPICHECKERIMPL_HPP_O1KSUWZO
-#define MPICHECKERIMPL_HPP_O1KSUWZO
+#ifndef MPICheckerAST_HPP_O1KSUWZO
+#define MPICheckerAST_HPP_O1KSUWZO
 
 #include <utility>
 #include "../ClangSACheckers.h"
@@ -19,9 +19,9 @@ namespace mpi {
 /**
  * Class to implement the actual checks.
  */
-class MPICheckerImpl : public clang::RecursiveASTVisitor<MPICheckerImpl> {
+class MPICheckerAST : public clang::RecursiveASTVisitor<MPICheckerAST> {
 public:
-    MPICheckerImpl(clang::ento::BugReporter &bugReporter,
+    MPICheckerAST(clang::ento::BugReporter &bugReporter,
                    const clang::ento::CheckerBase &checkerBase,
                    clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager},
@@ -55,7 +55,6 @@ public:
                              const llvm::StringRef) const;
 
     void checkForRedundantCalls() const;
-    void checkRequestUsage(const MPICall &) const;
     void checkForCollectiveCall(const MPICall &) const;
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
@@ -70,4 +69,4 @@ public:
 
 }  // end of namespace: mpi
 
-#endif  // end of include guard: MPICHECKERIMPL_HPP_O1KSUWZO
+#endif  // end of include guard: MPICheckerAST_HPP_O1KSUWZO

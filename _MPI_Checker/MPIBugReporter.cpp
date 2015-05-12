@@ -191,7 +191,34 @@ void MPIBugReporter::reportDoubleRequestUse(
  * @param waitCall
  * @param requestVar request variable used in wait
  */
-void MPIBugReporter::reportUnmatchedWait(
+void MPIBugReporter::reportDoubleWait(
+    const CallExpr *const waitCall, const VarDecl *const requestVar) const {
+    // auto analysisDeclCtx =
+        // analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+
+    // PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        // waitCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+
+    // std::string bugName{"unmatched wait function"};
+    // std::string errorText{"No immediate call is matching request " +
+                          // requestVar->getNameAsString() +
+                          // ". This will result in an endless wait. "};
+
+    // llvm::SmallVector<SourceRange, 2> sourceRanges{
+        // waitCall->getSourceRange(), requestVar->getSourceRange()};
+
+    // bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 // bugName, MPIError, errorText, location,
+                                 // sourceRanges);
+}
+
+/**
+ * Report wait without matching immediate send function.
+ *
+ * @param waitCall
+ * @param requestVar request variable used in wait
+ */
+void MPIBugReporter::reportUnmatchedNonblocking(
     const CallExpr *const waitCall, const VarDecl *const requestVar) const {
     auto analysisDeclCtx =
         analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
@@ -199,10 +226,10 @@ void MPIBugReporter::reportUnmatchedWait(
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         waitCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
-    std::string bugName{"unmatched wait function"};
-    std::string errorText{"No immediate call is matching request " +
+    std::string bugName{"unmatched nonblocking function"};
+    std::string errorText{"No wait call is matching request " +
                           requestVar->getNameAsString() +
-                          ". This will result in an endless wait. "};
+                          ". This might lead to problems. "};
 
     llvm::SmallVector<SourceRange, 2> sourceRanges{
         waitCall->getSourceRange(), requestVar->getSourceRange()};

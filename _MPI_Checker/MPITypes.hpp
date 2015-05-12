@@ -88,5 +88,27 @@ typedef std::vector<std::reference_wrapper<MPICall>> MPIrankCase;
 namespace MPIRankCases {
 extern llvm::SmallVector<MPIrankCase, 8> visitedRankCases;
 }
+
+// for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
+struct RankVar {
+    clang::VarDecl *varDecl_;
+    clang::CallExpr *lastUser_;
+
+    RankVar(clang::VarDecl *varDecl, clang::CallExpr *callExpr) :
+        varDecl_{varDecl}, lastUser_{callExpr} {}
+
+    void Profile(llvm::FoldingSetNodeID &id) const {
+        id.AddPointer(varDecl_);
+        id.AddPointer(lastUser_);
+    }
+
+    bool operator==(const RankVar& toCompare) const {
+        return toCompare.varDecl_ == varDecl_;
+    }
+};
 }  // end of namespace: mpi
+
+// register data structure for path sensitive analysis
+REGISTER_MAP_WITH_PROGRAMSTATE(RankVarMap, clang::VarDecl *, mpi::RankVar)
+
 #endif  // end of include guard: MPITYPES_HPP_IC7XR2MI

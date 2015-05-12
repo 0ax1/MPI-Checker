@@ -1,7 +1,7 @@
 #ifndef MPISCHEMACHECKERAST_HPP_NKN9I06D
 #define MPISCHEMACHECKERAST_HPP_NKN9I06D
 
-#include "MPICheckerImpl.hpp"
+#include "MPICheckerAST.hpp"
 
 namespace mpi {
 
@@ -19,7 +19,7 @@ namespace mpi {
 /**
  * Main visitor class to collect information about MPI calls traversing
  * the AST of a translation unit, checking invariants during the traversal
- * through MPICheckerImpl.
+ * through MPICheckerAST.
  *
  */
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
@@ -37,7 +37,7 @@ public:
     bool VisitIfStmt(clang::IfStmt *);
 
     void trackRankVariables(const MPICall &) const;
-    MPICheckerImpl checker_;
+    MPICheckerAST checker_;
 
 private:
     bool isRankBranch(clang::IfStmt *ifStmt);

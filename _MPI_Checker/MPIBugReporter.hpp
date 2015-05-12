@@ -23,15 +23,17 @@ public:
     void reportRedundantCall(const clang::CallExpr *const,
                              const clang::CallExpr *const,
                              const llvm::SmallVectorImpl<size_t> &) const;
+
     void reportDoubleRequestUse(const clang::CallExpr *const,
                                 const clang::VarDecl *,
                                 const clang::CallExpr *const) const;
-    void reportUnmatchedWait(const clang::CallExpr *const,
+    void reportDoubleWait(const clang::CallExpr *const,
+                             const clang::VarDecl *const) const;
+    void reportUnmatchedNonblocking(const clang::CallExpr *const,
                              const clang::VarDecl *const) const;
 
     void reportCollCallInBranch(const clang::CallExpr *const) const;
-    void reportUnmatchedCall(const clang::CallExpr *const,
-            std::string) const;
+    void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 
