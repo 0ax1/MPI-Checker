@@ -44,6 +44,8 @@ private:
     std::vector<std::reference_wrapper<MPICall>> collectMPICallsInCase(
         clang::Stmt *, clang::Stmt *,
         llvm::SmallVector<clang::Stmt *, 4> unmatchedCases);
+
+    llvm::SmallVector<clang::IfStmt *, 8> visitedIfStmts_;
 };
 
 }  // end of namespace: mpi

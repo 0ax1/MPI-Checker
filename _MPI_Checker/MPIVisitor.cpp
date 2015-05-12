@@ -20,12 +20,19 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     return true;
 }
 
+/**
+ * Checks if a rank variable is used in branch condition.
+ *
+ * @param ifStmt
+ *
+ * @return if rank var is used
+ */
 bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
     ExprVisitor exprVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : exprVisitor.vars_) {
         if (cont::isContained(MPIRank::visitedRankVariables, varDecl) ||
-                varDecl->getNameAsString() == "rank") {
+            varDecl->getNameAsString() == "rank") {
             isInRankBranch = true;
             break;
         }
@@ -35,6 +42,7 @@ bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
 
 /**
  * Visits rankCases. Checks if a rank variable is involved.
+ * Visits all if and else if!
  *
  * @param ifStmt
  *
@@ -42,36 +50,29 @@ bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
  */
 bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
+    if (cont::isContained(visitedIfStmts_, ifStmt)) return true;
 
-    // vector element must be assignable -> use std:vector is inside
-    llvm::SmallVector<MPIrankCase, 4> rankCases;
+    llvm::SmallVector<Stmt *, 4> unmatchedConditions;
 
-    llvm::SmallVector<Stmt *, 4> unmatchedCases;
-    unmatchedCases.push_back(ifStmt->getCond());
-
-    // collect mpi calls in if
-    rankCases.emplace_back(
-        collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond(), {}));
-
-    // collect mpi calls in all else if
-    Stmt *elseStmt = ifStmt->getElse();
-    while (IfStmt *elseIf = dyn_cast_or_null<IfStmt>(elseStmt)) {
-        rankCases.emplace_back(
-            collectMPICallsInCase(elseIf->getThen(), elseIf->getCond(), {}));
-        unmatchedCases.push_back(elseIf->getCond());
-        elseStmt = elseIf->getElse();
+    // collect mpi calls in if / else if
+    Stmt *stmt = ifStmt;
+    while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
+        MPIRankCases::visitedRankCases.emplace_back(
+            collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond(), {}));
+        unmatchedConditions.push_back(ifStmt->getCond());
+        stmt = ifStmt->getElse();
+        visitedIfStmts_.push_back(ifStmt);
     }
 
     // collect mpi calls in else
-    if (elseStmt)
-        rankCases.emplace_back(
-            collectMPICallsInCase(elseStmt, nullptr, unmatchedCases));
+    if (stmt) {
+        MPIRankCases::visitedRankCases.emplace_back(
+            collectMPICallsInCase(stmt, nullptr, unmatchedConditions));
+    }
 
-    // copy rank cases for complete translation unit analysis
-    cont::copy(rankCases, MPIRankCases::visitedRankCases);
 
     // check if collective calls are used in rank rankCase
-    for (const MPIrankCase &rankCase : rankCases) {
+    for (const MPIrankCase &rankCase : MPIRankCases::visitedRankCases) {
         for (const MPICall &call : rankCase) {
             checker_.checkForCollectiveCall(call);
         }
@@ -114,16 +115,17 @@ void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
 }
 
 MPIrankCase MPIVisitor::collectMPICallsInCase(
-    Stmt *then, Stmt *condition, llvm::SmallVector<Stmt *, 4> unmatchedCases) {
+    Stmt *then, Stmt *condition,
+    llvm::SmallVector<Stmt *, 4> unmatchedConditions) {
     MPIrankCase rankCaseVector;
     StmtVisitor stmtVisitor{then};  // collect call exprs
     for (CallExpr *callExpr : stmtVisitor.callExprs_) {
         // filter mpi calls
         if (checker_.funcClassifier_.isMPIType(
                 callExpr->getDirectCallee()->getIdentifier())) {
-            if (unmatchedCases.size()) {
+            if (unmatchedConditions.size()) {
                 MPICall::visitedCalls.emplace_back(callExpr, condition,
-                                                   unmatchedCases);
+                                                   unmatchedConditions);
             } else {
                 MPICall::visitedCalls.emplace_back(callExpr, condition);
             }
@@ -134,7 +136,6 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(
     }
     return rankCaseVector;
 }
-
 
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
@@ -155,7 +156,6 @@ public:
         // invoked after travering the translation unit
         // visitor.checker_.checkForRedundantCalls();
         visitor.checker_.checkPointToPointSchema();
-
 
         // clear after every translation unit
         MPICall::visitedCalls.clear();

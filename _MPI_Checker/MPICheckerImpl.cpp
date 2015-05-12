@@ -40,16 +40,15 @@ void MPICheckerImpl::checkUnmatchedCalls(
  * @param rankCase2
  */
 void MPICheckerImpl::stripPointToPointMatches(MPIrankCase &rankCase1,
-                                          MPIrankCase &rankCase2) {
+                                              MPIrankCase &rankCase2) {
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
         if (!funcClassifier_.isPointToPointType(rankCase1[0].get())) {
             cont::eraseIndex(rankCase1, 0);
-            if (!rankCase1.size()) break;;
+            if (!rankCase1.size()) break;
         }
 
         if (isSendRecvPair(rankCase1[0], rankCase2[i])) {
-            // remove matched pair
             cont::eraseIndex(rankCase1, 0);
             cont::eraseIndex(rankCase2, i--);
         }
@@ -126,10 +125,10 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
 
         // operators must be inverse
         if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-                BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
+               BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
 
-               (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-                BinaryOperatorKind::BO_Add == operatorsRecv.front())))
+              (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+               BinaryOperatorKind::BO_Add == operatorsRecv.front())))
             return false;
 
         // literal must match
@@ -137,7 +136,6 @@ bool MPICheckerImpl::isSendRecvPair(const MPICall &sendCall,
             return false;
         }
     }
-
 
     return true;
 }
