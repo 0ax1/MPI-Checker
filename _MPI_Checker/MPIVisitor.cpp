@@ -153,7 +153,7 @@ public:
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // invoked after travering the translation unit
-        visitor.checker_.checkForRedundantCalls();
+        // visitor.checker_.checkForRedundantCalls();
         visitor.checker_.checkPointToPointSchema();
 
 

@@ -41,15 +41,16 @@ void MPICheckerImpl::checkUnmatchedCalls(
  */
 void MPICheckerImpl::stripPointToPointMatches(MPIrankCase &rankCase1,
                                           MPIrankCase &rankCase2) {
-    size_t i2 = 0;
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
-        if (!funcClassifier_.isPointToPointType(rankCase1[i2].get())) {
-            i2++;
+        if (!funcClassifier_.isPointToPointType(rankCase1[0].get())) {
+            cont::eraseIndex(rankCase1, 0);
+            if (!rankCase1.size()) break;;
+        }
 
-        } else if (isSendRecvPair(rankCase1[i2], rankCase2[i])) {
+        if (isSendRecvPair(rankCase1[0], rankCase2[i])) {
             // remove matched pair
-            cont::eraseIndex(rankCase1, i2);
+            cont::eraseIndex(rankCase1, 0);
             cont::eraseIndex(rankCase2, i--);
         }
         // if non-matching, blocking function is hit, break
@@ -60,7 +61,7 @@ void MPICheckerImpl::stripPointToPointMatches(MPIrankCase &rankCase1,
 }
 
 void MPICheckerImpl::checkPointToPointSchema() {
-    auto rankCases = MPIRankCases::visitedRankCases;
+    auto &rankCases = MPIRankCases::visitedRankCases;
 
     for (size_t i = 0; i < 2; ++i) {
         for (MPIrankCase &rankCase1 : rankCases) {
