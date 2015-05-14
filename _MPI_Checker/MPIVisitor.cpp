@@ -4,6 +4,7 @@
 #include <functional>
 #include "MPIVisitor.hpp"
 #include "llvm/ADT/SmallVector.h"
+#include "MPICheckerSens.hpp"
 
 #include "ClangSACheckers.h"
 #include "InterCheckerAPI.h"
@@ -34,7 +35,7 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
         // to make display of function in diagnostics available
-        checker_.bugReporter_.currentFunctionDecl_ = functionDecl;
+        checkerAST_.bugReporter_.currentFunctionDecl_ = functionDecl;
     }
     return true;
 }
@@ -92,7 +93,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // check if collective calls are used in rank rankCase
     for (const MPIrankCase &rankCase : MPIRankCases::visitedRankCases) {
         for (const MPICall &call : rankCase) {
-            checker_.checkForCollectiveCall(call);
+            checkerAST_.checkForCollectiveCall(call);
         }
     }
 
@@ -109,14 +110,14 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
 
-    if (checker_.funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
+    if (checkerAST_.funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
         MPICall mpiCall{callExpr};
 
-        checker_.checkBufferTypeMatch(mpiCall);
-        checker_.checkForInvalidArgs(mpiCall);
+        checkerAST_.checkBufferTypeMatch(mpiCall);
+        checkerAST_.checkForInvalidArgs(mpiCall);
         trackRankVariables(mpiCall);
 
-        if (checker_.funcClassifier_.isCollectiveType(mpiCall)) {
+        if (checkerAST_.funcClassifier_.isCollectiveType(mpiCall)) {
             MPICall::visitedCalls.push_back(std::move(mpiCall));
         }
     }
@@ -125,7 +126,7 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 }
 
 void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
-    if (checker_.funcClassifier_.isMPI_Comm_rank(mpiCall)) {
+    if (checkerAST_.funcClassifier_.isMPI_Comm_rank(mpiCall)) {
         VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
         MPIRank::visitedRankVariables.insert(varDecl);
     }
@@ -138,7 +139,7 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(
     StmtVisitor stmtVisitor{then};  // collect call exprs
     for (CallExpr *callExpr : stmtVisitor.callExprs_) {
         // filter mpi calls
-        if (checker_.funcClassifier_.isMPIType(
+        if (checkerAST_.funcClassifier_.isMPIType(
                 callExpr->getDirectCallee()->getIdentifier())) {
             if (unmatchedConditions.size()) {
                 MPICall::visitedCalls.emplace_back(callExpr, condition,
@@ -165,8 +166,7 @@ class MPIChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>,
                      check::PreStmt<CallExpr>, check::EndFunction> {
 public:
-    MPIChecker() { initBugTypes(); }
-
+    // ast callback–––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
@@ -175,8 +175,8 @@ public:
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // invoked after travering the translation unit
-        // visitor.checker_.checkForRedundantCalls();
-        visitor.checker_.checkPointToPointSchema();
+        // visitor.checkerAST_.checkForRedundantCalls();
+        visitor.checkerAST_.checkPointToPointSchema();
 
         // clear after every translation unit
         MPICall::visitedCalls.clear();
@@ -186,131 +186,21 @@ public:
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
     void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
-        setupFunctionClassifier(ctx);
-
-        if (funcClassifier_->isWaitType(
-                callExpr->getDirectCallee()->getIdentifier())) {
-            checkWait(callExpr, ctx);
-        } else if (funcClassifier_->isNonBlockingType(
-                       callExpr->getDirectCallee()->getIdentifier())) {
-            checkNonBlocking(callExpr, ctx);
-        }
-    }
-    void checkNonBlocking(const CallExpr *callExpr, CheckerContext &ctx) const {
-        ProgramStateRef state = ctx.getState();
-        auto rankVars = state->get<RankVarMap>();
-
-        MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-        auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
-        auto requestVar = arg.vars_.front();
-        const RankVar *rankVar = state->get<RankVarMap>(requestVar);
-        state = state->set<RankVarMap>(
-            requestVar, {requestVar, const_cast<CallExpr *>(callExpr)});
-        auto node = ctx.addTransition(state);
-
-        if (rankVar && rankVar->lastUser_) {
-            auto lastUserID =
-                rankVar->lastUser_->getDirectCallee()->getIdentifier();
-            if (funcClassifier_->isNonBlockingType(lastUserID)) {
-                std::string errorText{
-                    "Request " + requestVar->getNameAsString() +
-                    " is already in use by nonblocking call. "};
-
-                BugReport *bugReport =
-                    new BugReport(*DoubleImmediateBugType, errorText, node);
-                bugReport->addRange(callExpr->getSourceRange());
-                bugReport->addRange(requestVar->getSourceRange());
-                ctx.emitReport(bugReport);
-            }
-        }
-    }
-
-    void checkWait(const CallExpr *callExpr, CheckerContext &ctx) const {
-        ProgramStateRef state = ctx.getState();
-        auto rankVars = state->get<RankVarMap>();
-
-        // collect request vars
-        MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-        llvm::SmallVector<VarDecl *, 1> requestVector;
-        if (funcClassifier_->isMPI_Wait(mpiCall)) {
-            requestVector.push_back(mpiCall.arguments_[0].vars_.front());
-        } else if (funcClassifier_->isMPI_Waitall(mpiCall)) {
-            ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
-            arrayVisitor.vars_.resize(arrayVisitor.vars_.size() / 2);  // hack
-
-            for (auto &requestVar : arrayVisitor.vars_) {
-                requestVector.push_back(requestVar);
-            }
-        }
-
-        for (VarDecl *requestVar : requestVector) {
-            const RankVar *rankVar = state->get<RankVarMap>(requestVar);
-            state = state->set<RankVarMap>(
-                requestVar, {requestVar, const_cast<CallExpr *>(callExpr)});
-            auto node = ctx.addTransition(state);
-
-            if (rankVar && rankVar->lastUser_) {
-                auto lastUserID =
-                    rankVar->lastUser_->getDirectCallee()->getIdentifier();
-                // check for double wait
-                if (funcClassifier_->isWaitType(lastUserID)) {
-                    std::string errorText{"Request " +
-                                          requestVar->getNameAsString() +
-                                          " is already waited upon. "};
-
-                    BugReport *bugReport =
-                        new BugReport(*DoubleWaitBugType, errorText, node);
-                    bugReport->addRange(callExpr->getSourceRange());
-                    bugReport->addRange(requestVar->getSourceRange());
-                    ctx.emitReport(bugReport);
-                }
-            }
-            // no matching nonblocking call
-            else {
-                std::string errorText{"Request " +
-                                      requestVar->getNameAsString() +
-                                      " has no matching nonblocking call. "};
-
-                BugReport *bugReport =
-                    new BugReport(*UnmatchedWaitBugType, errorText, node);
-                bugReport->addRange(callExpr->getSourceRange());
-                bugReport->addRange(requestVar->getSourceRange());
-                ctx.emitReport(bugReport);
-            }
-        }
+        dynamicInit(ctx);
+        pathSensitiveChecker_->checkWaitUsage(callExpr, ctx);
+        pathSensitiveChecker_->checkNonBlockingUsage(callExpr, ctx);
     }
 
     void checkEndFunction(CheckerContext &ctx) const {
+        dynamicInit(ctx);
+        pathSensitiveChecker_->checkForUnmatchedWait(ctx);
+        clearRankVars(ctx);
+    }
+
+    void clearRankVars(CheckerContext &ctx) const {
         ProgramStateRef state = ctx.getState();
         auto rankVars = state->get<RankVarMap>();
-        auto node = ctx.addTransition();
-
-        setupFunctionClassifier(ctx);
-
-        // prüfe  ob letzte funkion eine sendende und keine wait ist
-        // kein match für immediate
-        MPIBugReporter bugReporter{ctx.getBugReporter(), *this,
-                                   ctx.getAnalysisManager()};
-        // at the end of a function immediate calls should be matched with wait
-        for (auto &rankVar : rankVars) {
-            if (rankVar.second.lastUser_ &&
-                funcClassifier_->isNonBlockingType(
-                    rankVar.second.lastUser_->getDirectCallee()
-                        ->getIdentifier())) {
-                std::string errorText{
-                    "Nonblocking call using request " +
-                    rankVar.second.varDecl_->getNameAsString() +
-                    " has no matching wait. "};
-
-                BugReport *bugReport =
-                    new BugReport(*UnmatchedImmediateBugType, errorText, node);
-                bugReport->addRange(rankVar.second.lastUser_->getSourceRange());
-                bugReport->addRange(rankVar.second.varDecl_->getSourceRange());
-                ctx.emitReport(bugReport);
-            }
-        }
-
-        // remove all rank vars
+        // clear rank container
         for (auto &rankVar : rankVars) {
             state = state->remove<RankVarMap>(rankVar.first);
         }
@@ -318,27 +208,15 @@ public:
     }
 
 private:
-    void initBugTypes() {
-        DoubleWaitBugType.reset(new BugType(this, "double wait", "MPI Error"));
-        UnmatchedWaitBugType.reset(
-            new BugType(this, "unmatched wait", "MPI Error"));
-        DoubleImmediateBugType.reset(
-            new BugType(this, "double request usage", "MPI Error"));
-        UnmatchedImmediateBugType.reset(
-            new BugType(this, "missing wait", "MPI Error"));
-    }
+    std::unique_ptr<MPICheckerSens> pathSensitiveChecker_;
 
-    void setupFunctionClassifier(CheckerContext &ctx) const {
-        if (!funcClassifier_) {
-            funcClassifier_.reset(
-                new MPIFunctionClassifier(ctx.getAnalysisManager()));
+    void dynamicInit(CheckerContext &ctx) const {
+        if (!pathSensitiveChecker_) {
+            llvm::outs() << "dyn" << "\n";
+            const_cast<std::unique_ptr<MPICheckerSens>&>(pathSensitiveChecker_)
+                .reset(new MPICheckerSens(ctx.getAnalysisManager(), this));
         }
     }
-    std::unique_ptr<BugType> UnmatchedWaitBugType;
-    std::unique_ptr<BugType> UnmatchedImmediateBugType;
-    std::unique_ptr<BugType> DoubleWaitBugType;
-    std::unique_ptr<BugType> DoubleImmediateBugType;
-    mutable std::unique_ptr<MPIFunctionClassifier> funcClassifier_{nullptr};
 };
 }  // end of namespace: mpi
 

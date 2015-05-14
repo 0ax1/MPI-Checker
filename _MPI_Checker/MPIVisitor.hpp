@@ -29,7 +29,7 @@ public:
     MPIVisitor(clang::ento::BugReporter &bugReporter,
                const clang::ento::CheckerBase &checkerBase,
                clang::ento::AnalysisManager &analysisManager)
-        : checker_{bugReporter, checkerBase, analysisManager} {}
+        : checkerAST_{bugReporter, checkerBase, analysisManager} {}
 
     // visitor callbacks
     bool VisitFunctionDecl(clang::FunctionDecl *);
@@ -37,7 +37,7 @@ public:
     bool VisitIfStmt(clang::IfStmt *);
 
     void trackRankVariables(const MPICall &) const;
-    MPICheckerAST checker_;
+    MPICheckerAST checkerAST_;
 
 private:
     bool isRankBranch(clang::IfStmt *ifStmt);
