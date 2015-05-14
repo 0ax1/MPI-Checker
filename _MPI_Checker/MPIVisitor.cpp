@@ -202,7 +202,6 @@ private:
 
     void dynamicInit(CheckerContext &ctx) const {
         if (!pathSensitiveChecker_) {
-            llvm::outs() << "dyn" << "\n";
             const_cast<std::unique_ptr<MPICheckerSens>&>(pathSensitiveChecker_)
                 .reset(new MPICheckerSens(ctx.getAnalysisManager(), this));
         }
