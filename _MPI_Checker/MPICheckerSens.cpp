@@ -132,4 +132,14 @@ void MPICheckerSens::checkForUnmatchedWait(CheckerContext &ctx) {
     }
 }
 
+void MPICheckerSens::clearRankVars(CheckerContext &ctx) const {
+    ProgramStateRef state = ctx.getState();
+    auto rankVars = state->get<RankVarMap>();
+    // clear rank container
+    for (auto &rankVar : rankVars) {
+        state = state->remove<RankVarMap>(rankVar.first);
+    }
+    ctx.addTransition(state);
+}
+
 }  // end of namespace: mpi

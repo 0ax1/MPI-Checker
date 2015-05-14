@@ -22,6 +22,7 @@ public:
     void checkWaitUsage(const clang::CallExpr *,
                    clang::ento::CheckerContext &) const;
     void checkForUnmatchedWait(clang::ento::CheckerContext &);
+    void clearRankVars(clang::ento::CheckerContext &) const;
 
 private:
     std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType{nullptr};

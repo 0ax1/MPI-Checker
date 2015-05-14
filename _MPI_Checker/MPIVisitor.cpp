@@ -194,21 +194,11 @@ public:
     void checkEndFunction(CheckerContext &ctx) const {
         dynamicInit(ctx);
         pathSensitiveChecker_->checkForUnmatchedWait(ctx);
-        clearRankVars(ctx);
-    }
-
-    void clearRankVars(CheckerContext &ctx) const {
-        ProgramStateRef state = ctx.getState();
-        auto rankVars = state->get<RankVarMap>();
-        // clear rank container
-        for (auto &rankVar : rankVars) {
-            state = state->remove<RankVarMap>(rankVar.first);
-        }
-        ctx.addTransition(state);
+        pathSensitiveChecker_->clearRankVars(ctx);
     }
 
 private:
-    std::unique_ptr<MPICheckerSens> pathSensitiveChecker_;
+    const std::unique_ptr<MPICheckerSens> pathSensitiveChecker_;
 
     void dynamicInit(CheckerContext &ctx) const {
         if (!pathSensitiveChecker_) {
