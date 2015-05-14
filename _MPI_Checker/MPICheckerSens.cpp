@@ -5,19 +5,8 @@ namespace mpi {
 using namespace clang;
 using namespace ento;
 
-void MPICheckerSens::initBugTypes() {
-    DoubleWaitBugType.reset(
-        new BugType(checkerBase_, "double wait", "MPI Error"));
-    UnmatchedWaitBugType.reset(
-        new BugType(checkerBase_, "unmatched wait", "MPI Error"));
-    DoubleRequestBugType.reset(
-        new BugType(checkerBase_, "double request usage", "MPI Error"));
-    MissingWaitBugType.reset(
-        new BugType(checkerBase_, "missing wait", "MPI Error"));
-}
-
-void MPICheckerSens::checkNonBlockingUsage(const CallExpr *callExpr,
-                                      CheckerContext &ctx) const {
+void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
+                                           CheckerContext &ctx) const {
     if (!funcClassifier_.isNonBlockingType(
             callExpr->getDirectCallee()->getIdentifier())) {
         return;
@@ -38,20 +27,13 @@ void MPICheckerSens::checkNonBlockingUsage(const CallExpr *callExpr,
         auto lastUserID =
             rankVar->lastUser_->getDirectCallee()->getIdentifier();
         if (funcClassifier_.isNonBlockingType(lastUserID)) {
-            std::string errorText{"Request " + requestVar->getNameAsString() +
-                                  " is already in use by nonblocking call. "};
-
-            BugReport *bugReport =
-                new BugReport(*DoubleRequestBugType, errorText, node);
-            bugReport->addRange(callExpr->getSourceRange());
-            bugReport->addRange(requestVar->getSourceRange());
-            ctx.emitReport(bugReport);
+            // reportDoubleNonblocking(ctx, requestVar, callExpr, node);
         }
     }
 }
 
 void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
-                               CheckerContext &ctx) const {
+                                    CheckerContext &ctx) const {
     if (!funcClassifier_.isWaitType(
             callExpr->getDirectCallee()->getIdentifier())) {
         return;
@@ -85,52 +67,30 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
                 rankVar->lastUser_->getDirectCallee()->getIdentifier();
             // check for double wait
             if (funcClassifier_.isWaitType(lastUserID)) {
-                std::string errorText{"Request " +
-                                      requestVar->getNameAsString() +
-                                      " is already waited upon. "};
-
-                BugReport *bugReport =
-                    new BugReport(*DoubleWaitBugType, errorText, node);
-                bugReport->addRange(callExpr->getSourceRange());
-                bugReport->addRange(requestVar->getSourceRange());
-                ctx.emitReport(bugReport);
+                // reportDoubleWait(ctx, callExpr, *rankVar, node);
             }
         }
         // no matching nonblocking call
         else {
-            std::string errorText{"Request " + requestVar->getNameAsString() +
-                                  " has no matching nonblocking call. "};
-
-            BugReport *bugReport =
-                new BugReport(*UnmatchedWaitBugType, errorText, node);
-            bugReport->addRange(callExpr->getSourceRange());
-            bugReport->addRange(requestVar->getSourceRange());
-            ctx.emitReport(bugReport);
+            // reportUnmatchedWait(ctx, callExpr, *rankVar, node);
         }
     }
 }
 
-void MPICheckerSens::checkForUnmatchedWait(CheckerContext &ctx) {
+void MPICheckerSens::checkMissingWait(CheckerContext &ctx) {
     ProgramStateRef state = ctx.getState();
     auto rankVars = state->get<RankVarMap>();
-    auto node = ctx.addTransition();
+    ExplodedNode *node = ctx.addTransition();
     // at the end of a function immediate calls should be matched with wait
     for (auto &rankVar : rankVars) {
         if (rankVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
                 rankVar.second.lastUser_->getDirectCallee()->getIdentifier())) {
-            std::string errorText{"Nonblocking call using request " +
-                                  rankVar.second.varDecl_->getNameAsString() +
-                                  " has no matching wait. "};
-
-            BugReport *bugReport =
-                new BugReport(*MissingWaitBugType, errorText, node);
-            bugReport->addRange(rankVar.second.lastUser_->getSourceRange());
-            bugReport->addRange(rankVar.second.varDecl_->getSourceRange());
-            ctx.emitReport(bugReport);
+            // reportMissingWait(ctx, rankVar.second, node);
         }
     }
 }
+
 
 void MPICheckerSens::clearRankVars(CheckerContext &ctx) const {
     ProgramStateRef state = ctx.getState();

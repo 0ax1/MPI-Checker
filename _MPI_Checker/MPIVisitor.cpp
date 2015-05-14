@@ -155,6 +155,11 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(
     return rankCaseVector;
 }
 
+std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType{nullptr};
+std::unique_ptr<clang::ento::BugType> MissingWaitBugType{nullptr};
+std::unique_ptr<clang::ento::BugType> DoubleWaitBugType{nullptr};
+std::unique_ptr<clang::ento::BugType> DoubleRequestBugType{nullptr};
+
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Checker host class. Registers checker functionality.
@@ -166,6 +171,15 @@ class MPIChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>,
                      check::PreStmt<CallExpr>, check::EndFunction> {
 public:
+    MPIChecker() {
+        DoubleWaitBugType.reset(new BugType(this, "double wait", "MPI Error"));
+        UnmatchedWaitBugType.reset(
+            new BugType(this, "unmatched wait", "MPI Error"));
+        DoubleRequestBugType.reset(
+            new BugType(this, "double request usage", "MPI Error"));
+        MissingWaitBugType.reset(
+            new BugType(this, "missing wait", "MPI Error"));
+    }
     // ast callback–––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
@@ -186,25 +200,31 @@ public:
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
     void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
-        dynamicInit(ctx);
+        dynSetup(ctx);
         pathSensitiveChecker_->checkWaitUsage(callExpr, ctx);
-        pathSensitiveChecker_->checkNonBlockingUsage(callExpr, ctx);
+        pathSensitiveChecker_->checkDoubleNonblocking(callExpr, ctx);
     }
 
     void checkEndFunction(CheckerContext &ctx) const {
-        dynamicInit(ctx);
-        pathSensitiveChecker_->checkForUnmatchedWait(ctx);
+        dynSetup(ctx);
+        pathSensitiveChecker_->checkMissingWait(ctx);
         pathSensitiveChecker_->clearRankVars(ctx);
     }
 
 private:
     const std::unique_ptr<MPICheckerSens> pathSensitiveChecker_;
 
-    void dynamicInit(CheckerContext &ctx) const {
+
+    void dynSetup(CheckerContext &ctx) const {
         if (!pathSensitiveChecker_) {
-            const_cast<std::unique_ptr<MPICheckerSens>&>(pathSensitiveChecker_)
+            const_cast<std::unique_ptr<MPICheckerSens> &>(pathSensitiveChecker_)
                 .reset(new MPICheckerSens(ctx.getAnalysisManager(), this));
         }
+        // pathSensitiveChecker_->checkerBase_ = this;
+        // pathSensitiveChecker_->initBugTypes();
+
+        // TODO how often do the checker-base
+        // and checker-context change during analysis?
     }
 };
 }  // end of namespace: mpi

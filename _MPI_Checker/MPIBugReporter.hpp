@@ -15,6 +15,7 @@ public:
           checkerBase_{checkerBase},
           analysisManager_{analysisManager} {}
 
+    // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void reportTypeMismatch(const clang::CallExpr *const,
                             const std::pair<size_t, size_t> &) const;
     void reportInvalidArgumentType(const clang::CallExpr *const, const size_t,
@@ -23,10 +24,29 @@ public:
     void reportRedundantCall(const clang::CallExpr *const,
                              const clang::CallExpr *const,
                              const llvm::SmallVectorImpl<size_t> &) const;
+
     void reportCollCallInBranch(const clang::CallExpr *const) const;
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
 
+    // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––
+    void reportMissingWait(clang::ento::CheckerContext &,
+                                    const RankVar &,
+                                    clang::ento::ExplodedNode *) const;
+
+    void reportUnmatchedWait(clang::ento::CheckerContext &,
+                             const clang::CallExpr *, const RankVar &rankVar,
+                             clang::ento::ExplodedNode *) const;
+
+    void reportDoubleWait(clang::ento::CheckerContext &,
+                          const clang::CallExpr *, const RankVar &,
+                          clang::ento::ExplodedNode *) const;
+
+    void reportDoubleNonblocking(clang::ento::CheckerContext &,
+                                 clang::VarDecl *, const clang::CallExpr *,
+                                 clang::ento::ExplodedNode *) const;
+
     clang::Decl *currentFunctionDecl_{nullptr};
+
 
 private:
     std::string lineNumberForCallExpr(const clang::CallExpr *) const;

@@ -11,28 +11,22 @@ namespace mpi {
 class MPICheckerSens {
 public:
     MPICheckerSens(clang::ento::AnalysisManager &analysisManager,
-            const clang::ento::CheckerBase * checkerBase)
-        : funcClassifier_{analysisManager}, checkerBase_{checkerBase} {
-        initBugTypes();
+                   const clang::ento::CheckerBase *checkerBase)
+        : checkerBase_{checkerBase}, funcClassifier_{analysisManager} {
     }
 
-    void initBugTypes();
-    void checkNonBlockingUsage(const clang::CallExpr *,
-                          clang::ento::CheckerContext &) const;
+    void checkDoubleNonblocking(const clang::CallExpr *,
+                               clang::ento::CheckerContext &) const;
     void checkWaitUsage(const clang::CallExpr *,
-                   clang::ento::CheckerContext &) const;
-    void checkForUnmatchedWait(clang::ento::CheckerContext &);
+                        clang::ento::CheckerContext &) const;
+    void checkMissingWait(clang::ento::CheckerContext &);
     void clearRankVars(clang::ento::CheckerContext &) const;
 
-private:
-    std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType{nullptr};
-    std::unique_ptr<clang::ento::BugType> MissingWaitBugType{nullptr};
-    std::unique_ptr<clang::ento::BugType> DoubleWaitBugType{nullptr};
-    std::unique_ptr<clang::ento::BugType> DoubleRequestBugType{nullptr};
-    MPIFunctionClassifier funcClassifier_;
-    const clang::ento::CheckerBase *const checkerBase_;
-};
+    mutable const clang::ento::CheckerBase *checkerBase_;
 
+private:
+    MPIFunctionClassifier funcClassifier_;
+};
 }  // end of namespace: mpi
 
 #endif  // end of include guard: MPICHECKERSENS_HPP_BKYOQUPL
