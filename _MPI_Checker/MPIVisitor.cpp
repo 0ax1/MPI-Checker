@@ -177,7 +177,7 @@ public:
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // invoked after travering the translation unit
-        // visitor.checkerAST_.checkForRedundantCalls();
+        visitor.checkerAST_.checkForRedundantCalls();
         visitor.checkerAST_.checkPointToPointSchema();
 
         // clear after every translation unit

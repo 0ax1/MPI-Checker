@@ -200,7 +200,7 @@ void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
                           " has no matching nonblocking call. "};
 
     BugReport *bugReport =
-        new BugReport(*UnmatchedWaitBugType, "test", node);
+        new BugReport(*UnmatchedWaitBugType, errorText, node);
     bugReport->addRange(callExpr->getSourceRange());
     bugReport->addRange(rankVar->getSourceRange());
     bugReporter_.emitReport(bugReport);
