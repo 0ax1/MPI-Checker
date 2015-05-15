@@ -156,28 +156,38 @@ void MPIBugReporter::reportRedundantCall(
 }
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
-void MPIBugReporter::reportDoubleNonblocking(VarDecl *requestVar,
-                                             const CallExpr *callExpr,
+void MPIBugReporter::reportDoubleNonblocking(const CallExpr *observedCall,
+                                             const RankVar &rankVar,
                                              ExplodedNode *node) const {
-    std::string errorText{"Request " + requestVar->getNameAsString() +
-                          " is already in use by nonblocking call. "};
+    std::string lineNo{lineNumberForCallExpr(rankVar.lastUser_)};
+    std::string lastUser =
+        rankVar.lastUser_->getDirectCallee()->getNameAsString();
+    std::string errorText{"Request " + rankVar.varDecl_->getNameAsString() +
+                          " is already in use by nonblocking call " + lastUser +
+                          " in line " + lineNo + ". "};
 
     BugReport *bugReport =
-        new BugReport(*DoubleRequestBugType, errorText, node);
-    bugReport->addRange(callExpr->getSourceRange());
-    bugReport->addRange(requestVar->getSourceRange());
+        new BugReport(*DoubleNonblockingBugType, errorText, node);
+    bugReport->addRange(observedCall->getSourceRange());
+    bugReport->addRange(rankVar.varDecl_->getSourceRange());
+    bugReport->addRange(rankVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 
-void MPIBugReporter::reportDoubleWait(const CallExpr *callExpr,
+void MPIBugReporter::reportDoubleWait(const CallExpr *observedCall,
                                       const RankVar &rankVar,
                                       ExplodedNode *node) const {
+    std::string lineNo{lineNumberForCallExpr(rankVar.lastUser_)};
+    std::string lastUser =
+        rankVar.lastUser_->getDirectCallee()->getNameAsString();
     std::string errorText{"Request " + rankVar.varDecl_->getNameAsString() +
-                          " is already waited upon. "};
+                          " is already waited upon by " + lastUser +
+                          " in line " + lineNo + ". "};
 
     BugReport *bugReport = new BugReport(*DoubleWaitBugType, errorText, node);
-    bugReport->addRange(callExpr->getSourceRange());
+    bugReport->addRange(observedCall->getSourceRange());
     bugReport->addRange(rankVar.varDecl_->getSourceRange());
+    bugReport->addRange(rankVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 

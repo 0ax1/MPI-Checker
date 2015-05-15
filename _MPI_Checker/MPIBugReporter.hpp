@@ -20,7 +20,7 @@ public:
             new clang::ento::BugType(&checkerBase, "double wait", "MPI Error"));
         UnmatchedWaitBugType.reset(new clang::ento::BugType(
             &checkerBase, "unmatched wait", "MPI Error"));
-        DoubleRequestBugType.reset(new clang::ento::BugType(
+        DoubleNonblockingBugType.reset(new clang::ento::BugType(
             &checkerBase, "double request usage", "MPI Error"));
         MissingWaitBugType.reset(new clang::ento::BugType(
             &checkerBase, "missing wait", "MPI Error"));
@@ -49,8 +49,8 @@ public:
     void reportDoubleWait(const clang::CallExpr *, const RankVar &,
                           clang::ento::ExplodedNode *) const;
 
-    void reportDoubleNonblocking(clang::VarDecl *, const clang::CallExpr *,
-                                 clang::ento::ExplodedNode *) const;
+    void reportDoubleNonblocking(const clang::CallExpr *, const RankVar &,
+                          clang::ento::ExplodedNode *) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 
@@ -60,7 +60,7 @@ private:
     std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType;
     std::unique_ptr<clang::ento::BugType> MissingWaitBugType;
     std::unique_ptr<clang::ento::BugType> DoubleWaitBugType;
-    std::unique_ptr<clang::ento::BugType> DoubleRequestBugType;
+    std::unique_ptr<clang::ento::BugType> DoubleNonblockingBugType;
 
     clang::ento::BugReporter &bugReporter_;
     const clang::ento::CheckerBase &checkerBase_;

@@ -157,11 +157,8 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(
 
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
- * Checker host class. Registers checker functionality.
- * Class name determines checker name to specify when the command line
- * is invoked for static analysis.
- * Receives callback for every translation unit about to visit.
- *
+ * Checker host class that registers the checker for static analysis.
+ * Class name determines checker name to specify on the command line.
  * Is created once for every translation unit.
  */
 class MPIChecker
@@ -177,7 +174,7 @@ public:
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // invoked after travering the translation unit
-        visitor.checkerAST_.checkForRedundantCalls();
+        // visitor.checkerAST_.checkForRedundantCalls();
         visitor.checkerAST_.checkPointToPointSchema();
 
         // clear after every translation unit
