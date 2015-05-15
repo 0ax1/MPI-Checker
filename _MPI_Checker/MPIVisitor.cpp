@@ -1,6 +1,3 @@
-#ifndef MPIVISITOR_CPP_H6L3JFDT
-#define MPIVISITOR_CPP_H6L3JFDT
-
 #include <functional>
 #include "MPIVisitor.hpp"
 #include "llvm/ADT/SmallVector.h"
@@ -187,22 +184,22 @@ public:
     void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
         ctx.getBugReporter();
         dynamicInit(ctx);
-        pathSensitiveChecker_->checkWaitUsage(callExpr, ctx);
-        pathSensitiveChecker_->checkDoubleNonblocking(callExpr, ctx);
+        checkerSens_->checkWaitUsage(callExpr, ctx);
+        checkerSens_->checkDoubleNonblocking(callExpr, ctx);
     }
 
     void checkEndFunction(CheckerContext &ctx) const {
         dynamicInit(ctx);
-        pathSensitiveChecker_->checkMissingWait(ctx);
-        pathSensitiveChecker_->clearRankVars(ctx);
+        checkerSens_->checkMissingWait(ctx);
+        checkerSens_->clearRankVars(ctx);
     }
 
 private:
-    const std::unique_ptr<MPICheckerSens> pathSensitiveChecker_;
+    const std::unique_ptr<MPICheckerSens> checkerSens_;
 
     void dynamicInit(CheckerContext &ctx) const {
-        if (!pathSensitiveChecker_) {
-            const_cast<std::unique_ptr<MPICheckerSens> &>(pathSensitiveChecker_)
+        if (!checkerSens_) {
+            const_cast<std::unique_ptr<MPICheckerSens> &>(checkerSens_)
                 .reset(new MPICheckerSens(ctx.getAnalysisManager(), this,
                                           ctx.getBugReporter()));
         }
@@ -213,5 +210,3 @@ private:
 void ento::registerMPIChecker(CheckerManager &mgr) {
     mgr.registerChecker<mpi::MPIChecker>();
 }
-
-#endif  // end of include guard: MPIVISITOR_CPP_H6L3JFDT
