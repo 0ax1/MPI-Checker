@@ -40,7 +40,7 @@ void MPICheckerAST::checkUnmatchedCalls(
  * @param rankCase2
  */
 void MPICheckerAST::stripPointToPointMatches(MPIrankCase &rankCase1,
-                                              MPIrankCase &rankCase2) {
+                                             MPIrankCase &rankCase2) {
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
         if (!funcClassifier_.isPointToPointType(rankCase1[0].get())) {
@@ -67,12 +67,18 @@ void MPICheckerAST::checkPointToPointSchema() {
             for (MPIrankCase &rankCase2 : rankCases) {
                 // compare by pointer
                 if (&rankCase1 == &rankCase2) continue;
+                // TODO or if condition is the same
                 stripPointToPointMatches(rankCase1, rankCase2);
             }
         }
     }
     checkUnmatchedCalls(rankCases);
 }
+
+// vergleichen von argumenten
+// falls alles plus erlaube beliebige permutation
+// falls minus enthalten muss argument identisch sein
+// muss identisch sein weil man nicht weiß, welche neg/pos sind
 
 /**
  * Check if two calls are a send/recv pair.
@@ -83,9 +89,11 @@ void MPICheckerAST::checkPointToPointSchema() {
  * @return if they are send/recv pair
  */
 bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
-                                    const MPICall &recvCall) const {
+                                   const MPICall &recvCall) const {
     if (!funcClassifier_.isSendType(sendCall)) return false;
     if (!funcClassifier_.isRecvType(recvCall)) return false;
+
+    // TODO make match more restrictive
 
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
@@ -233,12 +241,12 @@ void MPICheckerAST::selectTypeMatcher(
 }
 
 bool MPICheckerAST::matchBoolType(const mpi::TypeVisitor &visitor,
-                                   const llvm::StringRef mpiDatatype) const {
+                                  const llvm::StringRef mpiDatatype) const {
     return (mpiDatatype == "MPI_C_BOOL");
 }
 
 bool MPICheckerAST::matchCharType(const mpi::TypeVisitor &visitor,
-                                   const llvm::StringRef mpiDatatype) const {
+                                  const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
     switch (visitor.builtinType_->getKind()) {
         case BuiltinType::SChar:
@@ -270,7 +278,7 @@ bool MPICheckerAST::matchCharType(const mpi::TypeVisitor &visitor,
 }
 
 bool MPICheckerAST::matchSignedType(const mpi::TypeVisitor &visitor,
-                                     const llvm::StringRef mpiDatatype) const {
+                                    const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -294,8 +302,8 @@ bool MPICheckerAST::matchSignedType(const mpi::TypeVisitor &visitor,
     return isTypeMatching;
 }
 
-bool MPICheckerAST::matchUnsignedType(
-    const mpi::TypeVisitor &visitor, const llvm::StringRef mpiDatatype) const {
+bool MPICheckerAST::matchUnsignedType(const mpi::TypeVisitor &visitor,
+                                      const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -319,7 +327,7 @@ bool MPICheckerAST::matchUnsignedType(
 }
 
 bool MPICheckerAST::matchFloatType(const mpi::TypeVisitor &visitor,
-                                    const llvm::StringRef mpiDatatype) const {
+                                   const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -339,7 +347,7 @@ bool MPICheckerAST::matchFloatType(const mpi::TypeVisitor &visitor,
 }
 
 bool MPICheckerAST::matchComplexType(const mpi::TypeVisitor &visitor,
-                                      const llvm::StringRef mpiDatatype) const {
+                                     const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
     switch (visitor.builtinType_->getKind()) {
@@ -402,7 +410,6 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
                 const mpi::TypeVisitor typeVisitor{var->getType()};
                 if (!typeVisitor.builtinType_ ||
                     !typeVisitor.builtinType_->isIntegerType()) {
-
                     bugReporter_.reportInvalidArgumentType(
                         mpiCall.callExpr_, idx, var->getSourceRange(),
                         "Variable");
@@ -443,10 +450,12 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
  * @return areEqual
  */
 bool MPICheckerAST::areComponentsOfArgEqual(const MPICall &callOne,
-                                             const MPICall &callTwo,
-                                             const size_t idx) const {
+                                            const MPICall &callTwo,
+                                            const size_t idx) const {
     auto argOne = callOne.arguments_[idx];
     auto argTwo = callTwo.arguments_[idx];
+
+    // argOne.expr_->
 
     // operators
     if (!cont::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
@@ -476,8 +485,8 @@ bool MPICheckerAST::areComponentsOfArgEqual(const MPICall &callOne,
 }
 
 bool MPICheckerAST::areDatatypesEqual(const MPICall &callOne,
-                                       const MPICall &callTwo,
-                                       const size_t idx) const {
+                                      const MPICall &callTwo,
+                                      const size_t idx) const {
     const VarDecl *mpiTypeNew = callOne.arguments_[idx].vars_.front();
     const VarDecl *mpiTypePrev = callTwo.arguments_[idx].vars_.front();
 
@@ -493,7 +502,7 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &callOne,
  * @return
  */
 bool MPICheckerAST::qualifyRedundancyCheck(const MPICall &callToCheck,
-                                            const MPICall &comparedCall) const {
+                                           const MPICall &comparedCall) const {
     if (comparedCall.isMarked_) return false;  // to omit double matching
     // do not compare with the call itself
     if (callToCheck.id_ == comparedCall.id_) return false;

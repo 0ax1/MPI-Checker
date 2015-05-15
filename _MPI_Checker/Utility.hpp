@@ -26,7 +26,7 @@ namespace util {
  * @return code part as string ref
  */
 clang::StringRef sourceRangeAsStringRef(clang::SourceRange,
-                                   clang::ento::AnalysisManager &);
+                                        clang::ento::AnalysisManager &);
 
 /**
  * Split string by delimiter.

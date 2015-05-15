@@ -24,8 +24,6 @@ namespace mpi {
  */
 class MPIVisitor : public clang::RecursiveASTVisitor<MPIVisitor> {
 public:
-    enum class MatchType { kMatch, kMismatch, kNoMatch };
-
     MPIVisitor(clang::ento::BugReporter &bugReporter,
                const clang::ento::CheckerBase &checkerBase,
                clang::ento::AnalysisManager &analysisManager)

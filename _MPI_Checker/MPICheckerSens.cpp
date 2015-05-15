@@ -6,7 +6,7 @@ using namespace clang;
 using namespace ento;
 
 void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
-                                           CheckerContext &ctx) const {
+                                            CheckerContext &ctx) const {
     if (!funcClassifier_.isNonBlockingType(
             callExpr->getDirectCallee()->getIdentifier())) {
         return;
@@ -49,7 +49,7 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
         requestVector.push_back(mpiCall.arguments_[0].vars_.front());
     } else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
         ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
-        arrayVisitor.vars_.resize(arrayVisitor.vars_.size() / 2); // hack
+        arrayVisitor.vars_.resize(arrayVisitor.vars_.size() / 2);  // hack
 
         for (auto &requestVar : arrayVisitor.vars_) {
             requestVector.push_back(requestVar);
@@ -93,7 +93,6 @@ void MPICheckerSens::checkMissingWait(CheckerContext &ctx) {
         }
     }
 }
-
 
 void MPICheckerSens::clearRankVars(CheckerContext &ctx) const {
     ProgramStateRef state = ctx.getState();

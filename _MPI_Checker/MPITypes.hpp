@@ -43,13 +43,10 @@ public:
     // semantic depends on context of usage
     mutable bool isMarked_;
 
-    // if mpi call is executed in (if)/(else if) case
+    // condition fullfilled to enter rank case
     const clang::Stmt *const rankCondition_{nullptr};
-    // if mpi call is executed in (else) case
+    // conditions not fullfilled to enter rank case
     const llvm::SmallVector<clang::Stmt *, 4> unmatchedRankConditions_;
-
-    // to capture all visited calls traversing the ast
-    static llvm::SmallVector<MPICall, 16> visitedCalls;
 
 private:
     /**
@@ -84,6 +81,7 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
 // to capture rank cases from branches
+// TODO add condition to rank case
 typedef std::vector<std::reference_wrapper<MPICall>> MPIrankCase;
 namespace MPIRankCases {
 extern llvm::SmallVector<MPIrankCase, 8> visitedRankCases;
@@ -94,15 +92,15 @@ struct RankVar {
     clang::VarDecl *varDecl_;
     clang::CallExpr *lastUser_;
 
-    RankVar(clang::VarDecl *varDecl, clang::CallExpr *callExpr) :
-        varDecl_{varDecl}, lastUser_{callExpr} {}
+    RankVar(clang::VarDecl *varDecl, clang::CallExpr *callExpr)
+        : varDecl_{varDecl}, lastUser_{callExpr} {}
 
     void Profile(llvm::FoldingSetNodeID &id) const {
         id.AddPointer(varDecl_);
         id.AddPointer(lastUser_);
     }
 
-    bool operator==(const RankVar& toCompare) const {
+    bool operator==(const RankVar &toCompare) const {
         return toCompare.varDecl_ == varDecl_;
     }
 };

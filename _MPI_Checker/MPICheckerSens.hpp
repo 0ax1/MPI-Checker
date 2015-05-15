@@ -8,7 +8,6 @@
 #include "MPITypes.hpp"
 #include "MPIBugReporter.hpp"
 
-
 namespace mpi {
 
 class MPICheckerSens {

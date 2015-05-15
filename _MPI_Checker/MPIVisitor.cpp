@@ -74,8 +74,8 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-        MPIRankCases::visitedRankCases.emplace_back(
-            collectMPICallsInCase(ifStmt->getThen(), ifStmt->getCond(), {}));
+        MPIRankCases::visitedRankCases.emplace_back(collectMPICallsInCase(
+            ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions));
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
@@ -138,13 +138,8 @@ MPIrankCase MPIVisitor::collectMPICallsInCase(
         // filter mpi calls
         if (checkerAST_.funcClassifier_.isMPIType(
                 callExpr->getDirectCallee()->getIdentifier())) {
-            if (unmatchedConditions.size()) {
                 MPICall::visitedCalls.emplace_back(callExpr, condition,
                                                    unmatchedConditions);
-            } else {
-                MPICall::visitedCalls.emplace_back(callExpr, condition);
-            }
-
             // add reference to rankCase vector
             rankCaseVector.push_back(MPICall::visitedCalls.back());
         }
@@ -176,13 +171,11 @@ public:
 
         // clear after every translation unit
         MPICall::visitedCalls.clear();
-        MPIRequest::visitedRequests.clear();
         MPIRankCases::visitedRankCases.clear();
     }
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
     void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
-        ctx.getBugReporter();
         dynamicInit(ctx);
         checkerSens_->checkWaitUsage(callExpr, ctx);
         checkerSens_->checkDoubleNonblocking(callExpr, ctx);

@@ -50,7 +50,7 @@ public:
                           clang::ento::ExplodedNode *) const;
 
     void reportDoubleNonblocking(const clang::CallExpr *, const RankVar &,
-                          clang::ento::ExplodedNode *) const;
+                                 clang::ento::ExplodedNode *) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 

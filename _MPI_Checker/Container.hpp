@@ -135,7 +135,7 @@ size_t indexPred(const T &container, P predicate) {
  */
 template <typename T, typename T2>
 void copy(const T &source, T2 &dest) {
-      std::copy(source.begin(), source.end(), std::back_inserter(dest));
+    std::copy(source.begin(), source.end(), std::back_inserter(dest));
 }
 
 /**
@@ -147,7 +147,7 @@ void copy(const T &source, T2 &dest) {
  */
 template <typename T, typename P>
 typename T::iterator findPred(T &cont, P pred) {
-      return std::find_if(cont.begin(), cont.end(), pred);
+    return std::find_if(cont.begin(), cont.end(), pred);
 }
 
 /**
@@ -177,7 +177,6 @@ bool isPermutation(const T1 &first, const T2 &second) {
     }
     return true;
 }
-
 
 }  // end of namespace: cont
 

@@ -5,6 +5,8 @@ using namespace ento;
 
 namespace mpi {
 
+// TODO speichere sequenz der argumente
+
 // variables or functions can be a declrefexpr
 bool ExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =

@@ -246,7 +246,6 @@ bool MPIFunctionClassifier::isPointToPointType(
     return cont::isContained(mpiPointToPointTypes_, identInfo);
 }
 
-
 bool MPIFunctionClassifier::isSendType(const IdentifierInfo *identInfo) const {
     return cont::isContained(mpiSendTypes_, identInfo);
 }
@@ -310,7 +309,8 @@ bool MPIFunctionClassifier::isMPI_Wait(const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Wait_;
 }
 
-bool MPIFunctionClassifier::isMPI_Waitall(const IdentifierInfo *identInfo) const {
+bool MPIFunctionClassifier::isMPI_Waitall(
+    const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Waitall_;
 }
 

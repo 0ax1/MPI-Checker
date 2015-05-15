@@ -8,7 +8,6 @@
 
 namespace mpi {
 
-
 /**
  * Visitor class to traverse an expression.
  * On the way it collects binary operators, variable decls, function decls,
@@ -52,8 +51,8 @@ public:
 
 /**
  * Class to find out type information for a given qualified type.
- * Detects if a QualType has a typedef, is a complex type,
- * is a builtin type. For matches the type information is stored.
+ * Detects if a QualType is a typedef, complex type, builtin type.
+ * For matches the type information is stored.
  */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
@@ -91,9 +90,7 @@ public:
  */
 class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
-    StmtVisitor(clang::Stmt *stmt)  {
-        TraverseStmt(stmt);
-    }
+    StmtVisitor(clang::Stmt *stmt) { TraverseStmt(stmt); }
     // must be public to trigger callbacks
     bool VisitCallExpr(clang::CallExpr *callExpr) {
         callExprs_.push_back(callExpr);
