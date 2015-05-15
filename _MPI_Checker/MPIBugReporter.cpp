@@ -106,12 +106,13 @@ void MPIBugReporter::reportInvalidArgumentType(
     std::string indexAsString{std::to_string(idx)};
     SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
     std::string bugName{"invalid argument type"};
-    std::string errorText{typeAsString + " used at index " + indexAsString +
-                          " is not valid. "};
+    std::string errorText{typeAsString + " type used at index " +
+                          indexAsString + " is not valid. "};
 
     bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugName, MPIError,
                                  errorText, location,
-                                 {callExprRange, invalidSourceRange});
+                                 {callExprRange, invalidSourceRange,
+                                  callExpr->getArg(idx)->getSourceRange()});
 }
 
 /**

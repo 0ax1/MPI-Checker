@@ -402,6 +402,7 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
                 const mpi::TypeVisitor typeVisitor{var->getType()};
                 if (!typeVisitor.builtinType_ ||
                     !typeVisitor.builtinType_->isIntegerType()) {
+
                     bugReporter_.reportInvalidArgumentType(
                         mpiCall.callExpr_, idx, var->getSourceRange(),
                         "Variable");
@@ -423,7 +424,7 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
                     !typeVisitor.builtinType_->isIntegerType()) {
                     bugReporter_.reportInvalidArgumentType(
                         mpiCall.callExpr_, idx, function->getSourceRange(),
-                        "Return value from function");
+                        "Return value");
                 }
             }
         }
