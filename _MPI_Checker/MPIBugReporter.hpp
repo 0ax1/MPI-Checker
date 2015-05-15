@@ -3,6 +3,8 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "MPITypes.hpp"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
+#include <memory>
 
 namespace mpi {
 
@@ -13,7 +15,16 @@ public:
                    clang::ento::AnalysisManager &analysisManager)
         : bugReporter_{bugReporter},
           checkerBase_{checkerBase},
-          analysisManager_{analysisManager} {}
+          analysisManager_{analysisManager} {
+        DoubleWaitBugType.reset(
+            new clang::ento::BugType(&checkerBase, "double wait", "MPI Error"));
+        UnmatchedWaitBugType.reset(new clang::ento::BugType(
+            &checkerBase, "unmatched wait", "MPI Error"));
+        DoubleRequestBugType.reset(new clang::ento::BugType(
+            &checkerBase, "double request usage", "MPI Error"));
+        MissingWaitBugType.reset(new clang::ento::BugType(
+            &checkerBase, "missing wait", "MPI Error"));
+    }
 
     // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void reportTypeMismatch(const clang::CallExpr *const,
@@ -29,27 +40,27 @@ public:
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
 
     // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––
-    void reportMissingWait(clang::ento::CheckerContext &,
-                                    const RankVar &,
-                                    clang::ento::ExplodedNode *) const;
+    void reportMissingWait(const RankVar &, clang::ento::ExplodedNode *) const;
 
-    void reportUnmatchedWait(clang::ento::CheckerContext &,
-                             const clang::CallExpr *, const RankVar &rankVar,
+    void reportUnmatchedWait(const clang::CallExpr *,
+                             const clang::VarDecl *rankVar,
                              clang::ento::ExplodedNode *) const;
 
-    void reportDoubleWait(clang::ento::CheckerContext &,
-                          const clang::CallExpr *, const RankVar &,
+    void reportDoubleWait(const clang::CallExpr *, const RankVar &,
                           clang::ento::ExplodedNode *) const;
 
-    void reportDoubleNonblocking(clang::ento::CheckerContext &,
-                                 clang::VarDecl *, const clang::CallExpr *,
+    void reportDoubleNonblocking(clang::VarDecl *, const clang::CallExpr *,
                                  clang::ento::ExplodedNode *) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
 
-
 private:
     std::string lineNumberForCallExpr(const clang::CallExpr *) const;
+
+    std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType;
+    std::unique_ptr<clang::ento::BugType> MissingWaitBugType;
+    std::unique_ptr<clang::ento::BugType> DoubleWaitBugType;
+    std::unique_ptr<clang::ento::BugType> DoubleRequestBugType;
 
     clang::ento::BugReporter &bugReporter_;
     const clang::ento::CheckerBase &checkerBase_;

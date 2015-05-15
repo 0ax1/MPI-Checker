@@ -27,7 +27,7 @@ void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
         auto lastUserID =
             rankVar->lastUser_->getDirectCallee()->getIdentifier();
         if (funcClassifier_.isNonBlockingType(lastUserID)) {
-            // reportDoubleNonblocking(ctx, requestVar, callExpr, node);
+            bugReporter_.reportDoubleNonblocking(requestVar, callExpr, node);
         }
     }
 }
@@ -60,20 +60,22 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
         const RankVar *rankVar = state->get<RankVarMap>(requestVar);
         state = state->set<RankVarMap>(
             requestVar, {requestVar, const_cast<CallExpr *>(callExpr)});
-        auto node = ctx.addTransition(state);
+        auto node = ctx.addTransition();
 
         if (rankVar && rankVar->lastUser_) {
             auto lastUserID =
                 rankVar->lastUser_->getDirectCallee()->getIdentifier();
             // check for double wait
             if (funcClassifier_.isWaitType(lastUserID)) {
-                // reportDoubleWait(ctx, callExpr, *rankVar, node);
+                bugReporter_.reportDoubleWait(callExpr, *rankVar, node);
             }
         }
         // no matching nonblocking call
         else {
-            // reportUnmatchedWait(ctx, callExpr, *rankVar, node);
+            bugReporter_.reportUnmatchedWait(callExpr, requestVar, node);
         }
+
+        ctx.addTransition(state);
     }
 }
 
@@ -86,7 +88,7 @@ void MPICheckerSens::checkMissingWait(CheckerContext &ctx) {
         if (rankVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
                 rankVar.second.lastUser_->getDirectCallee()->getIdentifier())) {
-            // reportMissingWait(ctx, rankVar.second, node);
+            bugReporter_.reportMissingWait(rankVar.second, node);
         }
     }
 }

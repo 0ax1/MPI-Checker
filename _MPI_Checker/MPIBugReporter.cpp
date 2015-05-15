@@ -24,55 +24,9 @@ std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
     return strs.at(strs.size() - 2);
 }
 
-// bug reports–––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+// bug reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
-extern std::unique_ptr<clang::ento::BugType> UnmatchedWaitBugType;
-extern std::unique_ptr<clang::ento::BugType> MissingWaitBugType;
-extern std::unique_ptr<clang::ento::BugType> DoubleWaitBugType;
-extern std::unique_ptr<clang::ento::BugType> DoubleRequestBugType;
-
-void MPIBugReporter::reportDoubleNonblocking(CheckerContext &ctx,
-        VarDecl *requestVar, const CallExpr *callExpr,
-        ExplodedNode *node) const {
-    std::string errorText{"Request " + requestVar->getNameAsString() +
-                          " is already in use by nonblocking call. "};
-
-    BugReport *bugReport =
-        new BugReport(*DoubleRequestBugType, errorText, node);
-    bugReport->addRange(callExpr->getSourceRange());
-    bugReport->addRange(requestVar->getSourceRange());
-    bugReporter_.emitReport(bugReport);
-}
-
-void MPIBugReporter::reportDoubleWait(CheckerContext &ctx,
-                                         const CallExpr *callExpr,
-                                         const RankVar &rankVar,
-                                         ExplodedNode *node)  const{
-    std::string errorText{"Request " +
-                          rankVar.varDecl_->getNameAsString() +
-                          " is already waited upon. "};
-
-    BugReport *bugReport =
-        new BugReport(*DoubleWaitBugType, errorText, node);
-    bugReport->addRange(callExpr->getSourceRange());
-    bugReport->addRange(rankVar.varDecl_->getSourceRange());
-    bugReporter_.emitReport(bugReport);
-}
-
-void MPIBugReporter::reportMissingWait(CheckerContext &ctx,
-                                                 const RankVar &rankVar,
-                                                 ExplodedNode *node)  const{
-    std::string errorText{"Nonblocking call using request " +
-                          rankVar.varDecl_->getNameAsString() +
-                          " has no matching wait. "};
-
-    BugReport *bugReport = new BugReport(*MissingWaitBugType, errorText, node);
-    bugReport->addRange(rankVar.lastUser_->getSourceRange());
-    bugReport->addRange(rankVar.varDecl_->getSourceRange());
-    ctx.emitReport(bugReport);
-}
-
-
+// ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Reports mismach between buffer type and mpi datatype.
  * @param callExpr
@@ -199,6 +153,57 @@ void MPIBugReporter::reportRedundantCall(
     bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
                                  bugName, MPIWarning, errorText, location,
                                  sourceRanges);
+}
+
+// path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
+void MPIBugReporter::reportDoubleNonblocking(VarDecl *requestVar,
+                                             const CallExpr *callExpr,
+                                             ExplodedNode *node) const {
+    std::string errorText{"Request " + requestVar->getNameAsString() +
+                          " is already in use by nonblocking call. "};
+
+    BugReport *bugReport =
+        new BugReport(*DoubleRequestBugType, errorText, node);
+    bugReport->addRange(callExpr->getSourceRange());
+    bugReport->addRange(requestVar->getSourceRange());
+    bugReporter_.emitReport(bugReport);
+}
+
+void MPIBugReporter::reportDoubleWait(const CallExpr *callExpr,
+                                      const RankVar &rankVar,
+                                      ExplodedNode *node) const {
+    std::string errorText{"Request " + rankVar.varDecl_->getNameAsString() +
+                          " is already waited upon. "};
+
+    BugReport *bugReport = new BugReport(*DoubleWaitBugType, errorText, node);
+    bugReport->addRange(callExpr->getSourceRange());
+    bugReport->addRange(rankVar.varDecl_->getSourceRange());
+    bugReporter_.emitReport(bugReport);
+}
+
+void MPIBugReporter::reportMissingWait(const RankVar &rankVar,
+                                       ExplodedNode *node) const {
+    std::string errorText{"Nonblocking call using request " +
+                          rankVar.varDecl_->getNameAsString() +
+                          " has no matching wait. "};
+
+    BugReport *bugReport = new BugReport(*MissingWaitBugType, errorText, node);
+    bugReport->addRange(rankVar.lastUser_->getSourceRange());
+    bugReport->addRange(rankVar.varDecl_->getSourceRange());
+    bugReporter_.emitReport(bugReport);
+}
+
+void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
+                                         const VarDecl *rankVar,
+                                         ExplodedNode *node) const {
+    std::string errorText{"Request " + rankVar->getNameAsString() +
+                          " has no matching nonblocking call. "};
+
+    BugReport *bugReport =
+        new BugReport(*UnmatchedWaitBugType, "test", node);
+    bugReport->addRange(callExpr->getSourceRange());
+    bugReport->addRange(rankVar->getSourceRange());
+    bugReporter_.emitReport(bugReport);
 }
 
 }  // end of namespace: mpi
