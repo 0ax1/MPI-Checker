@@ -47,7 +47,8 @@ public:
     bool isEqualOrdered(const StmtVisitor &visitor, bool) const;
     bool isEqualPermutative(const StmtVisitor &visitor, bool) const;
     bool containsNonCommutativeOps() const;
-    bool areContainerSizesEqual(const StmtVisitor &) const;
+    bool areDeclTypesEqual(const StmtVisitor &) const;
+    bool areVariablesEqual(const StmtVisitor &) const;
 };
 
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {

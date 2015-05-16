@@ -47,41 +47,8 @@ bool StmtVisitor::VisitCallExpr(clang::CallExpr *callExpr) {
     return true;
 }
 
-bool StmtVisitor::areContainerSizesEqual(const StmtVisitor &visitorToCompare) const {
-    // count of all elements must match
-    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size()) {
-        return false;
-    }
-
-    // int literals
-    if (intValues_ != visitorToCompare.intValues_) return false;
-
-    // float literals (just compare size, not by value)
-    if (floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size())
-        return false;
-
-    // functions
-    if (functions_ != visitorToCompare.functions_) return false;
-
-    if (vars_.size() != visitorToCompare.vars_.size()) return false;
-
-    return true;
-}
-
-bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
-                                 bool compareOperators) const {
-
-    if (!areContainerSizesEqual(visitorToCompare)) return false;
-
-    // compare classes in sequence
-    for (size_t i = 0; i < sequentialSeries_.size(); ++i) {
-        if (!(sequentialSeries_[i]->getStmtClass() ==
-              visitorToCompare.sequentialSeries_[i]->getStmtClass())) {
-            return false;
-        }
-    }
-
-    // compare decl types in sequence
+bool StmtVisitor::areDeclTypesEqual(const StmtVisitor &visitorToCompare) const {
+    // distinct var decls and function decls
     for (size_t i = 0; i < declarations_.size(); ++i) {
         if (!(isa<VarDecl>(declarations_[i]) ==
                   isa<VarDecl>(visitorToCompare.declarations_[i]) &&
@@ -90,25 +57,53 @@ bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
             return false;
         }
     }
+    return true;
+}
 
-
-    // variables (are compared by name, to make them comparable
-    // beyond their scope, across different branches, functions)
+bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
+    // variables are compared by name, to make them comparable
+    // beyond their scope, across different branches, functions
     for (size_t i = 0; i < vars_.size(); ++i) {
         if (vars_[i]->getNameAsString() !=
             visitorToCompare.vars_[i]->getNameAsString()) {
-            // if name not equal check if they are both rank vars
-            bool isRankVar1 =
-                cont::isContained(MPIRank::visitedRankVariables, vars_[i]);
-
-            bool isRankVar2 = cont::isContained(MPIRank::visitedRankVariables,
-                                                visitorToCompare.vars_[i]);
-            if (isRankVar1 && isRankVar2) continue;
+            // vars are rated as equal if they are both rank variables
+            if (cont::isContained(MPIRank::visitedRankVariables, vars_[i]) &&
+                cont::isContained(MPIRank::visitedRankVariables,
+                                  visitorToCompare.vars_[i]))
+                continue;
 
             return false;
         }
     }
+    return true;
+}
 
+bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
+                                 bool compareOperators) const {
+    // match container sizes
+    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
+        // float literals (just compare size, not by value)
+        floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size() ||
+        vars_.size() != visitorToCompare.vars_.size()) {
+        return false;
+    }
+
+    // compare class types in sequence
+    for (size_t i = 0; i < sequentialSeries_.size(); ++i) {
+        if (!(sequentialSeries_[i]->getStmtClass() ==
+              visitorToCompare.sequentialSeries_[i]->getStmtClass())) {
+            return false;
+        }
+    }
+
+    // distinct var decls and function decls
+    if (!areDeclTypesEqual(visitorToCompare)) return false;
+    // int literals
+    if (intValues_ != visitorToCompare.intValues_) return false;
+    // functions
+    if (functions_ != visitorToCompare.functions_) return false;
+    // variables
+    if (!areVariablesEqual(visitorToCompare)) return false;
     // operators
     if (compareOperators) {
         if (binaryOperators_ != visitorToCompare.binaryOperators_) return false;
@@ -119,8 +114,11 @@ bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
 
 bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
                                      bool compareOperators) const {
-    // count of all elements must match
-    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size()) {
+    // match container sizes
+    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
+        // float literals (just compare size, not by value)
+        floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size() ||
+        vars_.size() != visitorToCompare.vars_.size()) {
         return false;
     }
 
@@ -131,7 +129,6 @@ bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
 
     // variables (are compared by name, to make them comparable
     // beyond their scope, across different branches, functions)
-    if (vars_.size() != visitorToCompare.vars_.size()) return false;
     llvm::SmallVector<std::string, 2> varNames1;
     llvm::SmallVector<std::string, 2> varNames2;
     for (size_t i = 0; i < vars_.size(); ++i) {
@@ -142,10 +139,6 @@ bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
 
     // int literals
     if (!cont::isPermutation(intValues_, visitorToCompare.intValues_))
-        return false;
-
-    // float literals (just compare size, not by value)
-    if (floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size())
         return false;
 
     // functions
@@ -163,7 +156,6 @@ bool StmtVisitor::containsNonCommutativeOps() const {
     }
     return false;
 }
-
 
 bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =

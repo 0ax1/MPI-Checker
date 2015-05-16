@@ -103,7 +103,8 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (sendCall.arguments_[idx].containsNonCommutativeOps()) {
+        if (sendCall.arguments_[idx].containsNonCommutativeOps() ||
+            recvCall.arguments_[idx].containsNonCommutativeOps()) {
             if (!sendCall.arguments_[idx].isEqualOrdered(
                     sendCall.arguments_[idx], true)) {
                 return false;
@@ -134,18 +135,19 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
 
     // operators except last one must be equal
-    for (size_t i = 0; i < operatorsSend.size()-1; ++i) {
+    // (operator list is reversed to notation in code)
+    for (size_t i = 1; i < operatorsSend.size(); ++i) {
         if (operatorsSend[i] != operatorsRecv[i]) {
             return false;
         }
     }
 
     // last operator must be inverse
-    if (!((BinaryOperatorKind::BO_Add == operatorsSend.back() &&
-           BinaryOperatorKind::BO_Sub == operatorsRecv.back()) ||
+    if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
+           BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
 
-          (BinaryOperatorKind::BO_Sub == operatorsSend.back() &&
-           BinaryOperatorKind::BO_Add == operatorsRecv.back())))
+          (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
+           BinaryOperatorKind::BO_Add == operatorsRecv.front())))
         return false;
 
 
