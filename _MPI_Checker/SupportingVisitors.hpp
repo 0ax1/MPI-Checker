@@ -26,8 +26,9 @@ public:
     bool VisitCallExpr(clang::CallExpr *);
 
     // non visitor functions
-    bool isEqual(const StmtVisitor &visitor, bool) const;
-    bool isEqualOrdered(const StmtVisitor &visitor, bool) const;
+    enum class CompareOperators { kYes, kNo };
+    bool isEqual(const StmtVisitor &visitor, CompareOperators) const;
+    bool isEqualOrdered(const StmtVisitor &visitor, CompareOperators) const;
     bool isEqualPermutative(const StmtVisitor &visitor) const;
 
     bool containsNonCommutativeOps() const;

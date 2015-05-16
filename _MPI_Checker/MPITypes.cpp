@@ -31,8 +31,9 @@ bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
     // ranges used in rank conditions prohibit equality identification
     auto isRangeComparison = [](BinaryOperatorKind op) {
         return (BinaryOperatorKind::BO_LT == op ||
-            BinaryOperatorKind::BO_GT == op ||
-            BinaryOperatorKind::BO_LE == op || BinaryOperatorKind::BO_GE == op);
+                BinaryOperatorKind::BO_GT == op ||
+                BinaryOperatorKind::BO_LE == op ||
+                BinaryOperatorKind::BO_GE == op);
     };
     for (const auto op : matchedCondition_->binaryOperators_) {
         if (isRangeComparison(op)) return false;
@@ -43,7 +44,8 @@ bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
 
     // both cases are if/else if
     // compare matched condition
-    return matchedCondition_->isEqual(*rankCase.matchedCondition_, true);
+    return matchedCondition_->isEqual(*rankCase.matchedCondition_,
+                                      StmtVisitor::CompareOperators::kYes);
 }
 
 bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {

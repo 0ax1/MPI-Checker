@@ -102,8 +102,10 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     if (sendDataType != recvDataType) return false;
 
     // compare count, tag
-    for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!sendCall.arguments_[idx].isEqual(sendCall.arguments_[idx], true)) {
+    for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
+        if (!sendCall.arguments_[idx].isEqual(
+                sendCall.arguments_[idx],
+                StmtVisitor::CompareOperators::kYes)) {
             return false;
         }
     }
@@ -111,15 +113,16 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // compare ranks
     // exclude operator from this comparison
     if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
-            recvCall.arguments_[MPIPointToPoint::kRank], false)) {
+            recvCall.arguments_[MPIPointToPoint::kRank],
+            StmtVisitor::CompareOperators::kNo)) {
         return false;
     }
 
     // compare rank operators
-    auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
-    auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
-    auto &operatorsSend = rankArgSend.binaryOperators_;
-    auto &operatorsRecv = rankArgRecv.binaryOperators_;
+    const auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
+    const auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+    const auto &operatorsSend = rankArgSend.binaryOperators_;
+    const auto &operatorsRecv = rankArgRecv.binaryOperators_;
 
     if (operatorsSend.size() != operatorsRecv.size()) {
         return false;

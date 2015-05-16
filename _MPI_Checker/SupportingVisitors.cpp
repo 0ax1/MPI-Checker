@@ -81,7 +81,7 @@ bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
 }
 
 bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
-                          bool compareOperators) const {
+                          CompareOperators compareOperators) const {
     if (containsNonCommutativeOps() ||
         visitorToCompare.containsNonCommutativeOps()) {
         return isEqualOrdered(visitorToCompare, compareOperators);
@@ -91,7 +91,7 @@ bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
 }
 
 bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
-                                 bool compareOperators) const {
+                                 CompareOperators compareOperators) const {
     // match container sizes
     if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
         // float literals (just compare size, not by value)
@@ -117,7 +117,7 @@ bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
     // variables
     if (!areVariablesEqual(visitorToCompare)) return false;
     // operators
-    if (compareOperators) {
+    if (compareOperators == CompareOperators::kYes) {
         if (binaryOperators_ != visitorToCompare.binaryOperators_) return false;
     }
 
