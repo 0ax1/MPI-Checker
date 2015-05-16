@@ -58,9 +58,9 @@ public:
     void checkForCollectiveCall(const MPICall &) const;
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
-    void checkUnmatchedCalls(const llvm::SmallVectorImpl<MPIrankCase> &) const;
+    void checkUnmatchedCalls(const llvm::SmallVectorImpl<MPIRankCase> &) const;
     void checkPointToPointSchema();
-    void stripPointToPointMatches(MPIrankCase &, MPIrankCase &);
+    void matchRankCasePair(MPIRankCase &, MPIRankCase &);
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;

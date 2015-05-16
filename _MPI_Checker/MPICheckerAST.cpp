@@ -18,9 +18,9 @@ void MPICheckerAST::checkForCollectiveCall(const MPICall &mpiCall) const {
  * @param rankCases
  */
 void MPICheckerAST::checkUnmatchedCalls(
-    const llvm::SmallVectorImpl<MPIrankCase> &rankCases) const {
-    for (const MPIrankCase &rankCase : rankCases) {
-        for (const MPICall &call : rankCase) {
+    const llvm::SmallVectorImpl<MPIRankCase> &rankCases) const {
+    for (const MPIRankCase &rankCase : rankCases) {
+        for (const MPICall &call : rankCase.mpiCalls_) {
             if (funcClassifier_.isSendType(call)) {
                 bugReporter_.reportUnmatchedCall(call.callExpr_, "receive");
             } else if (funcClassifier_.isRecvType(call)) {
@@ -39,36 +39,37 @@ void MPICheckerAST::checkUnmatchedCalls(
  * @param rankCase1
  * @param rankCase2
  */
-void MPICheckerAST::stripPointToPointMatches(MPIrankCase &rankCase1,
-                                             MPIrankCase &rankCase2) {
+void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
+                                      MPIRankCase &rankCase2) {
     for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
         // skip non point to point
-        if (!funcClassifier_.isPointToPointType(rankCase1[0].get())) {
-            cont::eraseIndex(rankCase1, 0);
-            if (!rankCase1.size()) break;
+        while (
+            !funcClassifier_.isPointToPointType(rankCase1.mpiCalls_[0].get())) {
+            cont::eraseIndex(rankCase1.mpiCalls_, 0);
+            if (!rankCase1.size()) return;
         }
-
-        if (isSendRecvPair(rankCase1[0], rankCase2[i])) {
-            cont::eraseIndex(rankCase1, 0);
-            cont::eraseIndex(rankCase2, i--);
+        if (isSendRecvPair(rankCase1.mpiCalls_[0], rankCase2.mpiCalls_[i])) {
+            cont::eraseIndex(rankCase1.mpiCalls_, 0);
+            cont::eraseIndex(rankCase2.mpiCalls_, i--);
         }
         // if non-matching, blocking function is hit, break
-        else if (funcClassifier_.isBlockingType(rankCase2[i].get())) {
+        else if (funcClassifier_.isBlockingType(rankCase2.mpiCalls_[i].get())) {
             break;
         }
     }
 }
 
 void MPICheckerAST::checkPointToPointSchema() {
-    auto &rankCases = MPIRankCases::visitedRankCases;
+    auto &rankCases = MPIRankCase::visitedRankCases;
 
-    for (size_t i = 0; i < 2; ++i) {
-        for (MPIrankCase &rankCase1 : rankCases) {
-            for (MPIrankCase &rankCase2 : rankCases) {
-                // compare by pointer
-                if (&rankCase1 == &rankCase2) continue;
-                // TODO or if condition is the same
-                stripPointToPointMatches(rankCase1, rankCase2);
+    for (size_t i = 0; i < 4; ++i) {
+        for (MPIRankCase &rankCase1 : rankCases) {
+            for (MPIRankCase &rankCase2 : rankCases) {
+                // rank cases must be distinct
+                if (!rankCase1.isRankConditionEqual(rankCase2)) {
+                    // rank cases are potential partner
+                    matchRankCasePair(rankCase1, rankCase2);
+                }
             }
         }
     }
@@ -97,11 +98,11 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
+        sendCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments_[MPIPointToPoint::kDatatype].expr_->getSourceRange(),
+        recvCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     if (sendDataType != recvDataType) return false;
@@ -189,7 +190,7 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
 
         // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments_[idxPair.second].expr_;
+        auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
 

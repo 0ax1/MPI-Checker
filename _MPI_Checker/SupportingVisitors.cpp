@@ -5,36 +5,44 @@ using namespace ento;
 
 namespace mpi {
 
-// TODO speichere sequenz der argumente
-
 // variables or functions can be a declrefexpr
-bool ExprVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
+bool StmtVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
+        sequentialSeries_.push_back(declRef);
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
         functions_.push_back(fn);
+        sequentialSeries_.push_back(declRef);
     }
     return true;
 }
 
-bool ExprVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
+bool StmtVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
+    sequentialSeries_.push_back(op);
     return true;
 }
 
-bool ExprVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
+bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     intValues_.push_back(intLiteral->getValue());
+    sequentialSeries_.push_back(intLiteral);
     return true;
 }
 
-bool ExprVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
+bool StmtVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     floatValues_.push_back(floatLiteral->getValue());
+    sequentialSeries_.push_back(floatLiteral);
     return true;
 }
+
+bool StmtVisitor::VisitCallExpr(clang::CallExpr *callExpr) {
+    callExprs_.push_back(callExpr);
+    return true;
+};
 
 bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =

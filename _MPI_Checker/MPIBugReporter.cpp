@@ -158,62 +158,62 @@ void MPIBugReporter::reportRedundantCall(
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
 void MPIBugReporter::reportDoubleNonblocking(const CallExpr *observedCall,
-                                             const RankVar &rankVar,
+                                             const RequestVar &requestVar,
                                              ExplodedNode *node) const {
-    std::string lineNo{lineNumberForCallExpr(rankVar.lastUser_)};
+    std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
     std::string lastUser =
-        rankVar.lastUser_->getDirectCallee()->getNameAsString();
-    std::string errorText{"Request " + rankVar.varDecl_->getNameAsString() +
+        requestVar.lastUser_->getDirectCallee()->getNameAsString();
+    std::string errorText{"Request " + requestVar.varDecl_->getNameAsString() +
                           " is already in use by nonblocking call " + lastUser +
                           " in line " + lineNo + ". "};
 
     BugReport *bugReport =
         new BugReport(*DoubleNonblockingBugType, errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
-    bugReport->addRange(rankVar.varDecl_->getSourceRange());
-    bugReport->addRange(rankVar.lastUser_->getSourceRange());
+    bugReport->addRange(requestVar.varDecl_->getSourceRange());
+    bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 
 void MPIBugReporter::reportDoubleWait(const CallExpr *observedCall,
-                                      const RankVar &rankVar,
+                                      const RequestVar &requestVar,
                                       ExplodedNode *node) const {
-    std::string lineNo{lineNumberForCallExpr(rankVar.lastUser_)};
+    std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
     std::string lastUser =
-        rankVar.lastUser_->getDirectCallee()->getNameAsString();
-    std::string errorText{"Request " + rankVar.varDecl_->getNameAsString() +
+        requestVar.lastUser_->getDirectCallee()->getNameAsString();
+    std::string errorText{"Request " + requestVar.varDecl_->getNameAsString() +
                           " is already waited upon by " + lastUser +
                           " in line " + lineNo + ". "};
 
     BugReport *bugReport = new BugReport(*DoubleWaitBugType, errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
-    bugReport->addRange(rankVar.varDecl_->getSourceRange());
-    bugReport->addRange(rankVar.lastUser_->getSourceRange());
+    bugReport->addRange(requestVar.varDecl_->getSourceRange());
+    bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 
-void MPIBugReporter::reportMissingWait(const RankVar &rankVar,
+void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                                        ExplodedNode *node) const {
     std::string errorText{"Nonblocking call using request " +
-                          rankVar.varDecl_->getNameAsString() +
+                          requestVar.varDecl_->getNameAsString() +
                           " has no matching wait. "};
 
     BugReport *bugReport = new BugReport(*MissingWaitBugType, errorText, node);
-    bugReport->addRange(rankVar.lastUser_->getSourceRange());
-    bugReport->addRange(rankVar.varDecl_->getSourceRange());
+    bugReport->addRange(requestVar.lastUser_->getSourceRange());
+    bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 
 void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
-                                         const VarDecl *rankVar,
+                                         const VarDecl *requestVar,
                                          ExplodedNode *node) const {
-    std::string errorText{"Request " + rankVar->getNameAsString() +
+    std::string errorText{"Request " + requestVar->getNameAsString() +
                           " has no matching nonblocking call. "};
 
     BugReport *bugReport =
         new BugReport(*UnmatchedWaitBugType, errorText, node);
     bugReport->addRange(callExpr->getSourceRange());
-    bugReport->addRange(rankVar->getSourceRange());
+    bugReport->addRange(requestVar->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 

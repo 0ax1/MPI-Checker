@@ -13,21 +13,21 @@ void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
     }
 
     ProgramStateRef state = ctx.getState();
-    auto rankVars = state->get<RankVarMap>();
+    auto RequestVars = state->get<RequestVarMap>();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
     auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
-    auto requestVar = arg.vars_.front();
-    const RankVar *rankVar = state->get<RankVarMap>(requestVar);
-    state = state->set<RankVarMap>(
-        requestVar, {requestVar, const_cast<CallExpr *>(callExpr)});
+    auto requestVarDecl = arg.vars_.front();
+    const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
+    state = state->set<RequestVarMap>(
+        requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
     auto node = ctx.addTransition(state);
 
-    if (rankVar && rankVar->lastUser_) {
+    if (requestVar && requestVar->lastUser_) {
         auto lastUserID =
-            rankVar->lastUser_->getDirectCallee()->getIdentifier();
+            requestVar->lastUser_->getDirectCallee()->getIdentifier();
         if (funcClassifier_.isNonBlockingType(lastUserID)) {
-            bugReporter_.reportDoubleNonblocking(callExpr, *rankVar, node);
+            bugReporter_.reportDoubleNonblocking(callExpr, *requestVar, node);
         }
     }
 }
@@ -40,7 +40,7 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
     }
 
     ProgramStateRef state = ctx.getState();
-    auto rankVars = state->get<RankVarMap>();
+    auto requestVars = state->get<RequestVarMap>();
 
     // collect request vars
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
@@ -58,22 +58,23 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
 
     auto node = ctx.addTransition();
 
-    for (VarDecl *requestVar : requestVector) {
-        const RankVar *rankVar = state->get<RankVarMap>(requestVar);
-        state = state->set<RankVarMap>(
-            requestVar, {requestVar, const_cast<CallExpr *>(callExpr)});
+    for (VarDecl *requestVarDecl : requestVector) {
+        const RequestVar *requestVar =
+            state->get<RequestVarMap>(requestVarDecl);
+        state = state->set<RequestVarMap>(
+            requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
 
-        if (rankVar && rankVar->lastUser_) {
+        if (requestVar && requestVar->lastUser_) {
             auto lastUserID =
-                rankVar->lastUser_->getDirectCallee()->getIdentifier();
+                requestVar->lastUser_->getDirectCallee()->getIdentifier();
             // check for double wait
             if (funcClassifier_.isWaitType(lastUserID)) {
-                bugReporter_.reportDoubleWait(callExpr, *rankVar, node);
+                bugReporter_.reportDoubleWait(callExpr, *requestVar, node);
             }
         }
         // no matching nonblocking call
         else {
-            bugReporter_.reportUnmatchedWait(callExpr, requestVar, node);
+            bugReporter_.reportUnmatchedWait(callExpr, requestVarDecl, node);
         }
     }
 
@@ -82,24 +83,25 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
 
 void MPICheckerSens::checkMissingWait(CheckerContext &ctx) {
     ProgramStateRef state = ctx.getState();
-    auto rankVars = state->get<RankVarMap>();
+    auto requestVars = state->get<RequestVarMap>();
     ExplodedNode *node = ctx.addTransition();
     // at the end of a function immediate calls should be matched with wait
-    for (auto &rankVar : rankVars) {
-        if (rankVar.second.lastUser_ &&
+    for (auto &requestVar : requestVars) {
+        if (requestVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
-                rankVar.second.lastUser_->getDirectCallee()->getIdentifier())) {
-            bugReporter_.reportMissingWait(rankVar.second, node);
+                requestVar.second.lastUser_->getDirectCallee()
+                    ->getIdentifier())) {
+            bugReporter_.reportMissingWait(requestVar.second, node);
         }
     }
 }
 
-void MPICheckerSens::clearRankVars(CheckerContext &ctx) const {
+void MPICheckerSens::clearRequestVars(CheckerContext &ctx) const {
     ProgramStateRef state = ctx.getState();
-    auto rankVars = state->get<RankVarMap>();
+    auto requestVars = state->get<RequestVarMap>();
     // clear rank container
-    for (auto &rankVar : rankVars) {
-        state = state->remove<RankVarMap>(rankVar.first);
+    for (auto &requestVar : requestVars) {
+        state = state->remove<RequestVarMap>(requestVar.first);
     }
     ctx.addTransition(state);
 }

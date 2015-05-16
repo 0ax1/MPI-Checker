@@ -19,16 +19,9 @@ public:
         init(callExpr);
     };
 
-    MPICall(clang::CallExpr *callExpr, const clang::Stmt *const rankCondition)
-        : callExpr_{callExpr}, rankCondition_{rankCondition} {
-        init(callExpr);
-    };
-
-    MPICall(clang::CallExpr *callExpr, const clang::Stmt *const rankCondition,
-            llvm::SmallVector<clang::Stmt *, 4> unmatchedRankConditions)
-        : callExpr_{callExpr},
-          rankCondition_{rankCondition},
-          unmatchedRankConditions_{unmatchedRankConditions} {
+    MPICall(clang::CallExpr *callExpr,
+            const clang::Stmt *const matchedCondition)
+        : callExpr_{callExpr} {
         init(callExpr);
     };
 
@@ -36,17 +29,14 @@ public:
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *const callExpr_;
-    const llvm::SmallVector<mpi::ExprVisitor, 8> arguments_;
+    const llvm::SmallVector<mpi::StmtVisitor, 8> arguments_;
     const clang::IdentifierInfo *identInfo_;
     const unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_;
 
-    // condition fullfilled to enter rank case
-    const clang::Stmt *const rankCondition_{nullptr};
-    // conditions not fullfilled to enter rank case
-    const llvm::SmallVector<clang::Stmt *, 4> unmatchedRankConditions_;
+    static llvm::SmallVector<MPICall, 16> visitedCalls;
 
 private:
     /**
@@ -60,19 +50,12 @@ private:
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
             // emplace triggers ExprVisitor ctor
-            const_cast<llvm::SmallVector<mpi::ExprVisitor, 8> &>(arguments_)
+            const_cast<llvm::SmallVector<mpi::StmtVisitor, 8> &>(arguments_)
                 .emplace_back(callExpr->getArg(i));
         }
     }
 
     static unsigned long id;
-};
-
-// to capture request variables
-struct MPIRequest {
-    const clang::VarDecl *requestVariable_;
-    const clang::CallExpr *callUsingTheRequest_;
-    static llvm::SmallVector<MPIRequest, 4> visitedRequests;
 };
 
 // to capture rank variables
@@ -81,18 +64,39 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
 // to capture rank cases from branches
-// TODO add condition to rank case
-typedef std::vector<std::reference_wrapper<MPICall>> MPIrankCase;
-namespace MPIRankCases {
-extern llvm::SmallVector<MPIrankCase, 8> visitedRankCases;
-}
+struct MPIRankCase {
+    MPIRankCase(clang::Stmt *matchedCondition,
+                llvm::SmallVector<clang::Stmt *, 4> unmatchedConditions) {
+
+        // init stmt visitors with conditions
+        if (matchedCondition) {
+            matchedCondition_.reset(new StmtVisitor{matchedCondition});
+        }
+        for (auto const unmatchedCondition : unmatchedConditions) {
+            unmatchedConditions.emplace_back(unmatchedCondition);
+        }
+    }
+
+    bool isRankConditionEqual(const MPIRankCase &);
+
+    std::vector<std::reference_wrapper<MPICall>> mpiCalls_;
+    // condition fullfilled to enter rank case
+    std::unique_ptr<StmtVisitor> matchedCondition_{nullptr};
+    // conditions not fullfilled to enter rank case
+    const llvm::SmallVector<StmtVisitor, 4> unmatchedConditions_;
+
+    size_t size() { return mpiCalls_.size(); }
+
+    static llvm::SmallVector<MPIRankCase, 8> visitedRankCases;
+
+};
 
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
-struct RankVar {
+struct RequestVar {
     clang::VarDecl *varDecl_;
     clang::CallExpr *lastUser_;
 
-    RankVar(clang::VarDecl *varDecl, clang::CallExpr *callExpr)
+    RequestVar(clang::VarDecl *varDecl, clang::CallExpr *callExpr)
         : varDecl_{varDecl}, lastUser_{callExpr} {}
 
     void Profile(llvm::FoldingSetNodeID &id) const {
@@ -100,13 +104,13 @@ struct RankVar {
         id.AddPointer(lastUser_);
     }
 
-    bool operator==(const RankVar &toCompare) const {
+    bool operator==(const RequestVar &toCompare) const {
         return toCompare.varDecl_ == varDecl_;
     }
 };
 }  // end of namespace: mpi
 
 // register data structure for path sensitive analysis
-REGISTER_MAP_WITH_PROGRAMSTATE(RankVarMap, clang::VarDecl *, mpi::RankVar)
+REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, clang::VarDecl *, mpi::RequestVar)
 
 #endif  // end of include guard: MPITYPES_HPP_IC7XR2MI

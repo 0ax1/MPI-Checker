@@ -34,14 +34,12 @@ public:
     bool VisitCallExpr(clang::CallExpr *);
     bool VisitIfStmt(clang::IfStmt *);
 
-    void trackRankVariables(const MPICall &) const;
     MPICheckerAST checkerAST_;
 
 private:
     bool isRankBranch(clang::IfStmt *ifStmt);
-    std::vector<std::reference_wrapper<MPICall>> collectMPICallsInCase(
-        clang::Stmt *, clang::Stmt *,
-        llvm::SmallVector<clang::Stmt *, 4> unmatchedCases);
+    MPIRankCase buildRankCase(clang::Stmt *, clang::Stmt *,
+                              llvm::SmallVector<clang::Stmt *, 4>);
 
     llvm::SmallVector<clang::IfStmt *, 8> visitedIfStmts_;
 };

@@ -23,7 +23,7 @@ public:
     void checkWaitUsage(const clang::CallExpr *,
                         clang::ento::CheckerContext &) const;
     void checkMissingWait(clang::ento::CheckerContext &);
-    void clearRankVars(clang::ento::CheckerContext &) const;
+    void clearRequestVars(clang::ento::CheckerContext &) const;
 
 private:
     MPIFunctionClassifier funcClassifier_;

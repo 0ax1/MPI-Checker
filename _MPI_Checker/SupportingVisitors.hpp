@@ -5,26 +5,32 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "MPIFunctionClassifier.hpp"
 
 namespace mpi {
 
 /**
- * Visitor class to traverse an expression.
+ * Visitor class to traverse a statement.
  * On the way it collects binary operators, variable decls, function decls,
- * integer literals, floating literals.
+ * integer literals, floating literals, call expressions.
  */
-class ExprVisitor : public clang::RecursiveASTVisitor<ExprVisitor> {
+class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
-    ExprVisitor(clang::Expr *expr) : expr_{expr} { TraverseStmt(expr_); }
+    StmtVisitor(clang::Stmt *stmt) : stmt_{stmt} { TraverseStmt(stmt_); }
 
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitBinaryOperator(clang::BinaryOperator *);
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
+    bool VisitCallExpr(clang::CallExpr *);
 
-    // complete expression
-    clang::Expr *expr_;
+    // sequential series of components
+    llvm::SmallVector<clang::Expr *, 4> sequentialSeries_;
+
+    // complete statement
+    clang::Stmt *stmt_;
+
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
@@ -33,6 +39,8 @@ public:
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
     llvm::SmallVector<llvm::APInt, 1> intValues_;
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
+
+    llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
 };
 
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
@@ -86,19 +94,18 @@ public:
 };
 
 /**
- * Visitor class to collect call expressions.
+ * Visitor class to collect rank variables.
  */
-class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
+class RankVisitor : public clang::RecursiveASTVisitor<RankVisitor> {
 public:
-    StmtVisitor(clang::Stmt *stmt) { TraverseStmt(stmt); }
-    // must be public to trigger callbacks
-    bool VisitCallExpr(clang::CallExpr *callExpr) {
-        callExprs_.push_back(callExpr);
-        return true;
-    };
+    RankVisitor(clang::ento::AnalysisManager &analysisManager)
+        : funcClassifier_{analysisManager} {}
 
-    // complete stmt expression
-    llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
+    // collect rank vars
+    bool VisitCallExpr(clang::CallExpr *);
+
+private:
+    MPIFunctionClassifier funcClassifier_;
 };
 
 }  // end of namespace: mpi

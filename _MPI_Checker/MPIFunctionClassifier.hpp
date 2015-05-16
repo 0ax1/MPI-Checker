@@ -37,6 +37,7 @@ public:
     bool isWaitType(const clang::IdentifierInfo *) const;
 
 private:
+
     void identifierInit(clang::ento::AnalysisManager &);
     void initPointToPointIdentifiers(clang::ento::AnalysisManager &);
     void initCollectiveIdentifiers(clang::ento::AnalysisManager &);

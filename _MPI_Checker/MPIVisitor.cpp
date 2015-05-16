@@ -46,10 +46,9 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
  */
 bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
-    ExprVisitor exprVisitor{ifStmt->getCond()};
-    for (const VarDecl *const varDecl : exprVisitor.vars_) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl) ||
-            varDecl->getNameAsString() == "rank") {
+    StmtVisitor stmtVisitor{ifStmt->getCond()};
+    for (const VarDecl *const varDecl : stmtVisitor.vars_) {
+        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
             isInRankBranch = true;
             break;
         }
@@ -74,7 +73,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-        MPIRankCases::visitedRankCases.emplace_back(collectMPICallsInCase(
+        MPIRankCase::visitedRankCases.emplace_back(buildRankCase(
             ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions));
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
@@ -83,13 +82,13 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 
     // collect mpi calls in else
     if (stmt) {
-        MPIRankCases::visitedRankCases.emplace_back(
-            collectMPICallsInCase(stmt, nullptr, unmatchedConditions));
+        MPIRankCase::visitedRankCases.emplace_back(
+            buildRankCase(stmt, nullptr, unmatchedConditions));
     }
 
     // check if collective calls are used in rank rankCase
-    for (const MPIrankCase &rankCase : MPIRankCases::visitedRankCases) {
-        for (const MPICall &call : rankCase) {
+    for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+        for (const MPICall &call : rankCase.mpiCalls_) {
             checkerAST_.checkForCollectiveCall(call);
         }
     }
@@ -112,7 +111,6 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
         checkerAST_.checkBufferTypeMatch(mpiCall);
         checkerAST_.checkForInvalidArgs(mpiCall);
-        trackRankVariables(mpiCall);
 
         if (checkerAST_.funcClassifier_.isCollectiveType(mpiCall)) {
             MPICall::visitedCalls.push_back(std::move(mpiCall));
@@ -122,29 +120,22 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     return true;
 }
 
-void MPIVisitor::trackRankVariables(const MPICall &mpiCall) const {
-    if (checkerAST_.funcClassifier_.isMPI_Comm_rank(mpiCall)) {
-        VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-        MPIRank::visitedRankVariables.insert(varDecl);
-    }
-}
-
-MPIrankCase MPIVisitor::collectMPICallsInCase(
-    Stmt *then, Stmt *condition,
+MPIRankCase MPIVisitor::buildRankCase(
+    Stmt *then, Stmt *matchedCondition,
     llvm::SmallVector<Stmt *, 4> unmatchedConditions) {
-    MPIrankCase rankCaseVector;
+    // capture un/matched conditions
+    MPIRankCase rankCase{matchedCondition, unmatchedConditions};
     StmtVisitor stmtVisitor{then};  // collect call exprs
     for (CallExpr *callExpr : stmtVisitor.callExprs_) {
         // filter mpi calls
         if (checkerAST_.funcClassifier_.isMPIType(
                 callExpr->getDirectCallee()->getIdentifier())) {
-                MPICall::visitedCalls.emplace_back(callExpr, condition,
-                                                   unmatchedConditions);
+            MPICall::visitedCalls.emplace_back(callExpr);
             // add reference to rankCase vector
-            rankCaseVector.push_back(MPICall::visitedCalls.back());
+            rankCase.mpiCalls_.push_back(MPICall::visitedCalls.back());
         }
     }
-    return rankCaseVector;
+    return rankCase;
 }
 
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
@@ -161,17 +152,24 @@ public:
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
+        // identify rank variables first
+        RankVisitor rankVisitor{analysisManager};
+        rankVisitor.TraverseTranslationUnitDecl(
+            const_cast<TranslationUnitDecl *>(tuDecl));
+
+        // traverse translation unit ast
         MPIVisitor visitor{bugReporter, *this, analysisManager};
         visitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
-        // invoked after travering the translation unit
-        // visitor.checkerAST_.checkForRedundantCalls();
+        // // check point to point schema at the end of a translation unit
+        // // visitor.checkerAST_.checkForRedundantCalls();
         visitor.checkerAST_.checkPointToPointSchema();
 
-        // clear after every translation unit
+        // // clear after every translation unit
         MPICall::visitedCalls.clear();
-        MPIRankCases::visitedRankCases.clear();
+        MPIRank::visitedRankVariables.clear();
+        MPIRankCase::visitedRankCases.clear();
     }
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
@@ -184,7 +182,7 @@ public:
     void checkEndFunction(CheckerContext &ctx) const {
         dynamicInit(ctx);
         checkerSens_->checkMissingWait(ctx);
-        checkerSens_->clearRankVars(ctx);
+        checkerSens_->clearRequestVars(ctx);
     }
 
 private:

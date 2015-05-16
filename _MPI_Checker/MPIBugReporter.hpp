@@ -40,16 +40,16 @@ public:
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
 
     // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––
-    void reportMissingWait(const RankVar &, clang::ento::ExplodedNode *) const;
+    void reportMissingWait(const RequestVar &, clang::ento::ExplodedNode *) const;
 
     void reportUnmatchedWait(const clang::CallExpr *,
-                             const clang::VarDecl *rankVar,
+                             const clang::VarDecl *requestVar,
                              clang::ento::ExplodedNode *) const;
 
-    void reportDoubleWait(const clang::CallExpr *, const RankVar &,
+    void reportDoubleWait(const clang::CallExpr *, const RequestVar &,
                           clang::ento::ExplodedNode *) const;
 
-    void reportDoubleNonblocking(const clang::CallExpr *, const RankVar &,
+    void reportDoubleNonblocking(const clang::CallExpr *, const RequestVar &,
                                  clang::ento::ExplodedNode *) const;
 
     clang::Decl *currentFunctionDecl_{nullptr};
