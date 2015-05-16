@@ -26,7 +26,8 @@ public:
     bool VisitCallExpr(clang::CallExpr *);
 
     // sequential series of components
-    llvm::SmallVector<clang::Expr *, 4> sequentialSeries_;
+    llvm::SmallVector<clang::Stmt *, 4> sequentialSeries_;
+    llvm::SmallVector<clang::Decl *, 2> declarations_;
 
     // complete statement
     clang::Stmt *stmt_;
@@ -41,6 +42,11 @@ public:
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 
     llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
+
+
+    bool isEqualOrdered(const StmtVisitor &visitor, bool) const;
+    bool isEqualPermutative(const StmtVisitor &visitor, bool) const;
+    bool containsNonCommutativeOps() const;
 };
 
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {

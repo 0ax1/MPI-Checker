@@ -66,7 +66,8 @@ void MPICheckerAST::checkPointToPointSchema() {
         for (MPIRankCase &rankCase1 : rankCases) {
             for (MPIRankCase &rankCase2 : rankCases) {
                 // rank cases must be distinct
-                if (!rankCase1.isRankConditionEqual(rankCase2)) {
+                if (!rankCase1.isRankConditionEqual(rankCase2) &&
+                    &rankCase1 != &rankCase2) {
                     // rank cases are potential partner
                     matchRankCasePair(rankCase1, rankCase2);
                 }
@@ -94,8 +95,6 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     if (!funcClassifier_.isSendType(sendCall)) return false;
     if (!funcClassifier_.isRecvType(recvCall)) return false;
 
-    // TODO make match more restrictive
-
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
         sendCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
@@ -107,44 +106,53 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     if (sendDataType != recvDataType) return false;
 
-    // compare count, tag (expected to be static)
+    // compare count, tag
     for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!areComponentsOfArgEqual(sendCall, recvCall, idx)) {
+        if (sendCall.arguments_[idx].containsNonCommutativeOps()) {
+            if (!sendCall.arguments_[idx].isEqualOrdered(
+                    sendCall.arguments_[idx], true)) {
+                return false;
+            }
+        } else {
+            if (!sendCall.arguments_[idx].isEqualPermutative(
+                    sendCall.arguments_[idx], true)) {
+                return false;
+            }
+        }
+    }
+
+    // compare ranks
+    // exclude operator from this comparison
+    if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
+            sendCall.arguments_[MPIPointToPoint::kRank], false)) {
+        return false;
+    }
+
+    // compare rank operators
+    auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
+    auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+    auto &operatorsSend = rankArgSend.binaryOperators_;
+    auto &operatorsRecv = rankArgRecv.binaryOperators_;
+
+    if (operatorsSend.size() != operatorsRecv.size()) {
+        return false;
+    }
+
+    // operators except last one must be equal
+    for (size_t i = 0; i < operatorsSend.size()-1; ++i) {
+        if (operatorsSend[i] != operatorsRecv[i]) {
             return false;
         }
     }
 
-    // compare rank
-    auto rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
-    auto rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+    // last operator must be inverse
+    if (!((BinaryOperatorKind::BO_Add == operatorsSend.back() &&
+           BinaryOperatorKind::BO_Sub == operatorsRecv.back()) ||
 
-    // if has standard form: rank +/- literal
-    if (rankArgSend.binaryOperators_.size() == 1 &&
-        rankArgRecv.binaryOperators_.size() == 1 &&
-        rankArgSend.intValues_.size() == 1 &&
-        rankArgRecv.intValues_.size() == 1 && rankArgSend.vars_.size() == 1 &&
-        rankArgRecv.vars_.size() == 1) {
-        // TODO check if vars are rank vars
-        // if var is lhs
-        // if operators are +/-
-        // if no functions are used
+          (BinaryOperatorKind::BO_Sub == operatorsSend.back() &&
+           BinaryOperatorKind::BO_Add == operatorsRecv.back())))
+        return false;
 
-        auto operatorsSend = rankArgSend.binaryOperators_;
-        auto operatorsRecv = rankArgRecv.binaryOperators_;
-
-        // operators must be inverse
-        if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-               BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
-
-              (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-               BinaryOperatorKind::BO_Add == operatorsRecv.front())))
-            return false;
-
-        // literal must match
-        if (rankArgSend.intValues_.front() != rankArgRecv.intValues_.front()) {
-            return false;
-        }
-    }
 
     return true;
 }
@@ -439,52 +447,6 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
     }
 }
 
-/**
- * Compares all components of an argument from two calls for equality
- * obtained by index. The components can appear in any permutation of
- * each other to be rated as equal.
- *
- * @param callOne
- * @param callTwo
- * @param idx
- *
- * @return areEqual
- */
-bool MPICheckerAST::areComponentsOfArgEqual(const MPICall &callOne,
-                                            const MPICall &callTwo,
-                                            const size_t idx) const {
-    auto argOne = callOne.arguments_[idx];
-    auto argTwo = callTwo.arguments_[idx];
-
-    // argOne.expr_->
-
-    // operators
-    if (!cont::isPermutation(argOne.binaryOperators_, argTwo.binaryOperators_))
-        return false;
-
-    // variables (are compared by name, to make them comparable
-    // beyond their scope, across different branches, functions)
-    llvm::SmallVector<std::string, 2> varNames1;
-    llvm::SmallVector<std::string, 2> varNames2;
-    for (const auto &var : argOne.vars_) {
-        varNames1.push_back(var->getNameAsString());
-    }
-    for (const auto &var : argTwo.vars_) {
-        varNames2.push_back(var->getNameAsString());
-    }
-    if (!cont::isPermutation(varNames1, varNames2)) return false;
-
-    // int literals
-    if (!cont::isPermutation(argOne.intValues_, argTwo.intValues_))
-        return false;
-
-    // functions
-    if (!cont::isPermutation(argOne.functions_, argTwo.functions_))
-        return false;
-
-    return true;
-}
-
 bool MPICheckerAST::areDatatypesEqual(const MPICall &callOne,
                                       const MPICall &callTwo,
                                       const size_t idx) const {
@@ -546,63 +508,63 @@ bool MPICheckerAST::qualifyRedundancyCheck(const MPICall &callToCheck,
  * @param callToCheck
  */
 void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck) const {
-    SmallVector<size_t, 3> indicesToCheckComponents;
-    SmallVector<size_t, 2> indicesToCheckAsString;
+    // SmallVector<size_t, 3> indicesToCheckComponents;
+    // SmallVector<size_t, 2> indicesToCheckAsString;
 
-    if (funcClassifier_.isPointToPointType(callToCheck)) {
-        indicesToCheckComponents = {MPIPointToPoint::kCount,
-                                    MPIPointToPoint::kRank,
-                                    MPIPointToPoint::kTag};
-        indicesToCheckAsString = {MPIPointToPoint::kDatatype};
-    } else if (funcClassifier_.isReduceType(callToCheck)) {
-        indicesToCheckComponents = {2};
-        indicesToCheckAsString = {3, 4};
-    } else if (funcClassifier_.isScatterType(callToCheck) ||
-               funcClassifier_.isGatherType(callToCheck) ||
-               funcClassifier_.isAlltoallType(callToCheck)) {
-        indicesToCheckComponents = {1, 4, 6};
-        indicesToCheckAsString = {2, 5};
-    } else if (funcClassifier_.isBcastType(callToCheck)) {
-        indicesToCheckComponents = {1, 3};
-        indicesToCheckAsString = {2};
-    }
+    // if (funcClassifier_.isPointToPointType(callToCheck)) {
+    // indicesToCheckComponents = {MPIPointToPoint::kCount,
+    // MPIPointToPoint::kRank,
+    // MPIPointToPoint::kTag};
+    // indicesToCheckAsString = {MPIPointToPoint::kDatatype};
+    // } else if (funcClassifier_.isReduceType(callToCheck)) {
+    // indicesToCheckComponents = {2};
+    // indicesToCheckAsString = {3, 4};
+    // } else if (funcClassifier_.isScatterType(callToCheck) ||
+    // funcClassifier_.isGatherType(callToCheck) ||
+    // funcClassifier_.isAlltoallType(callToCheck)) {
+    // indicesToCheckComponents = {1, 4, 6};
+    // indicesToCheckAsString = {2, 5};
+    // } else if (funcClassifier_.isBcastType(callToCheck)) {
+    // indicesToCheckComponents = {1, 3};
+    // indicesToCheckAsString = {2};
+    // }
 
-    for (const MPICall &comparedCall : MPICall::visitedCalls) {
-        if (!qualifyRedundancyCheck(callToCheck, comparedCall)) continue;
+    // for (const MPICall &comparedCall : MPICall::visitedCalls) {
+    // if (!qualifyRedundancyCheck(callToCheck, comparedCall)) continue;
 
-        // argument types which are compared by all 'components' –––––––
-        bool identical = true;
-        for (const size_t idx : indicesToCheckComponents) {
-            if (!areComponentsOfArgEqual(callToCheck, comparedCall, idx)) {
-                identical = false;
-                break;  // end inner loop
-            }
-        }
-        // compare specified mpi datatypes –––––––––––––––––––––––––––––
-        for (const size_t idx : indicesToCheckAsString) {
-            if (!areDatatypesEqual(callToCheck, comparedCall, idx)) {
-                identical = false;
-                break;  // end inner loop
-            }
-        }
-        if (!identical) continue;
+    // // argument types which are compared by all 'components' –––––––
+    // bool identical = true;
+    // for (const size_t idx : indicesToCheckComponents) {
+    // if (!areComponentsOfArgEqual(callToCheck, comparedCall, idx)) {
+    // identical = false;
+    // break;  // end inner loop
+    // }
+    // }
+    // // compare specified mpi datatypes –––––––––––––––––––––––––––––
+    // for (const size_t idx : indicesToCheckAsString) {
+    // if (!areDatatypesEqual(callToCheck, comparedCall, idx)) {
+    // identical = false;
+    // break;  // end inner loop
+    // }
+    // }
+    // if (!identical) continue;
 
-        // if function reaches this point all arguments have been equal
-        // mark call to omit symmetric duplicate report
-        callToCheck.isMarked_ = true;
+    // // if function reaches this point all arguments have been equal
+    // // mark call to omit symmetric duplicate report
+    // callToCheck.isMarked_ = true;
 
-        SmallVector<size_t, 5> checkedIndices;
-        cont::copy(indicesToCheckComponents, checkedIndices);
-        cont::copy(indicesToCheckAsString, checkedIndices);
+    // SmallVector<size_t, 5> checkedIndices;
+    // cont::copy(indicesToCheckComponents, checkedIndices);
+    // cont::copy(indicesToCheckAsString, checkedIndices);
 
-        bugReporter_.reportRedundantCall(
-            callToCheck.callExpr_, comparedCall.callExpr_, checkedIndices);
+    // bugReporter_.reportRedundantCall(
+    // callToCheck.callExpr_, comparedCall.callExpr_, checkedIndices);
 
-        // do not match against further calls
-        // still all duplicate calls will appear in the diagnostics
-        // due to transitivity of duplicates
-        return;
-    }
+    // // do not match against further calls
+    // // still all duplicate calls will appear in the diagnostics
+    // // due to transitivity of duplicates
+    // return;
+    // }
 }
 
 /**

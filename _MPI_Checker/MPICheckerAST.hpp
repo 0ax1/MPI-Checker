@@ -29,8 +29,6 @@ public:
           analysisManager_{analysisManager} {}
 
     // validation functions
-    bool areComponentsOfArgEqual(const MPICall &, const MPICall &,
-                                 const size_t) const;
     bool areDatatypesEqual(const MPICall &, const MPICall &,
                            const size_t) const;
 
