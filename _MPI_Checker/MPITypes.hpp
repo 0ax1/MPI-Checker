@@ -71,24 +71,29 @@ struct MPIRankCase {
         // init stmt visitors with conditions
         if (matchedCondition) {
             matchedCondition_.reset(new StmtVisitor{matchedCondition});
+            initConditionType();
         }
         for (auto const unmatchedCondition : unmatchedConditions) {
             unmatchedConditions.emplace_back(unmatchedCondition);
         }
     }
 
-    bool isRankConditionEqual(const MPIRankCase &);
+
+    bool isRankConditionEqual(MPIRankCase &);
+    void initConditionType();
+    bool isConditionTypeStandard();
+    size_t size() { return mpiCalls_.size(); }
 
     std::vector<std::reference_wrapper<MPICall>> mpiCalls_;
     // condition fullfilled to enter rank case
     std::unique_ptr<StmtVisitor> matchedCondition_{nullptr};
     // conditions not fullfilled to enter rank case
     const llvm::SmallVector<StmtVisitor, 4> unmatchedConditions_;
-
-    size_t size() { return mpiCalls_.size(); }
-
     static llvm::SmallVector<MPIRankCase, 8> visitedRankCases;
 
+
+private:
+    bool isConditionTypeStandard_;
 };
 
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
