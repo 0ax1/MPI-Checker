@@ -77,11 +77,6 @@ void MPICheckerAST::checkPointToPointSchema() {
     checkUnmatchedCalls(rankCases);
 }
 
-// vergleichen von argumenten
-// falls alles plus erlaube beliebige permutation
-// falls minus enthalten muss argument identisch sein
-// muss identisch sein weil man nicht weiß, welche neg/pos sind
-
 /**
  * Check if two calls are a send/recv pair.
  *
@@ -124,7 +119,7 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // compare ranks
     // exclude operator from this comparison
     if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
-            sendCall.arguments_[MPIPointToPoint::kRank], false)) {
+            recvCall.arguments_[MPIPointToPoint::kRank], false)) {
         return false;
     }
 
