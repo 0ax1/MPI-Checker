@@ -28,12 +28,12 @@ bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
 }
 
 /**
- * Sets if case condition is in standard form.
+ * Sets case condition type depending on standard form.
  * Standard conditions must have the form (rank == intLiteral).
  */
 void MPIRankCase::initConditionType() {
-    // only one literal
     isConditionTypeStandard_ =
+        // only one int literal
         (matchedCondition_->integerLiterals_.size() == 1 &&
 
          // only variable is rank variable
@@ -44,7 +44,13 @@ void MPIRankCase::initConditionType() {
          // only operator is == operator
          matchedCondition_->binaryOperators_.size() == 1 &&
          matchedCondition_->binaryOperators_.front() ==
-             clang::BinaryOperatorKind::BO_EQ);
+             clang::BinaryOperatorKind::BO_EQ &&
+
+         // no floats
+         matchedCondition_->floatingLiterals_.size() == 0 &&
+
+         // no functions
+         matchedCondition_->functions_.size() == 0);
 }
 
 bool MPIRankCase::isConditionTypeStandard() { return isConditionTypeStandard_; }
