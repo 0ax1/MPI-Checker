@@ -68,7 +68,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
     if (cont::isContained(visitedIfStmts_, ifStmt)) return true;
 
-    llvm::SmallVector<Stmt *, 4> unmatchedConditions;
+    std::vector<StmtVisitor> unmatchedConditions;
 
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
@@ -82,7 +82,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 
     // collect mpi calls in else
     if (stmt) {
-        MPIRankCase::visitedRankCases.emplace_back(
+        MPIRankCase::visitedRankCases.push_back(
             buildRankCase(stmt, nullptr, unmatchedConditions));
     }
 
@@ -122,7 +122,7 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
 MPIRankCase MPIVisitor::buildRankCase(
     Stmt *then, Stmt *matchedCondition,
-    llvm::SmallVector<Stmt *, 4> unmatchedConditions) {
+    const std::vector<StmtVisitor> &unmatchedConditions) {
     // capture un/matched conditions
     MPIRankCase rankCase{matchedCondition, unmatchedConditions};
     StmtVisitor stmtVisitor{then};  // collect call exprs

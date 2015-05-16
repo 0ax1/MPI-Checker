@@ -23,52 +23,29 @@ llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
  * @return if they are equal
  */
 bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
-    // if incomparable
+    // at least one else case
     if (!matchedCondition_ || !rankCase.matchedCondition_) {
-        return false;
-    }
-
-    if (isConditionTypeStandard() && rankCase.isConditionTypeStandard()) {
-        return (matchedCondition_->intValues_.front() ==
-                rankCase.matchedCondition_->intValues_.front());
-    } else {
-        if (matchedCondition_->containsNonCommutativeOps()) {
-            return matchedCondition_->isEqualOrdered(
-                *(rankCase.matchedCondition_.get()), true);
+        if (unmatchedConditions_.size() !=
+            rankCase.unmatchedConditions_.size()) {
+            return false;
         } else {
-            return matchedCondition_->isEqualPermutative(
-                *(rankCase.matchedCondition_.get()), true);
+            // compare unmatched conditions
+            for (size_t i = 0; i < unmatchedConditions_.size(); ++i) {
+                if (!unmatchedConditions_[i].isEqual(
+                        rankCase.unmatchedConditions_[i], true)) {
+                    return false;
+                }
+            }
         }
+        return true;
+
+    }
+    // both cases are if/else if
+    else {
+        return matchedCondition_->isEqual(*(rankCase.matchedCondition_.get()),
+                                          true);
     }
 }
-
-/**
- * Sets case condition type depending on standard form.
- * Standard conditions must have the form (rank == intLiteral).
- */
-void MPIRankCase::initConditionType() {
-    isConditionTypeStandard_ =
-        // only one int literal
-        (matchedCondition_->integerLiterals_.size() == 1 &&
-
-         // only variable is rank variable
-         matchedCondition_->vars_.size() == 1 &&
-         cont::isContained(MPIRank::visitedRankVariables,
-                           matchedCondition_->vars_.front()) &&
-
-         // only operator is == operator
-         matchedCondition_->binaryOperators_.size() == 1 &&
-         matchedCondition_->binaryOperators_.front() ==
-             BinaryOperatorKind::BO_EQ &&
-
-         // no floats
-         matchedCondition_->floatingLiterals_.size() == 0 &&
-
-         // no functions
-         matchedCondition_->functions_.size() == 0);
-}
-
-bool MPIRankCase::isConditionTypeStandard() { return isConditionTypeStandard_; }
 
 bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {
     MPICall mpiCall{callExpr};

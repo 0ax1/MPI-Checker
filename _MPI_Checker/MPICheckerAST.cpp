@@ -103,17 +103,8 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (sendCall.arguments_[idx].containsNonCommutativeOps() ||
-            recvCall.arguments_[idx].containsNonCommutativeOps()) {
-            if (!sendCall.arguments_[idx].isEqualOrdered(
-                    sendCall.arguments_[idx], true)) {
-                return false;
-            }
-        } else {
-            if (!sendCall.arguments_[idx].isEqualPermutative(
-                    sendCall.arguments_[idx], true)) {
-                return false;
-            }
+        if (!sendCall.arguments_[idx].isEqual(sendCall.arguments_[idx], true)) {
+            return false;
         }
     }
 
@@ -149,7 +140,6 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
           (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
            BinaryOperatorKind::BO_Add == operatorsRecv.front())))
         return false;
-
 
     return true;
 }

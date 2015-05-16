@@ -39,7 +39,7 @@ public:
 private:
     bool isRankBranch(clang::IfStmt *ifStmt);
     MPIRankCase buildRankCase(clang::Stmt *, clang::Stmt *,
-                              llvm::SmallVector<clang::Stmt *, 4>);
+                                const std::vector<StmtVisitor> &);
 
     llvm::SmallVector<clang::IfStmt *, 8> visitedIfStmts_;
 };

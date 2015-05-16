@@ -80,6 +80,16 @@ bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
     return true;
 }
 
+bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
+                          bool compareOperators) const {
+    if (containsNonCommutativeOps() ||
+        visitorToCompare.containsNonCommutativeOps()) {
+        return isEqualOrdered(visitorToCompare, compareOperators);
+    } else {
+        return isEqualPermutative(visitorToCompare);
+    }
+}
+
 bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
                                  bool compareOperators) const {
     // match container sizes
@@ -114,8 +124,8 @@ bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
     return true;
 }
 
-bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
-                                     bool compareOperators) const {
+bool StmtVisitor::isEqualPermutative(
+    const StmtVisitor &visitorToCompare) const {
     // match container sizes
     if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
         integerLiterals_.size() != visitorToCompare.integerLiterals_.size() ||
@@ -127,9 +137,9 @@ bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
     }
 
     // operators
-    if (compareOperators) {
-        if (binaryOperators_ != visitorToCompare.binaryOperators_) return false;
-    }
+    if (!cont::isPermutation(binaryOperators_,
+                             visitorToCompare.binaryOperators_))
+        return false;
 
     // variables (are compared by name, to make them comparable
     // beyond their scope, across different branches, functions)

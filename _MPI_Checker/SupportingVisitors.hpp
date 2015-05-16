@@ -25,12 +25,21 @@ public:
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
     bool VisitCallExpr(clang::CallExpr *);
 
-    // sequential series of components
-    llvm::SmallVector<clang::Stmt *, 4> sequentialSeries_;
-    llvm::SmallVector<clang::Decl *, 2> declarations_;
+    // non visitor functions
+    bool isEqual(const StmtVisitor &visitor, bool) const;
+    bool isEqualOrdered(const StmtVisitor &visitor, bool) const;
+    bool isEqualPermutative(const StmtVisitor &visitor) const;
+
+    bool containsNonCommutativeOps() const;
+    bool areDeclTypesEqual(const StmtVisitor &) const;
+    bool areVariablesEqual(const StmtVisitor &) const;
 
     // complete statement
     clang::Stmt *stmt_;
+
+    // sequential series of components
+    llvm::SmallVector<clang::Stmt *, 4> sequentialSeries_;
+    llvm::SmallVector<clang::Decl *, 2> declarations_;
 
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
@@ -42,13 +51,6 @@ public:
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 
     llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
-
-
-    bool isEqualOrdered(const StmtVisitor &visitor, bool) const;
-    bool isEqualPermutative(const StmtVisitor &visitor, bool) const;
-    bool containsNonCommutativeOps() const;
-    bool areDeclTypesEqual(const StmtVisitor &) const;
-    bool areVariablesEqual(const StmtVisitor &) const;
 };
 
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {

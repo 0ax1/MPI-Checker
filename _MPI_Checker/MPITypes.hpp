@@ -66,20 +66,14 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 // to capture rank cases from branches
 struct MPIRankCase {
     MPIRankCase(clang::Stmt *matchedCondition,
-                llvm::SmallVector<clang::Stmt *, 4> unmatchedConditions) {
-
-        // init stmt visitors with conditions
+                const std::vector<StmtVisitor> &unmatchedConditions)
+        : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {
             matchedCondition_.reset(new StmtVisitor{matchedCondition});
-            initConditionType();
-        }
-        for (auto const unmatchedCondition : unmatchedConditions) {
-            unmatchedConditions.emplace_back(unmatchedCondition);
         }
     }
 
     bool isRankConditionEqual(MPIRankCase &);
-    void initConditionType();
     bool isConditionTypeStandard();
     size_t size() { return mpiCalls_.size(); }
 
@@ -87,15 +81,12 @@ struct MPIRankCase {
     // condition fullfilled to enter rank case
     std::unique_ptr<StmtVisitor> matchedCondition_{nullptr};
     // conditions not fullfilled to enter rank case
-    const llvm::SmallVector<StmtVisitor, 4> unmatchedConditions_;
+    std::vector<StmtVisitor> unmatchedConditions_;
     static llvm::SmallVector<MPIRankCase, 8> visitedRankCases;
-
-
-private:
-    bool isConditionTypeStandard_;
 };
 
-// for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
+// for path sensitive
+// analysis–––––––––––––––––––––––––––––––––––––––––––––––
 struct RequestVar {
     clang::VarDecl *varDecl_;
     clang::CallExpr *lastUser_;
