@@ -33,12 +33,14 @@ bool StmtVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
 bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     intValues_.push_back(intLiteral->getValue());
+    sequentialSeries_.push_back(intLiteral);
     return true;
 }
 
 bool StmtVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     floatValues_.push_back(floatLiteral->getValue());
+    sequentialSeries_.push_back(floatLiteral);
     return true;
 }
 
@@ -116,6 +118,8 @@ bool StmtVisitor::isEqualPermutative(const StmtVisitor &visitorToCompare,
                                      bool compareOperators) const {
     // match container sizes
     if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
+        integerLiterals_.size() != visitorToCompare.integerLiterals_.size() ||
+        functions_.size() != visitorToCompare.functions_.size() ||
         // float literals (just compare size, not by value)
         floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size() ||
         vars_.size() != visitorToCompare.vars_.size()) {

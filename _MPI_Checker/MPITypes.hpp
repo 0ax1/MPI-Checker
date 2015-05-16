@@ -78,7 +78,6 @@ struct MPIRankCase {
         }
     }
 
-
     bool isRankConditionEqual(MPIRankCase &);
     void initConditionType();
     bool isConditionTypeStandard();

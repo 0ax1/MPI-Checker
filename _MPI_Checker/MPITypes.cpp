@@ -23,6 +23,11 @@ llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
  * @return if they are equal
  */
 bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
+    // if incomparable
+    if (!matchedCondition_ || !rankCase.matchedCondition_) {
+        return false;
+    }
+
     if (isConditionTypeStandard() && rankCase.isConditionTypeStandard()) {
         return (matchedCondition_->intValues_.front() ==
                 rankCase.matchedCondition_->intValues_.front());
