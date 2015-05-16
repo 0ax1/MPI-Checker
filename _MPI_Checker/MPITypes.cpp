@@ -23,28 +23,27 @@ llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
  * @return if they are equal
  */
 bool MPIRankCase::isRankConditionEqual(MPIRankCase &rankCase) {
-    // at least one else case
-    if (!matchedCondition_ || !rankCase.matchedCondition_) {
-        if (unmatchedConditions_.size() !=
-            rankCase.unmatchedConditions_.size()) {
-            return false;
-        } else {
-            // compare unmatched conditions
-            for (size_t i = 0; i < unmatchedConditions_.size(); ++i) {
-                if (!unmatchedConditions_[i].isEqual(
-                        rankCase.unmatchedConditions_[i], true)) {
-                    return false;
-                }
-            }
-        }
-        return true;
+    // else cases prohibit equality identification
+    if ((!matchedCondition_ || !rankCase.matchedCondition_)) {
+        return false;
+    }
 
+    // ranges used in rank conditions prohibit equality identification
+    auto isRangeComparison = [](BinaryOperatorKind op) {
+        return (BinaryOperatorKind::BO_LT == op ||
+            BinaryOperatorKind::BO_GT == op ||
+            BinaryOperatorKind::BO_LE == op || BinaryOperatorKind::BO_GE == op);
+    };
+    for (const auto op : matchedCondition_->binaryOperators_) {
+        if (isRangeComparison(op)) return false;
     }
+    for (const auto op : rankCase.matchedCondition_->binaryOperators_) {
+        if (isRangeComparison(op)) return false;
+    }
+
     // both cases are if/else if
-    else {
-        return matchedCondition_->isEqual(*(rankCase.matchedCondition_.get()),
-                                          true);
-    }
+    // compare matched condition
+    return matchedCondition_->isEqual(*rankCase.matchedCondition_, true);
 }
 
 bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {
