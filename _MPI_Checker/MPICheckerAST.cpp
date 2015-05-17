@@ -135,14 +135,13 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
         if (!sendCall.arguments_[idx].isEqual(
-                sendCall.arguments_[idx],
+                recvCall.arguments_[idx],
                 StmtVisitor::CompareOperators::kYes)) {
             return false;
         }
     }
 
     // compare ranks
-    // exclude operator from this comparison
     if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
             recvCall.arguments_[MPIPointToPoint::kRank],
             StmtVisitor::CompareOperators::kNo)) {
