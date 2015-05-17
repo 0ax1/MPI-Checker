@@ -29,9 +29,6 @@ public:
           analysisManager_{analysisManager} {}
 
     // validation functions
-    bool areDatatypesEqual(const MPICall &, const MPICall &,
-                           const size_t) const;
-
     void checkForInvalidArgs(const MPICall &) const;
 
     void checkForRedundantCall(const MPICall &) const;

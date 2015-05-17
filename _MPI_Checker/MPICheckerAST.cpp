@@ -48,7 +48,6 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
             if (!rankCase1.size()) return;
         }
     }
-
     for (size_t i = 0; i < rankCase2.mpiCalls_.size(); ++i) {
         if (!funcClassifier_.isPointToPointType(rankCase2.mpiCalls_[0].get())) {
             cont::eraseIndex(rankCase2.mpiCalls_, 0);
@@ -56,22 +55,24 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
         }
     }
 
+    // find send/recv pair
     for (size_t i = 0, i2 = 0; i < rankCase1.size() && i2 < rankCase2.size();
          ++i2) {
-        // skip non blocking recvs
+        // skip non blocking recvs for case 1
         while (
             funcClassifier_.isNonBlockingType(rankCase1.mpiCalls_[i].get()) &&
             funcClassifier_.isRecvType(rankCase1.mpiCalls_[i].get())) {
             if (!(++i < rankCase1.size())) return;
         }
-
+        // check if pair matches
         if (isSendRecvPair(rankCase1.mpiCalls_[i], rankCase2.mpiCalls_[i2])) {
             // distinct cases
             if (&rankCase1 != &rankCase2) {
                 cont::eraseIndex(rankCase1.mpiCalls_, i);
                 cont::eraseIndex(rankCase2.mpiCalls_, i2--);
-            } else {
-                // same case which can be matched by multiple ranks
+            }
+            // same case which can be matched by multiple ranks
+            else {
                 if (i2 > i) {
                     cont::eraseIndex(rankCase2.mpiCalls_, i2);
                     cont::eraseIndex(rankCase1.mpiCalls_, i);
@@ -83,7 +84,7 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
             }
         }
 
-        // if non-matching, blocking function is hit, break
+        // if non-matching, blocking function is hit in case 2, break
         else if (funcClassifier_.isBlockingType(
                      rankCase2.mpiCalls_[i2].get())) {
             break;
@@ -465,15 +466,6 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
             }
         }
     }
-}
-
-bool MPICheckerAST::areDatatypesEqual(const MPICall &callOne,
-                                      const MPICall &callTwo,
-                                      const size_t idx) const {
-    const VarDecl *mpiTypeNew = callOne.arguments_[idx].vars_.front();
-    const VarDecl *mpiTypePrev = callTwo.arguments_[idx].vars_.front();
-
-    return mpiTypeNew->getName() == mpiTypePrev->getName();
 }
 
 /**
