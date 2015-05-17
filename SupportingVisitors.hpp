@@ -18,6 +18,9 @@ class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
     StmtVisitor(clang::Stmt *stmt) : stmt_{stmt} { TraverseStmt(stmt_); }
 
+    enum class ComponentType { kInt, kFloat, kVar, kFunc, kComparsison,
+        kAddOp, kSubOp, kOperator };
+
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitBinaryOperator(clang::BinaryOperator *);
@@ -32,19 +35,19 @@ public:
     bool isEqualPermutative(const StmtVisitor &visitor) const;
 
     bool containsNonCommutativeOps() const;
-    bool areDeclTypesEqual(const StmtVisitor &) const;
-    bool areVariablesEqual(const StmtVisitor &) const;
 
     // complete statement
     clang::Stmt *stmt_;
 
-    // sequential series of components
-    llvm::SmallVector<clang::Stmt *, 4> sequentialSeries_;
-    llvm::SmallVector<clang::Decl *, 2> declarations_;
+    // sequential series of component types
+    llvm::SmallVector<ComponentType, 4> typeSequence_;
+    // without operators
+    llvm::SmallVector<ComponentType, 4> typeSequenceNoOps_;
 
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
+    llvm::SmallVector<std::string, 1> varNames_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;

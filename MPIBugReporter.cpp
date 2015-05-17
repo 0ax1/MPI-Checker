@@ -41,9 +41,12 @@ void MPIBugReporter::reportTypeMismatch(
     std::string bugName{"buffer type mismatch"};
     std::string errorText{"Buffer type and specified MPI type do not match. "};
 
-    llvm::SmallVector<SourceRange, 2> sourceRanges{
-        callRange, callExpr->getArg(idxPair.first)->getSourceRange(),
-        callExpr->getArg(idxPair.second)->getSourceRange()};
+
+    llvm::SmallVector<SourceRange, 2> sourceRanges;
+    sourceRanges.push_back(callRange);
+    sourceRanges.push_back(callExpr->getArg(idxPair.first)->getSourceRange());
+    sourceRanges.push_back(callExpr->getArg(idxPair.second)->getSourceRange());
+
     bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
                                  MPIError, errorText, location, sourceRanges);
 }
@@ -125,35 +128,35 @@ void MPIBugReporter::reportInvalidArgumentType(
 void MPIBugReporter::reportRedundantCall(
     const CallExpr *const matchedCall, const CallExpr *const duplicateCall,
     const llvm::SmallVectorImpl<size_t> &indices) const {
-    auto analysisDeclCtx =
-        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    // auto analysisDeclCtx =
+        // analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+    // PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        // duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
-    std::string lineNo = lineNumberForCallExpr(matchedCall);
+    // std::string lineNo = lineNumberForCallExpr(matchedCall);
 
-    // build source ranges vector
-    SmallVector<SourceRange, 10> sourceRanges{
-        matchedCall->getCallee()->getSourceRange(),
-        duplicateCall->getCallee()->getSourceRange()};
+    // // build source ranges vector
+    // SmallVector<SourceRange, 10> sourceRanges{
+        // matchedCall->getCallee()->getSourceRange(),
+        // duplicateCall->getCallee()->getSourceRange()};
 
-    for (size_t idx : indices) {
-        sourceRanges.push_back(matchedCall->getArg(idx)->getSourceRange());
-        sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
-    }
+    // for (size_t idx : indices) {
+        // sourceRanges.push_back(matchedCall->getArg(idx)->getSourceRange());
+        // sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
+    // }
 
-    std::string redundantCallName{
-        matchedCall->getDirectCallee()->getNameAsString()};
+    // std::string redundantCallName{
+        // matchedCall->getDirectCallee()->getNameAsString()};
 
-    std::string bugName{"duplicate calls"};
-    std::string errorText{"Identical communication arguments used in " +
-                          redundantCallName + " in line " + lineNo +
-                          ".\nConsider to summarize these calls. "};
+    // std::string bugName{"duplicate calls"};
+    // std::string errorText{"Identical communication arguments used in " +
+                          // redundantCallName + " in line " + lineNo +
+                          // ".\nConsider to summarize these calls. "};
 
-    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
-                                 bugName, MPIWarning, errorText, location,
-                                 sourceRanges);
+    // bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
+                                 // bugName, MPIWarning, errorText, location,
+                                 // sourceRanges);
 }
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––

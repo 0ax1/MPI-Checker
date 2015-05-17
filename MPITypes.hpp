@@ -19,12 +19,6 @@ public:
         init(callExpr);
     };
 
-    MPICall(clang::CallExpr *callExpr,
-            const clang::Stmt *const matchedCondition)
-        : callExpr_{callExpr} {
-        init(callExpr);
-    };
-
     // implicit conversion function
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
@@ -73,7 +67,8 @@ struct MPIRankCase {
         }
     }
 
-    bool isRankConditionEqual(MPIRankCase &);
+    bool isConditionAmbiguous();
+    bool isConditionUnambiguouslyEqual(MPIRankCase &);
     bool isConditionTypeStandard();
     size_t size() { return mpiCalls_.size(); }
 

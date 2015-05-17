@@ -48,6 +48,19 @@ void erase(T &container, E &elementToErase) {
 }
 
 /**
+ * Deletes all appearances of given element.
+ *
+ * @param container
+ * @param elementToErase
+ */
+template <typename T, typename E>
+void eraseAll(T &container, E &&elementToErase) {
+    container.erase(
+        std::remove(container.begin(), container.end(), elementToErase),
+        container.end());
+}
+
+/**
  * Deletes first appearance of given pointer.
  *
  * @param container

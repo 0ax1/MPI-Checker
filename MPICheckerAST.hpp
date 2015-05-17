@@ -53,7 +53,7 @@ public:
     void checkForCollectiveCall(const MPICall &) const;
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
-    void checkUnmatchedCalls(const llvm::SmallVectorImpl<MPIRankCase> &) const;
+    void checkUnmatchedCalls() const;
     void checkPointToPointSchema();
     void matchRankCasePair(MPIRankCase &, MPIRankCase &);
 

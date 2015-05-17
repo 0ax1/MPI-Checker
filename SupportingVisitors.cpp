@@ -13,70 +13,50 @@ bool StmtVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
-        declarations_.push_back(var);
-        sequentialSeries_.push_back(declRef);
+        varNames_.push_back(var->getNameAsString());
+        typeSequence_.push_back(ComponentType::kVar);
+        typeSequenceNoOps_.push_back(ComponentType::kVar);
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
         functions_.push_back(fn);
-        declarations_.push_back(fn);
-        sequentialSeries_.push_back(declRef);
+        typeSequence_.push_back(ComponentType::kFunc);
+        typeSequenceNoOps_.push_back(ComponentType::kFunc);
     }
     return true;
 }
 
 bool StmtVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
-    sequentialSeries_.push_back(op);
+    if (op->isComparisonOp()) {
+        typeSequence_.push_back(ComponentType::kComparsison);
+    } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
+        typeSequence_.push_back(ComponentType::kAddOp);
+    } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
+        typeSequence_.push_back(ComponentType::kSubOp);
+    } else {
+        typeSequence_.push_back(ComponentType::kOperator);
+    }
     return true;
 }
 
 bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     intValues_.push_back(intLiteral->getValue());
-    sequentialSeries_.push_back(intLiteral);
+    typeSequence_.push_back(ComponentType::kInt);
+    typeSequenceNoOps_.push_back(ComponentType::kInt);
     return true;
 }
 
 bool StmtVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     floatValues_.push_back(floatLiteral->getValue());
-    sequentialSeries_.push_back(floatLiteral);
+    typeSequence_.push_back(ComponentType::kFloat);
+    typeSequenceNoOps_.push_back(ComponentType::kFloat);
     return true;
 }
 
 bool StmtVisitor::VisitCallExpr(clang::CallExpr *callExpr) {
     callExprs_.push_back(callExpr);
-    return true;
-}
-
-bool StmtVisitor::areDeclTypesEqual(const StmtVisitor &visitorToCompare) const {
-    // distinct var decls and function decls
-    for (size_t i = 0; i < declarations_.size(); ++i) {
-        if (!(isa<VarDecl>(declarations_[i]) ==
-                  isa<VarDecl>(visitorToCompare.declarations_[i]) &&
-              isa<FunctionDecl>(declarations_[i]) ==
-                  isa<FunctionDecl>(visitorToCompare.declarations_[i]))) {
-            return false;
-        }
-    }
-    return true;
-}
-
-bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
-    // variables are compared by name, to make them comparable
-    // beyond their scope, across different branches, functions
-    for (size_t i = 0; i < vars_.size(); ++i) {
-        if (vars_[i]->getNameAsString() !=
-            visitorToCompare.vars_[i]->getNameAsString()) {
-            // vars are rated as equal if they are both rank variables
-            if (cont::isContained(MPIRank::visitedRankVariables, vars_[i]) &&
-                cont::isContained(MPIRank::visitedRankVariables,
-                                  visitorToCompare.vars_[i]))
-                continue;
-
-            return false;
-        }
-    }
     return true;
 }
 
@@ -90,32 +70,46 @@ bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
     }
 }
 
+// TODO
+// bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
+
+    // // variables are compared by name, to make them comparable
+    // // beyond their scope, across different branches, functions
+    // for (size_t i = 0; i < vars_.size(); ++i) {
+        // if (vars_[i]->getNameAsString() !=
+            // visitorToCompare.vars_[i]->getNameAsString()) {
+            // // vars are rated as equal if they are both rank variables
+            // if (cont::isContained(MPIRank::visitedRankVariables, vars_[i]) &&
+                // cont::isContained(MPIRank::visitedRankVariables,
+                                  // visitorToCompare.vars_[i]))
+                // continue;
+
+            // return false;
+        // }
+    // }
+    // return true;
+// }
+
 bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
                                  CompareOperators compareOperators) const {
-    // match container sizes
-    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
-        // float literals (just compare size, not by value)
-        floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size() ||
-        vars_.size() != visitorToCompare.vars_.size()) {
-        return false;
+    // include operator comparison
+    if (compareOperators == CompareOperators::kYes) {
+        // complete type sequence must match
+        if (typeSequence_ != visitorToCompare.typeSequence_) return false;
     }
-
-    // compare class types in sequence
-    for (size_t i = 0; i < sequentialSeries_.size(); ++i) {
-        if (!(sequentialSeries_[i]->getStmtClass() ==
-              visitorToCompare.sequentialSeries_[i]->getStmtClass())) {
+    // omit operator comparison
+    else {
+        // type sequence without operators
+        if (typeSequenceNoOps_ != visitorToCompare.typeSequenceNoOps_)
             return false;
-        }
     }
 
-    // distinct var decls and function decls
-    if (!areDeclTypesEqual(visitorToCompare)) return false;
     // int literals
     if (intValues_ != visitorToCompare.intValues_) return false;
     // functions
     if (functions_ != visitorToCompare.functions_) return false;
     // variables
-    if (!areVariablesEqual(visitorToCompare)) return false;
+    if (varNames_ != visitorToCompare.varNames_) return false;
     // operators
     if (compareOperators == CompareOperators::kYes) {
         if (binaryOperators_ != visitorToCompare.binaryOperators_) return false;
@@ -126,13 +120,8 @@ bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
 
 bool StmtVisitor::isEqualPermutative(
     const StmtVisitor &visitorToCompare) const {
-    // match container sizes
-    if (sequentialSeries_.size() != visitorToCompare.sequentialSeries_.size() ||
-        integerLiterals_.size() != visitorToCompare.integerLiterals_.size() ||
-        functions_.size() != visitorToCompare.functions_.size() ||
-        // float literals (just compare size, not by value)
-        floatingLiterals_.size() != visitorToCompare.floatingLiterals_.size() ||
-        vars_.size() != visitorToCompare.vars_.size()) {
+    // type sequence must be permutation
+    if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
         return false;
     }
 
@@ -140,16 +129,10 @@ bool StmtVisitor::isEqualPermutative(
     if (!cont::isPermutation(binaryOperators_,
                              visitorToCompare.binaryOperators_))
         return false;
-
     // variables (are compared by name, to make them comparable
     // beyond their scope, across different branches, functions)
-    llvm::SmallVector<std::string, 2> varNames1;
-    llvm::SmallVector<std::string, 2> varNames2;
-    for (size_t i = 0; i < vars_.size(); ++i) {
-        varNames1.push_back(vars_[i]->getNameAsString());
-        varNames2.push_back(visitorToCompare.vars_[i]->getNameAsString());
-    }
-    if (!cont::isPermutation(varNames1, varNames2)) return false;
+    if (!cont::isPermutation(varNames_, visitorToCompare.varNames_))
+        return false;
 
     // int literals
     if (!cont::isPermutation(intValues_, visitorToCompare.intValues_))
@@ -176,6 +159,16 @@ bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
     }
+    return true;
+}
+
+bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {
+    MPICall mpiCall{callExpr};
+    if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
+        VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
+        MPIRank::visitedRankVariables.insert(varDecl);
+    }
+
     return true;
 }
 
