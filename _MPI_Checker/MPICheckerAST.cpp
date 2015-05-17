@@ -41,19 +41,51 @@ void MPICheckerAST::checkUnmatchedCalls(
  */
 void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
                                       MPIRankCase &rankCase2) {
-    for (size_t i = 0; i < rankCase2.size() && rankCase1.size(); ++i) {
-        // skip non point to point
-        while (
-            !funcClassifier_.isPointToPointType(rankCase1.mpiCalls_[0].get())) {
+    // erase non point to point
+    for (size_t i = 0; i < rankCase1.mpiCalls_.size(); ++i) {
+        if (!funcClassifier_.isPointToPointType(rankCase1.mpiCalls_[0].get())) {
             cont::eraseIndex(rankCase1.mpiCalls_, 0);
             if (!rankCase1.size()) return;
         }
-        if (isSendRecvPair(rankCase1.mpiCalls_[0], rankCase2.mpiCalls_[i])) {
-            cont::eraseIndex(rankCase1.mpiCalls_, 0);
-            cont::eraseIndex(rankCase2.mpiCalls_, i--);
+    }
+
+    for (size_t i = 0; i < rankCase2.mpiCalls_.size(); ++i) {
+        if (!funcClassifier_.isPointToPointType(rankCase2.mpiCalls_[0].get())) {
+            cont::eraseIndex(rankCase2.mpiCalls_, 0);
+            if (!rankCase2.size()) return;
         }
+    }
+
+    for (size_t i = 0, i2 = 0; i < rankCase1.size() && i2 < rankCase2.size();
+         ++i2) {
+        // skip non blocking recvs
+        while (
+            funcClassifier_.isNonBlockingType(rankCase1.mpiCalls_[i].get()) &&
+            funcClassifier_.isRecvType(rankCase1.mpiCalls_[i].get())) {
+            if (!(++i < rankCase1.size())) return;
+        }
+
+        if (isSendRecvPair(rankCase1.mpiCalls_[i], rankCase2.mpiCalls_[i2])) {
+            // distinct cases
+            if (&rankCase1 != &rankCase2) {
+                cont::eraseIndex(rankCase1.mpiCalls_, i);
+                cont::eraseIndex(rankCase2.mpiCalls_, i2--);
+            } else {
+                // same case which can be matched by multiple ranks
+                if (i2 > i) {
+                    cont::eraseIndex(rankCase2.mpiCalls_, i2);
+                    cont::eraseIndex(rankCase1.mpiCalls_, i);
+                    i2 -= 2;
+                } else if (i > i2) {
+                    cont::eraseIndex(rankCase1.mpiCalls_, i);
+                    cont::eraseIndex(rankCase2.mpiCalls_, i2--);
+                }
+            }
+        }
+
         // if non-matching, blocking function is hit, break
-        else if (funcClassifier_.isBlockingType(rankCase2.mpiCalls_[i].get())) {
+        else if (funcClassifier_.isBlockingType(
+                     rankCase2.mpiCalls_[i2].get())) {
             break;
         }
     }
@@ -65,9 +97,8 @@ void MPICheckerAST::checkPointToPointSchema() {
     for (size_t i = 0; i < 4; ++i) {
         for (MPIRankCase &rankCase1 : rankCases) {
             for (MPIRankCase &rankCase2 : rankCases) {
-                // rank cases must be distinct
-                if (!rankCase1.isRankConditionEqual(rankCase2) &&
-                    &rankCase1 != &rankCase2) {
+                // rank conditions must be not identical
+                if (!rankCase1.isRankConditionEqual(rankCase2)) {
                     // rank cases are potential partner
                     matchRankCasePair(rankCase1, rankCase2);
                 }
