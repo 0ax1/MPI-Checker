@@ -163,10 +163,12 @@ bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 }
 
 bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {
-    MPICall mpiCall{callExpr};
-    if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
-        VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-        MPIRank::visitedRankVariables.insert(varDecl);
+    if (funcClassifier_.isMPIType(callExpr->getDirectCallee()->getIdentifier())) {
+        MPICall mpiCall{callExpr};
+        if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
+            VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
+            MPIRank::visitedRankVariables.insert(varDecl);
+        }
     }
 
     return true;

@@ -111,10 +111,6 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
 
         checkerAST_.checkBufferTypeMatch(mpiCall);
         checkerAST_.checkForInvalidArgs(mpiCall);
-
-        if (checkerAST_.funcClassifier_.isCollectiveType(mpiCall)) {
-            MPICall::visitedCalls.push_back(std::move(mpiCall));
-        }
     }
 
     return true;
@@ -130,9 +126,8 @@ MPIRankCase MPIVisitor::buildRankCase(
         // filter mpi calls
         if (checkerAST_.funcClassifier_.isMPIType(
                 callExpr->getDirectCallee()->getIdentifier())) {
-            MPICall::visitedCalls.emplace_back(callExpr);
             // add reference to rankCase vector
-            rankCase.mpiCalls_.push_back(MPICall::visitedCalls.back());
+            rankCase.mpiCalls_.push_back(callExpr);
         }
     }
     return rankCase;

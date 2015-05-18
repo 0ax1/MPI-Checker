@@ -22,10 +22,10 @@ public:
     // implicit conversion function
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
-    const clang::CallExpr *const callExpr_;
-    const llvm::SmallVector<mpi::StmtVisitor, 8> arguments_;
+    const clang::CallExpr *callExpr_;
+    std::vector<StmtVisitor> arguments_;
     const clang::IdentifierInfo *identInfo_;
-    const unsigned long id_{id++};  // unique call identification
+    unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_;
@@ -44,8 +44,7 @@ private:
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
             // emplace triggers ExprVisitor ctor
-            const_cast<llvm::SmallVector<mpi::StmtVisitor, 8> &>(arguments_)
-                .emplace_back(callExpr->getArg(i));
+            arguments_.emplace_back(callExpr->getArg(i));
         }
     }
 
@@ -69,10 +68,9 @@ struct MPIRankCase {
 
     bool isConditionAmbiguous();
     bool isConditionUnambiguouslyEqual(MPIRankCase &);
-    bool isConditionTypeStandard();
     size_t size() { return mpiCalls_.size(); }
 
-    std::vector<std::reference_wrapper<MPICall>> mpiCalls_;
+    std::vector<MPICall> mpiCalls_;
     // condition fullfilled to enter rank case
     std::unique_ptr<StmtVisitor> matchedCondition_{nullptr};
     // conditions not fullfilled to enter rank case

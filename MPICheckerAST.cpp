@@ -43,12 +43,12 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
 
     while (i < rankCase1.size() && i2 < rankCase2.size()) {
         // skip non sends for case 1
-        while (!funcClassifier_.isSendType(rankCase1.mpiCalls_[i].get())) {
+        while (!funcClassifier_.isSendType(rankCase1.mpiCalls_[i])) {
             if (!(++i < rankCase1.size())) return;
         }
 
         // skip non recvs for case 2
-        while (!funcClassifier_.isRecvType(rankCase2.mpiCalls_[i2].get())) {
+        while (!funcClassifier_.isRecvType(rankCase2.mpiCalls_[i2])) {
             if (!(++i2 < rankCase2.size())) return;
         }
 
@@ -88,7 +88,7 @@ void MPICheckerAST::checkPointToPointSchema() {
     for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
         for (size_t i = 0; i < rankCase.mpiCalls_.size(); ++i) {
             if (!funcClassifier_.isPointToPointType(
-                    rankCase.mpiCalls_[i].get())) {
+                    rankCase.mpiCalls_[i])) {
                 cont::eraseIndex(rankCase.mpiCalls_, i--);
             }
         }
@@ -590,14 +590,14 @@ void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck) const {
  * @return is equal call in list
  */
 void MPICheckerAST::checkForRedundantCalls() const {
-    for (const MPICall &mpiCall : MPICall::visitedCalls) {
-        checkForRedundantCall(mpiCall);
-    }
+    // for (const MPICall &mpiCall : MPICall::visitedCalls) {
+        // checkForRedundantCall(mpiCall);
+    // }
 
-    // unmark calls
-    for (const MPICall &mpiCall : MPICall::visitedCalls) {
-        mpiCall.isMarked_ = false;
-    }
+    // // unmark calls
+    // for (const MPICall &mpiCall : MPICall::visitedCalls) {
+        // mpiCall.isMarked_ = false;
+    // }
 }
 
 }  // end of namespace: mpi
