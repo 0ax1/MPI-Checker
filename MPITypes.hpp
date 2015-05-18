@@ -29,8 +29,8 @@ public:
     unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
-    bool isMarked_;
-    bool isReachable_;
+    bool isMarked_{false};
+    bool isReachable_{false};
 
 private:
     /**
@@ -80,6 +80,13 @@ struct MPIRankCase {
     bool isConditionAmbiguous();
     bool isConditionUnambiguouslyEqual(MPIRankCase &);
     size_t size() { return mpiCalls_.size(); }
+    static void unmarkCalls() {
+        for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+            for (MPICall &call : rankCase.mpiCalls_) {
+                call.isMarked_ = false;
+            }
+        }
+    }
 
     std::vector<MPICall> mpiCalls_;
     // condition fullfilled to enter rank case

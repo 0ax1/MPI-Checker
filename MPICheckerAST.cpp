@@ -9,19 +9,29 @@ namespace mpi {
  * Checks if point to point functions resolve to a valid schema.
  */
 void MPICheckerAST::checkPointToPointSchema() {
+    MPIRankCase::unmarkCalls();
+
     // search send/recv pairs for interacting cases
     for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
         for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
             // rank conditions must be distinct or ambiguous
             if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
                 // rank cases are potential partner
-                matchRankCasePair(rankCase1, rankCase2);
+                checkSendRecvMatches(rankCase1, rankCase2);
             }
         }
     }
 
-    // unmarked calls are unmatched
-    checkUnmatchedCalls();
+    // trigger report for unmarked
+    for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+        for (const MPICall &call : rankCase.mpiCalls_) {
+            if (funcClassifier_.isSendType(call) && !call.isMarked_) {
+                bugReporter_.reportUnmatchedCall(call.callExpr_, "receive");
+            } else if (funcClassifier_.isRecvType(call) && !call.isMarked_) {
+                bugReporter_.reportUnmatchedCall(call.callExpr_, "send");
+            }
+        }
+    }
 }
 
 /**
@@ -32,8 +42,8 @@ void MPICheckerAST::checkPointToPointSchema() {
  * @param rankCase1
  * @param rankCase2
  */
-void MPICheckerAST::matchRankCasePair(MPIRankCase &firstCase,
-                                      MPIRankCase &secondCase) {
+void MPICheckerAST::checkSendRecvMatches(MPIRankCase &firstCase,
+                                         MPIRankCase &secondCase) {
     // find send/recv pairs
     for (MPICall &send : firstCase.mpiCalls_) {
         // skip non sends for case 1
@@ -54,23 +64,63 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &firstCase,
 }
 
 /**
- * Looks for unmatched point to point calls to trigger diagnosis.
- * Unmatched calls are not marked.
- *
- * @param rankCases
+ * Check if mpi functions can be reached.
  */
-void MPICheckerAST::checkUnmatchedCalls() const {
+void MPICheckerAST::checkReachbility() {
+    MPIRankCase::unmarkCalls();
+
+    for (int i = 0; i < 4; ++i) {
+        // search send/recv pairs for interacting cases
+        for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
+            for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
+                // rank conditions must be distinct or ambiguous
+                if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
+                    // rank cases are potential partner
+                    checkReachbilityPair(rankCase1, rankCase2);
+                }
+            }
+        }
+    }
+
+    // trigger report for unreached
     for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
         for (const MPICall &call : rankCase.mpiCalls_) {
-            if (funcClassifier_.isSendType(call) && !call.isMarked_) {
-                bugReporter_.reportUnmatchedCall(call.callExpr_, "receive");
-            } else if (funcClassifier_.isRecvType(call) && !call.isMarked_) {
-                bugReporter_.reportUnmatchedCall(call.callExpr_, "send");
+            if (funcClassifier_.isMPIType(call) && !call.isReachable_) {
+                bugReporter_.reportNotReachableCall(call.callExpr_);
             }
         }
     }
 }
 
+void MPICheckerAST::checkReachbilityPair(MPIRankCase &firstCase,
+                                         MPIRankCase &secondCase) {
+    // find send/recv pairs
+    for (MPICall &send : firstCase.mpiCalls_) {
+        send.isReachable_ = true;
+        if (send.isMarked_) continue;
+
+        for (MPICall &recv : secondCase.mpiCalls_) {
+            recv.isReachable_ = true;
+            if (recv.isMarked_) continue;
+
+            // check if pair matches
+            if (isSendRecvPair(send, recv)) {
+                send.isMarked_ = true;
+                recv.isMarked_ = true;
+                break;
+            }
+            // no match and call was blocking
+            else if (funcClassifier_.isBlockingType(recv)) {
+                break;
+            }
+        }
+
+        // to matching recv found in all cases
+        if (funcClassifier_.isBlockingType(send) && !send.isMarked_) {
+            return;
+        }
+    }
+}
 
 /**
  * Checks if a collective call. Triggers bug reporter.

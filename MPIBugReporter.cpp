@@ -27,6 +27,25 @@ std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
 // bug reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+/**
+ * Reports if a collective call is used inside a rank branch.
+ * @param callExpr collective call
+ */
+void MPIBugReporter::reportNotReachableCall(
+    const CallExpr *const callExpr) const {
+    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), adc);
+
+    SourceRange range = callExpr->getCallee()->getSourceRange();
+    std::string bugName{"unreachable call"};
+    std::string errorText{
+        "Call is not reachable due to previous blocking commands. "};
+
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+                                 MPIError, errorText, location, range);
+}
 /**
  * Reports mismach between buffer type and mpi datatype.
  * @param callExpr
@@ -40,7 +59,6 @@ void MPIBugReporter::reportTypeMismatch(
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
     std::string bugName{"buffer type mismatch"};
     std::string errorText{"Buffer type and specified MPI type do not match. "};
-
 
     llvm::SmallVector<SourceRange, 2> sourceRanges;
     sourceRanges.push_back(callRange);
@@ -129,34 +147,34 @@ void MPIBugReporter::reportRedundantCall(
     const CallExpr *const matchedCall, const CallExpr *const duplicateCall,
     const llvm::SmallVectorImpl<size_t> &indices) const {
     // auto analysisDeclCtx =
-        // analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    // analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
 
     // PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        // duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
+    // duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
 
     // std::string lineNo = lineNumberForCallExpr(matchedCall);
 
     // // build source ranges vector
     // SmallVector<SourceRange, 10> sourceRanges{
-        // matchedCall->getCallee()->getSourceRange(),
-        // duplicateCall->getCallee()->getSourceRange()};
+    // matchedCall->getCallee()->getSourceRange(),
+    // duplicateCall->getCallee()->getSourceRange()};
 
     // for (size_t idx : indices) {
-        // sourceRanges.push_back(matchedCall->getArg(idx)->getSourceRange());
-        // sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
+    // sourceRanges.push_back(matchedCall->getArg(idx)->getSourceRange());
+    // sourceRanges.push_back(duplicateCall->getArg(idx)->getSourceRange());
     // }
 
     // std::string redundantCallName{
-        // matchedCall->getDirectCallee()->getNameAsString()};
+    // matchedCall->getDirectCallee()->getNameAsString()};
 
     // std::string bugName{"duplicate calls"};
     // std::string errorText{"Identical communication arguments used in " +
-                          // redundantCallName + " in line " + lineNo +
-                          // ".\nConsider to summarize these calls. "};
+    // redundantCallName + " in line " + lineNo +
+    // ".\nConsider to summarize these calls. "};
 
     // bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
-                                 // bugName, MPIWarning, errorText, location,
-                                 // sourceRanges);
+    // bugName, MPIWarning, errorText, location,
+    // sourceRanges);
 }
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––

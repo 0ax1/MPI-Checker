@@ -55,7 +55,10 @@ public:
 
     void checkUnmatchedCalls() const;
     void checkPointToPointSchema();
-    void matchRankCasePair(MPIRankCase &, MPIRankCase &);
+    void checkSendRecvMatches(MPIRankCase &, MPIRankCase &);
+    void checkReachbility();
+    void checkReachbilityPair(MPIRankCase &, MPIRankCase &);
+    void unmarkCalls();
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;

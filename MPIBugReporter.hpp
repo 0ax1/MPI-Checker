@@ -38,6 +38,7 @@ public:
 
     void reportCollCallInBranch(const clang::CallExpr *const) const;
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
+    void reportNotReachableCall(const clang::CallExpr *const) const;
 
     // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––
     void reportMissingWait(const RequestVar &, clang::ento::ExplodedNode *) const;
