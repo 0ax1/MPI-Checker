@@ -29,13 +29,6 @@ void MPICheckerAST::checkUnmatchedCalls() const {
     }
 }
 
-/**
- * Searches for send/recv pairs betwenn two rank cases.
- * Matches and irrelevant calls get erased.
- *
- * @param rankCase1
- * @param rankCase2
- */
 void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
                                       MPIRankCase &rankCase2) {
     // find send/recv pair
@@ -82,6 +75,60 @@ void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
         // }
     }
 }
+
+/**
+ * Searches for send/recv pairs betwenn two rank cases.
+ * Matches and irrelevant calls get erased.
+ *
+ * @param rankCase1
+ * @param rankCase2
+ */
+// void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
+                                      // MPIRankCase &rankCase2) {
+    // // find send/recv pair
+    // size_t i = 0, i2 = 0;
+
+    // while (i < rankCase1.size() && i2 < rankCase2.size()) {
+        // // skip non sends for case 1
+        // while (!funcClassifier_.isSendType(rankCase1.mpiCalls_[i])) {
+            // if (!(++i < rankCase1.size())) return;
+        // }
+
+        // // skip non recvs for case 2
+        // while (!funcClassifier_.isRecvType(rankCase2.mpiCalls_[i2])) {
+            // if (!(++i2 < rankCase2.size())) return;
+        // }
+
+        // // check if pair matches
+        // if (isSendRecvPair(rankCase1.mpiCalls_[i], rankCase2.mpiCalls_[i2])) {
+            // // distinct cases
+            // if (&rankCase1 != &rankCase2) {
+                // cont::eraseIndex(rankCase1.mpiCalls_, i);
+                // cont::eraseIndex(rankCase2.mpiCalls_, i2);
+            // }
+            // // same case which can be matched by multiple ranks
+            // else {
+                // if (i2 > i) {
+                    // cont::eraseIndex(rankCase1.mpiCalls_, i2);
+                    // cont::eraseIndex(rankCase1.mpiCalls_, i);
+                    // --i2;
+                // } else if (i > i2) {
+                    // cont::eraseIndex(rankCase1.mpiCalls_, i);
+                    // cont::eraseIndex(rankCase1.mpiCalls_, i2);
+                    // --i;
+                // }
+            // }
+            // continue;
+        // }
+        // ++i2;
+
+        // // if non-matching, blocking function is hit in case 2, break
+        // // else if (funcClassifier_.isBlockingType(
+        // // rankCase2.mpiCalls_[i2].get())) {
+        // // break;
+        // // }
+    // }
+// }
 
 void MPICheckerAST::checkPointToPointSchema() {
     // erase non point to point calls first

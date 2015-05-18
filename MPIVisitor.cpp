@@ -73,8 +73,9 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-        MPIRankCase::visitedRankCases.emplace_back(buildRankCase(
-            ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions));
+        MPIRankCase::visitedRankCases.emplace_back(
+            ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions,
+            checkerAST_.funcClassifier_);
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
@@ -82,8 +83,8 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 
     // collect mpi calls in else
     if (stmt) {
-        MPIRankCase::visitedRankCases.push_back(
-            buildRankCase(stmt, nullptr, unmatchedConditions));
+        MPIRankCase::visitedRankCases.emplace_back(
+            stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier_);
     }
 
     // check if collective calls are used in rank rankCase
@@ -116,23 +117,6 @@ bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     return true;
 }
 
-MPIRankCase MPIVisitor::buildRankCase(
-    Stmt *then, Stmt *matchedCondition,
-    const std::vector<StmtVisitor> &unmatchedConditions) {
-    // capture un/matched conditions
-    MPIRankCase rankCase{matchedCondition, unmatchedConditions};
-    StmtVisitor stmtVisitor{then};  // collect call exprs
-    for (CallExpr *callExpr : stmtVisitor.callExprs_) {
-        // filter mpi calls
-        if (checkerAST_.funcClassifier_.isMPIType(
-                callExpr->getDirectCallee()->getIdentifier())) {
-            // add reference to rankCase vector
-            rankCase.mpiCalls_.push_back(callExpr);
-        }
-    }
-    return rankCase;
-}
-
 // host class ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Checker host class that registers the checker for static analysis.
@@ -162,7 +146,6 @@ public:
         visitor.checkerAST_.checkPointToPointSchema();
 
         // // clear after every translation unit
-        MPICall::visitedCalls.clear();
         MPIRank::visitedRankVariables.clear();
         MPIRankCase::visitedRankCases.clear();
     }

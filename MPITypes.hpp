@@ -2,6 +2,7 @@
 #define MPITYPES_HPP_IC7XR2MI
 
 #include "SupportingVisitors.hpp"
+#include "MPIFunctionClassifier.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––
 
@@ -30,8 +31,6 @@ public:
     // semantic depends on context of usage
     mutable bool isMarked_;
 
-    static llvm::SmallVector<MPICall, 16> visitedCalls;
-
 private:
     /**
      * Init function shared by ctors.
@@ -58,11 +57,22 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 
 // to capture rank cases from branches
 struct MPIRankCase {
-    MPIRankCase(clang::Stmt *matchedCondition,
-                const std::vector<StmtVisitor> &unmatchedConditions)
+    MPIRankCase(clang::Stmt *then, clang::Stmt *matchedCondition,
+                const std::vector<StmtVisitor> &unmatchedConditions,
+                MPIFunctionClassifier &funcClassifier)
+
         : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {
             matchedCondition_.reset(new StmtVisitor{matchedCondition});
+        }
+
+        StmtVisitor stmtVisitor{then};  // collect call exprs
+        for (clang::CallExpr *callExpr : stmtVisitor.callExprs_) {
+            // add mpi calls only
+            if (funcClassifier.isMPIType(
+                    callExpr->getDirectCallee()->getIdentifier())) {
+                mpiCalls_.push_back(callExpr);
+            }
         }
     }
 
