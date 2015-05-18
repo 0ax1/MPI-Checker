@@ -5,157 +5,82 @@ using namespace ento;
 
 namespace mpi {
 
-void MPICheckerAST::checkForCollectiveCall(const MPICall &mpiCall) const {
-    if (funcClassifier_.isCollectiveType(mpiCall)) {
-        bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
+/**
+ * Checks if point to point functions resolve to a valid schema.
+ */
+void MPICheckerAST::checkPointToPointSchema() {
+    // search send/recv pairs for interacting cases
+    for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
+        for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
+            // rank conditions must be distinct or ambiguous
+            if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
+                // rank cases are potential partner
+                matchRankCasePair(rankCase1, rankCase2);
+            }
+        }
+    }
+
+    // unmarked calls are unmatched
+    checkUnmatchedCalls();
+}
+
+/**
+ * Matches send with recv operations between two rank cases.
+ * For the first case send operations are tried to be matched
+ * with recv operations from the second case.
+ *
+ * @param rankCase1
+ * @param rankCase2
+ */
+void MPICheckerAST::matchRankCasePair(MPIRankCase &firstCase,
+                                      MPIRankCase &secondCase) {
+    // find send/recv pairs
+    for (MPICall &send : firstCase.mpiCalls_) {
+        // skip non sends for case 1
+        if (!funcClassifier_.isSendType(send) || send.isMarked_) continue;
+
+        // skip non recvs for case 2
+        for (MPICall &recv : secondCase.mpiCalls_) {
+            if (!funcClassifier_.isRecvType(recv) || recv.isMarked_) continue;
+
+            // check if pair matches
+            if (isSendRecvPair(send, recv)) {
+                send.isMarked_ = true;
+                recv.isMarked_ = true;
+                break;
+            }
+        }
     }
 }
 
 /**
- * Iterates rank cases looking for point to point send or receive
- * functions. If found report them as unmatched.
+ * Looks for unmatched point to point calls to trigger diagnosis.
+ * Unmatched calls are not marked.
  *
  * @param rankCases
  */
 void MPICheckerAST::checkUnmatchedCalls() const {
     for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
         for (const MPICall &call : rankCase.mpiCalls_) {
-            if (funcClassifier_.isSendType(call)) {
+            if (funcClassifier_.isSendType(call) && !call.isMarked_) {
                 bugReporter_.reportUnmatchedCall(call.callExpr_, "receive");
-            } else if (funcClassifier_.isRecvType(call)) {
+            } else if (funcClassifier_.isRecvType(call) && !call.isMarked_) {
                 bugReporter_.reportUnmatchedCall(call.callExpr_, "send");
             }
         }
     }
 }
 
-void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
-                                      MPIRankCase &rankCase2) {
-    // find send/recv pair
-    size_t i = 0, i2 = 0;
-
-    while (i < rankCase1.size() && i2 < rankCase2.size()) {
-        // skip non sends for case 1
-        while (!funcClassifier_.isSendType(rankCase1.mpiCalls_[i])) {
-            if (!(++i < rankCase1.size())) return;
-        }
-
-        // skip non recvs for case 2
-        while (!funcClassifier_.isRecvType(rankCase2.mpiCalls_[i2])) {
-            if (!(++i2 < rankCase2.size())) return;
-        }
-
-        // check if pair matches
-        if (isSendRecvPair(rankCase1.mpiCalls_[i], rankCase2.mpiCalls_[i2])) {
-            // distinct cases
-            if (&rankCase1 != &rankCase2) {
-                cont::eraseIndex(rankCase1.mpiCalls_, i);
-                cont::eraseIndex(rankCase2.mpiCalls_, i2);
-            }
-            // same case which can be matched by multiple ranks
-            else {
-                if (i2 > i) {
-                    cont::eraseIndex(rankCase1.mpiCalls_, i2);
-                    cont::eraseIndex(rankCase1.mpiCalls_, i);
-                    --i2;
-                } else if (i > i2) {
-                    cont::eraseIndex(rankCase1.mpiCalls_, i);
-                    cont::eraseIndex(rankCase1.mpiCalls_, i2);
-                    --i;
-                }
-            }
-            continue;
-        }
-        ++i2;
-
-        // if non-matching, blocking function is hit in case 2, break
-        // else if (funcClassifier_.isBlockingType(
-        // rankCase2.mpiCalls_[i2].get())) {
-        // break;
-        // }
-    }
-}
 
 /**
- * Searches for send/recv pairs betwenn two rank cases.
- * Matches and irrelevant calls get erased.
+ * Checks if a collective call. Triggers bug reporter.
  *
- * @param rankCase1
- * @param rankCase2
+ * @param mpiCall
  */
-// void MPICheckerAST::matchRankCasePair(MPIRankCase &rankCase1,
-                                      // MPIRankCase &rankCase2) {
-    // // find send/recv pair
-    // size_t i = 0, i2 = 0;
-
-    // while (i < rankCase1.size() && i2 < rankCase2.size()) {
-        // // skip non sends for case 1
-        // while (!funcClassifier_.isSendType(rankCase1.mpiCalls_[i])) {
-            // if (!(++i < rankCase1.size())) return;
-        // }
-
-        // // skip non recvs for case 2
-        // while (!funcClassifier_.isRecvType(rankCase2.mpiCalls_[i2])) {
-            // if (!(++i2 < rankCase2.size())) return;
-        // }
-
-        // // check if pair matches
-        // if (isSendRecvPair(rankCase1.mpiCalls_[i], rankCase2.mpiCalls_[i2])) {
-            // // distinct cases
-            // if (&rankCase1 != &rankCase2) {
-                // cont::eraseIndex(rankCase1.mpiCalls_, i);
-                // cont::eraseIndex(rankCase2.mpiCalls_, i2);
-            // }
-            // // same case which can be matched by multiple ranks
-            // else {
-                // if (i2 > i) {
-                    // cont::eraseIndex(rankCase1.mpiCalls_, i2);
-                    // cont::eraseIndex(rankCase1.mpiCalls_, i);
-                    // --i2;
-                // } else if (i > i2) {
-                    // cont::eraseIndex(rankCase1.mpiCalls_, i);
-                    // cont::eraseIndex(rankCase1.mpiCalls_, i2);
-                    // --i;
-                // }
-            // }
-            // continue;
-        // }
-        // ++i2;
-
-        // // if non-matching, blocking function is hit in case 2, break
-        // // else if (funcClassifier_.isBlockingType(
-        // // rankCase2.mpiCalls_[i2].get())) {
-        // // break;
-        // // }
-    // }
-// }
-
-void MPICheckerAST::checkPointToPointSchema() {
-    // erase non point to point calls first
-    for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
-        for (size_t i = 0; i < rankCase.mpiCalls_.size(); ++i) {
-            if (!funcClassifier_.isPointToPointType(
-                    rankCase.mpiCalls_[i])) {
-                cont::eraseIndex(rankCase.mpiCalls_, i--);
-            }
-        }
+void MPICheckerAST::checkForCollectiveCall(const MPICall &mpiCall) const {
+    if (funcClassifier_.isCollectiveType(mpiCall)) {
+        bugReporter_.reportCollCallInBranch(mpiCall.callExpr_);
     }
-
-    // search send/recv pairs for interacting cases
-    for (size_t i = 0; i < 4; ++i) {
-        for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
-            for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
-                // rank conditions must be distinct or ambiguous
-                if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
-                    // rank cases are potential partner
-                    matchRankCasePair(rankCase1, rankCase2);
-                }
-            }
-        }
-    }
-
-    // remaining calls are unmatched
-    checkUnmatchedCalls();
 }
 
 /**
@@ -192,8 +117,10 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
 
     // compare ranks
+    // TODO cut arguments last 2 elements to allow flexible comparison
     if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
             recvCall.arguments_[MPIPointToPoint::kRank],
+            // TODO drop this
             StmtVisitor::CompareOperators::kNo)) {
         return false;
     }
@@ -207,7 +134,6 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     if (operatorsSend.size() != operatorsRecv.size()) {
         return false;
     }
-
     // operators except last one must be equal
     // (operator list is reversed to notation in code)
     for (size_t i = 1; i < operatorsSend.size(); ++i) {
@@ -475,43 +401,49 @@ bool MPICheckerAST::matchExactWidthType(
  * @param mpiCall to check the arguments for
  */
 void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
+    bool performCheck{false};
+
+    llvm::SmallVector<size_t, 4> indicesToCheck;
     if (funcClassifier_.isPointToPointType(mpiCall)) {
-        const auto indicesToCheck = {MPIPointToPoint::kCount,
-                                     MPIPointToPoint::kRank,
-                                     MPIPointToPoint::kTag};
+        indicesToCheck.push_back(MPIPointToPoint::kCount);
+        indicesToCheck.push_back(MPIPointToPoint::kRank);
+        indicesToCheck.push_back(MPIPointToPoint::kTag);
+        performCheck = true;
+    }
 
-        // iterate indices which should not have float arguments
-        for (const size_t idx : indicesToCheck) {
-            // check for invalid variable types
-            const auto &arg = mpiCall.arguments_[idx];
-            const auto &vars = arg.vars_;
-            for (const auto &var : vars) {
-                const mpi::TypeVisitor typeVisitor{var->getType()};
-                if (!typeVisitor.builtinType_ ||
-                    !typeVisitor.builtinType_->isIntegerType()) {
-                    bugReporter_.reportInvalidArgumentType(
-                        mpiCall.callExpr_, idx, var->getSourceRange(),
-                        "Variable");
-                }
-            }
+    if (!performCheck) return;
+    // TODO add more mpi types
 
-            // check for float literals
-            if (arg.floatingLiterals_.size()) {
+    // iterate indices which should not have float arguments
+    for (const size_t idx : indicesToCheck) {
+        // check for invalid variable types
+        const auto &arg = mpiCall.arguments_[idx];
+        const auto &vars = arg.vars_;
+        for (const auto &var : vars) {
+            const mpi::TypeVisitor typeVisitor{var->getType()};
+            if (!typeVisitor.builtinType_ ||
+                !typeVisitor.builtinType_->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
-                    mpiCall.callExpr_, idx,
-                    arg.floatingLiterals_.front()->getSourceRange(), "Literal");
+                    mpiCall.callExpr_, idx, var->getSourceRange(), "Variable");
             }
+        }
 
-            // check for invalid return types from functions
-            const auto &functions = arg.functions_;
-            for (const auto &function : functions) {
-                const mpi::TypeVisitor typeVisitor{function->getReturnType()};
-                if (!typeVisitor.builtinType_ ||
-                    !typeVisitor.builtinType_->isIntegerType()) {
-                    bugReporter_.reportInvalidArgumentType(
-                        mpiCall.callExpr_, idx, function->getSourceRange(),
-                        "Return value");
-                }
+        // check for float literals
+        if (arg.floatingLiterals_.size()) {
+            bugReporter_.reportInvalidArgumentType(
+                mpiCall.callExpr_, idx,
+                arg.floatingLiterals_.front()->getSourceRange(), "Literal");
+        }
+
+        // check for invalid return types from functions
+        const auto &functions = arg.functions_;
+        for (const auto &function : functions) {
+            const mpi::TypeVisitor typeVisitor{function->getReturnType()};
+            if (!typeVisitor.builtinType_ ||
+                !typeVisitor.builtinType_->isIntegerType()) {
+                bugReporter_.reportInvalidArgumentType(
+                    mpiCall.callExpr_, idx, function->getSourceRange(),
+                    "Return value");
             }
         }
     }
@@ -638,12 +570,12 @@ void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck) const {
  */
 void MPICheckerAST::checkForRedundantCalls() const {
     // for (const MPICall &mpiCall : MPICall::visitedCalls) {
-        // checkForRedundantCall(mpiCall);
+    // checkForRedundantCall(mpiCall);
     // }
 
     // // unmark calls
     // for (const MPICall &mpiCall : MPICall::visitedCalls) {
-        // mpiCall.isMarked_ = false;
+    // mpiCall.isMarked_ = false;
     // }
 }
 

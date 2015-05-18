@@ -29,7 +29,8 @@ public:
     unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
-    mutable bool isMarked_;
+    bool isMarked_;
+    bool isReachable_;
 
 private:
     /**
