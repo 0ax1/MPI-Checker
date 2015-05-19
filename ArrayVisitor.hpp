@@ -20,15 +20,14 @@ public:
     }
 
     const clang::VarDecl *arrayVarDecl() { return arrayVarDecl_; }
-    const llvm::SmallVector<clang::VarDecl *, 4> &vars() { return vars_; }
+    const llvm::SmallVectorImpl<clang::VarDecl *> &vars() { return vars_; }
 
 private:
-    // complete VarDecl expression
+    // complete VarDecl
     clang::VarDecl *arrayVarDecl_;
-    // extracted components
+    // array variables
     llvm::SmallVector<clang::VarDecl *, 4> vars_;
 };
 
 }  // end of namespace: mpi
-
 #endif  // end of include guard: ARRAYVISITOR_HPP_LNSPXQ6N

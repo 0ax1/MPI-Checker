@@ -50,10 +50,8 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
         requestVector.push_back(mpiCall.arguments()[0].vars().front());
     } else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
         ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
-        llvm::SmallVector<clang::VarDecl *, 4> vars = arrayVisitor.vars();
-        vars.resize(vars.size() / 2);  // hack
 
-        for (const auto &requestVar : vars) {
+        for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
         }
     }
