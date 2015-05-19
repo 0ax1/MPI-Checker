@@ -2,7 +2,7 @@
 #define MPITYPES_HPP_IC7XR2MI
 
 #include "llvm/ADT/SmallSet.h"
-#include "StmtVisitor.hpp"
+#include "ArgumentVisitor.hpp"
 #include "CallExprVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
 
@@ -29,7 +29,7 @@ public:
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *callExpr() const { return callExpr_; }
-    const std::vector<StmtVisitor> &arguments() const { return arguments_; }
+    const std::vector<ArgumentVisitor> &arguments() const { return arguments_; }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
 
@@ -55,7 +55,7 @@ private:
     }
 
     const clang::CallExpr *callExpr_;
-    std::vector<StmtVisitor> arguments_;
+    std::vector<ArgumentVisitor> arguments_;
     const clang::IdentifierInfo *identInfo_;
     unsigned long id_{idCounter++};  // unique call identification
 
@@ -71,12 +71,12 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 struct MPIRankCase {
     MPIRankCase(const clang::Stmt *const then,
                 const clang::Stmt *const matchedCondition,
-                const std::vector<StmtVisitor> &unmatchedConditions,
+                const std::vector<ArgumentVisitor> &unmatchedConditions,
                 const MPIFunctionClassifier &funcClassifier)
 
         : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {
-            matchedCondition_.reset(new StmtVisitor{matchedCondition});
+            matchedCondition_.reset(new ArgumentVisitor{matchedCondition});
         }
 
         const CallExprVisitor callExprVisitor{then};  // collect call exprs
@@ -102,18 +102,18 @@ struct MPIRankCase {
     bool isConditionUnambiguouslyEqual(const MPIRankCase &) const;
     size_t size() const { return mpiCalls_.size(); }
     const std::vector<MPICall> &mpiCalls() const { return mpiCalls_; }
-    const std::unique_ptr<StmtVisitor> &matchedCondition() const {
+    const std::unique_ptr<ArgumentVisitor> &matchedCondition() const {
         return matchedCondition_;
     }
 
     // conditions not fullfilled to enter rank case
-    const std::vector<StmtVisitor> unmatchedConditions_;
+    const std::vector<ArgumentVisitor> unmatchedConditions_;
     static llvm::SmallVector<MPIRankCase, 8> visitedRankCases;
 
 private:
     std::vector<MPICall> mpiCalls_;
     // condition fulfilled to enter rank case
-    std::unique_ptr<StmtVisitor> matchedCondition_{nullptr};
+    std::unique_ptr<ArgumentVisitor> matchedCondition_{nullptr};
 };
 
 // for path sensitive

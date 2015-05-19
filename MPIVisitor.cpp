@@ -26,8 +26,8 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
  */
 bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
-    StmtVisitor stmtVisitor{ifStmt->getCond()};
-    for (const VarDecl *const varDecl : stmtVisitor.vars()) {
+    ArgumentVisitor ArgumentVisitor{ifStmt->getCond()};
+    for (const VarDecl *const varDecl : ArgumentVisitor.vars()) {
         if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
             isInRankBranch = true;
             break;
@@ -48,7 +48,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
     if (cont::isContained(visitedIfStmts_, ifStmt)) return true;
 
-    std::vector<StmtVisitor> unmatchedConditions;
+    std::vector<ArgumentVisitor> unmatchedConditions;
 
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;

@@ -186,7 +186,7 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         return false;
 
     // build sequences without last operator(skip first element)
-    std::vector<StmtVisitor::ComponentType> seq1, seq2;
+    std::vector<ArgumentVisitor::ComponentType> seq1, seq2;
     std::vector<std::string> val1, val2;
     bool containsMinus{false};
     for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
