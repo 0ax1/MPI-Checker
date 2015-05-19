@@ -1,9 +1,6 @@
 #ifndef SUPPORTINGVISITORS_HPP_NWUC3OWQ
 #define SUPPORTINGVISITORS_HPP_NWUC3OWQ
 
-#include "../ClangSACheckers.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "MPIFunctionClassifier.hpp"
 

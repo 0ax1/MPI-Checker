@@ -1,4 +1,8 @@
+#include "clang/Lex/Lexer.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "Utility.hpp"
+#include <sstream>
+#include <vector>
 
 namespace util {
 

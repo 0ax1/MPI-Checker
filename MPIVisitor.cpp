@@ -1,26 +1,5 @@
-#include <functional>
 #include "MPIVisitor.hpp"
-#include "llvm/ADT/SmallVector.h"
 #include "MPICheckerSens.hpp"
-
-#include "ClangSACheckers.h"
-#include "InterCheckerAPI.h"
-#include "clang/AST/Attr.h"
-#include "clang/AST/ParentMap.h"
-#include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace ento;

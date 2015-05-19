@@ -1,19 +1,7 @@
 #ifndef UTILITY_HPP_SVQZWTL8
 #define UTILITY_HPP_SVQZWTL8
 
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/Analysis/AnalysisContext.h"
-#include "clang/Basic/LangOptions.h"
-
-#include "../ClangSACheckers.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-
-#include <sstream>
-#include <vector>
-#include "Container.hpp"
 
 namespace util {
 

@@ -1,14 +1,7 @@
 #ifndef MPICheckerAST_HPP_O1KSUWZO
 #define MPICheckerAST_HPP_O1KSUWZO
 
-#include <utility>
 #include "../ClangSACheckers.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "llvm/ADT/SmallVector.h"
-#include "clang/Lex/Lexer.h"
-
 #include "MPIFunctionClassifier.hpp"
 #include "MPIBugReporter.hpp"
 #include "Container.hpp"

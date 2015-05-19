@@ -1,8 +1,6 @@
 #ifndef MPICHECKERSENS_HPP_BKYOQUPL
 #define MPICHECKERSENS_HPP_BKYOQUPL
 
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "MPIFunctionClassifier.hpp"
 #include "MPITypes.hpp"

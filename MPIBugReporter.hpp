@@ -1,10 +1,8 @@
 #ifndef MPIBUGREPORTER_HPP_57XZJI4L
 #define MPIBUGREPORTER_HPP_57XZJI4L
 
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "MPITypes.hpp"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include <memory>
+#include "MPITypes.hpp"
 
 namespace mpi {
 

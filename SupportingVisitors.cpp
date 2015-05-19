@@ -1,4 +1,3 @@
-#include <string>
 #include "SupportingVisitors.hpp"
 #include "Container.hpp"
 #include "MPITypes.hpp"
