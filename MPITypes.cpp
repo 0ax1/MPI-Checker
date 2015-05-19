@@ -30,6 +30,7 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
 }
 
 bool MPIRankCase::isConditionAmbiguous() {
+    // no matched condition means is else case
     if (!matchedCondition_) return true;
 
     // ranges used in rank conditions prohibit equality identification
