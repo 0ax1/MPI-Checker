@@ -156,11 +156,13 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        sendCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt_->getSourceRange(),
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        recvCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt_->getSourceRange(),
         analysisManager_);
 
     if (sendDataType != recvDataType) return false;
