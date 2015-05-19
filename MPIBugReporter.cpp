@@ -41,7 +41,7 @@ void MPIBugReporter::reportNotReachableCall(
     SourceRange range = callExpr->getCallee()->getSourceRange();
     std::string bugName{"unreachable call"};
     std::string errorText{
-        "Call is not reachable. Schema results to a deadlock.  "};
+        "Call is not reachable. Schema leads to a deadlock. "};
 
     bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
                                  MPIError, errorText, location, range);
