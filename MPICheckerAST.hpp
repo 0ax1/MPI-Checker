@@ -23,7 +23,7 @@ public:
 
     // validation functions
     void checkForInvalidArgs(const MPICall &) const;
-    std::vector<size_t> integerIndicesOfCall(const MPICall &) const;
+    std::vector<size_t> integerIndices(const MPICall &) const;
 
     void checkForRedundantCall(const MPICall &callToCheck,
                                const MPIRankCase &rankCase) const;
@@ -31,6 +31,8 @@ public:
     bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
+    typedef llvm::SmallVector<std::pair<size_t, size_t>, 2> IndexPairs;
+    IndexPairs bufferDataTypeIndices(const MPICall &) const;
     void selectTypeMatcher(const mpi::TypeVisitor &, const MPICall &,
                            const clang::StringRef,
                            const std::pair<size_t, size_t> &) const;

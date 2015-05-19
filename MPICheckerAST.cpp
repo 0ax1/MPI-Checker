@@ -209,7 +209,36 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
  */
 void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // one pair consists of {bufferIdx, mpiDatatypeIdx}
-    llvm::SmallVector<std::pair<size_t, size_t>, 2> indexPairs;
+    IndexPairs indexPairs = bufferDataTypeIndices(mpiCall);
+
+    // for every buffer mpi-data pair in function
+    // check if their types match
+    for (const auto &idxPair : indexPairs) {
+        const VarDecl *bufferArg =
+            mpiCall.arguments_[idxPair.first].vars_.front();
+
+        // collect buffer type information
+        const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
+
+        // get mpi datatype as string
+        auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
+        StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
+            mpiDatatype->getSourceRange(), analysisManager_)};
+
+        selectTypeMatcher(typeVisitor, mpiCall, mpiDatatypeString, idxPair);
+    }
+}
+
+/**
+ * Returns index pairs for each buffer, datatype pair.
+ *
+ * @param mpiCall
+ *
+ * @return index pairs
+ */
+MPICheckerAST::IndexPairs MPICheckerAST::bufferDataTypeIndices(
+    const MPICall &mpiCall) const {
+    IndexPairs indexPairs;
 
     if (funcClassifier_.isPointToPointType(mpiCall)) {
         indexPairs.push_back(
@@ -232,23 +261,7 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
             indexPairs.push_back({0, 2});
         }
     }
-
-    // for every buffer mpi-data pair in function
-    // check if their types match
-    for (const auto &idxPair : indexPairs) {
-        const VarDecl *bufferArg =
-            mpiCall.arguments_[idxPair.first].vars_.front();
-
-        // collect buffer type information
-        const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
-
-        // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
-        StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
-            mpiDatatype->getSourceRange(), analysisManager_)};
-
-        selectTypeMatcher(typeVisitor, mpiCall, mpiDatatypeString, idxPair);
-    }
+    return indexPairs;
 }
 
 /**
@@ -450,7 +463,7 @@ bool MPICheckerAST::matchExactWidthType(
  * @param mpiCall to check the arguments for
  */
 void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
-    std::vector<size_t> indicesToCheck = integerIndicesOfCall(mpiCall);
+    std::vector<size_t> indicesToCheck = integerIndices(mpiCall);
     if (!indicesToCheck.size()) return;
 
     // iterate indices which should not have float arguments
@@ -495,9 +508,9 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
  *
  * @return int indices
  */
-std::vector<size_t> MPICheckerAST::integerIndicesOfCall(
+std::vector<size_t> MPICheckerAST::integerIndices(
     const MPICall &mpiCall) const {
-    // std vector to allow init lists
+    // std vector to allow list assignment
     std::vector<size_t> intIndices;
 
     if (funcClassifier_.isPointToPointType(mpiCall)) {
