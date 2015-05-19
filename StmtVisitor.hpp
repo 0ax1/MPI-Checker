@@ -42,48 +42,50 @@ public:
     bool containsNonCommutativeOps() const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
-    const llvm::SmallVector<ComponentType, 4> &typeSequence() const {
+    const llvm::SmallVectorImpl<ComponentType> &typeSequence() const {
         return typeSequence_;
     }
 
-    const llvm::SmallVector<ComponentType, 4> &typeSequenceNoOps() const {
+    const llvm::SmallVectorImpl<ComponentType> &typeSequenceNoOps() const {
         return typeSequenceNoOps_;
     }
 
-    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators()
+    const llvm::SmallVectorImpl<clang::BinaryOperatorKind> &binaryOperators()
         const {
         return binaryOperators_;
     }
 
-    const llvm::SmallVector<clang::VarDecl *, 1> &vars() const { return vars_; }
+    const llvm::SmallVectorImpl<clang::VarDecl *> &vars() const {
+        return vars_;
+    }
 
-    const llvm::SmallVector<std::string, 1> &varNames() const {
+    const llvm::SmallVectorImpl<std::string> &varNames() const {
         return varNames_;
     }
 
-    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions() const {
+    const llvm::SmallVectorImpl<clang::FunctionDecl *> &functions() const {
         return functions_;
     }
 
-    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals()
+    const llvm::SmallVectorImpl<clang::IntegerLiteral *> &integerLiterals()
         const {
         return integerLiterals_;
     }
 
-    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals()
+    const llvm::SmallVectorImpl<clang::FloatingLiteral *> &floatingLiterals()
         const {
         return floatingLiterals_;
     }
 
-    const llvm::SmallVector<llvm::APInt, 1> &intValues() const {
+    const llvm::SmallVectorImpl<llvm::APInt> &intValues() const {
         return intValues_;
     }
 
-    const llvm::SmallVector<llvm::APFloat, 0> &floatValues() const {
+    const llvm::SmallVectorImpl<llvm::APFloat> &floatValues() const {
         return floatValues_;
     }
 
-    const llvm::SmallVector<clang::CallExpr *, 8> &callExprs() const {
+    const llvm::SmallVectorImpl<clang::CallExpr *> &callExprs() const {
         return callExprs_;
     }
 
