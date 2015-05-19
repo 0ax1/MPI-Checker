@@ -29,7 +29,7 @@ public:
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *callExpr() const { return callExpr_; }
-    const std::vector<StatementVisitor> &arguments() const {
+    const std::vector<ArgumentVisitor> &arguments() const {
         return arguments_;
     }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
@@ -57,7 +57,7 @@ private:
     }
 
     const clang::CallExpr *callExpr_;
-    std::vector<StatementVisitor> arguments_;
+    std::vector<ArgumentVisitor> arguments_;
     const clang::IdentifierInfo *identInfo_;
     unsigned long id_{idCounter++};  // unique call identification
 
