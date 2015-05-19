@@ -43,7 +43,6 @@ bool StmtVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
 
 bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
-    intValues_.push_back(intLiteral->getValue());
     typeSequence_.push_back(ComponentType::kInt);
 
     SmallVector<char, 4> intValAsString;
@@ -58,7 +57,6 @@ bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
 
 bool StmtVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
-    floatValues_.push_back(floatLiteral->getValue());
     typeSequence_.push_back(ComponentType::kFloat);
 
     valueSequence_.push_back(

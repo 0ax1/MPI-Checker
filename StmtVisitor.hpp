@@ -68,15 +68,7 @@ public:
         return floatingLiterals_;
     }
 
-    const llvm::SmallVectorImpl<llvm::APInt> &intValues() const {
-        return intValues_;
-    }
-
-    const llvm::SmallVectorImpl<llvm::APFloat> &floatValues() const {
-        return floatValues_;
-    }
-
-    const std::vector<std::string> &valueSequence() const {
+    const llvm::SmallVectorImpl<std::string> &valueSequence() const {
         return valueSequence_;
     }
 
@@ -84,18 +76,17 @@ public:
     const clang::Stmt *const stmt_;
 
 private:
-    // sequential series of component types
+    // sequential series of types
     llvm::SmallVector<ComponentType, 4> typeSequence_;
-    // extracted components
+    // sequential series of values
+    llvm::SmallVector<std::string, 4> valueSequence_;
+    // components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
-    llvm::SmallVector<llvm::APInt, 1> intValues_;
-    llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 
-    std::vector<std::string> valueSequence_;
 };
 
 }  // end of namespace: mpi
