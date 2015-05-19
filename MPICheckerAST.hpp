@@ -21,7 +21,6 @@ public:
           bugReporter_{bugReporter, checkerBase, analysisManager},
           analysisManager_{analysisManager} {}
 
-    // validation functions
     void checkForInvalidArgs(const MPICall &) const;
     std::vector<size_t> integerIndices(const MPICall &) const;
 

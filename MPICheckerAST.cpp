@@ -37,7 +37,8 @@ void MPICheckerAST::checkPointToPointSchema() {
 /**
  * Matches send with recv operations between two rank cases.
  * For the first case send operations are tried to be matched
- * with recv operations from the second case.
+ * with recv operations from the second case. In case of a match
+ * calls are marked.
  *
  * @param rankCase1
  * @param rankCase2
@@ -69,7 +70,7 @@ void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &firstCase,
 void MPICheckerAST::checkReachbility() {
     MPIRankCase::unmarkCalls();
 
-    // multiple send/recv phases per rank case are allowdd
+    // multiple send/recv phases per rank case are allowed
     for (int i = 0; i < 4; ++i) {
         // search send/recv pairs for interacting cases
         for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
@@ -93,6 +94,12 @@ void MPICheckerAST::checkReachbility() {
     }
 }
 
+/**
+ * Check for reachability of calls between to cases.
+ *
+ * @param firstCase
+ * @param secondCase
+ */
 void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
                                          const MPIRankCase &secondCase) {
     // find send/recv pairs
