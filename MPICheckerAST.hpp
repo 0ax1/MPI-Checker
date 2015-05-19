@@ -15,8 +15,6 @@ namespace mpi {
  */
 class MPICheckerAST : public clang::RecursiveASTVisitor<MPICheckerAST> {
 public:
-    typedef StatementVisitor ArgumentVisitor;
-
     MPICheckerAST(clang::ento::BugReporter &bugReporter,
                   const clang::ento::CheckerBase &checkerBase,
                   clang::ento::AnalysisManager &analysisManager)
@@ -30,7 +28,7 @@ public:
     void checkForCollectiveCall(const MPICall &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
-    typedef llvm::SmallVector<std::pair<size_t, size_t>, 2> IndexPairs;
+    using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2> ;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
     void setCurrentlyVisitedFunction(
         const clang::FunctionDecl *const functionDecl) {

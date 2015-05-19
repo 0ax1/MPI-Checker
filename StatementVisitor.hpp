@@ -88,6 +88,10 @@ private:
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
 };
 
+// aliases
+using ArgumentVisitor = StatementVisitor;
+using ConditionVisitor = StatementVisitor;
+
 }  // end of namespace: mpi
 
 #endif  // end of include guard: StatementVisitor_HPP_9UDA2XCC

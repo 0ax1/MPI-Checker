@@ -72,8 +72,6 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 // to capture rank cases from branches
 class MPIRankCase {
 public:
-    typedef StatementVisitor ConditionVisitor;
-
     MPIRankCase(const clang::Stmt *const then,
                 const clang::Stmt *const matchedCondition,
                 const std::vector<ConditionVisitor> &unmatchedConditions,
