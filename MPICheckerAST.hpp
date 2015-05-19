@@ -23,6 +23,7 @@ public:
 
     // validation functions
     void checkForInvalidArgs(const MPICall &) const;
+    std::vector<size_t> integerIndicesOfCall(const MPICall &) const;
 
     void checkForRedundantCall(const MPICall &callToCheck,
                                const MPIRankCase &rankCase) const;

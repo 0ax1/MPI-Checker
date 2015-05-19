@@ -261,6 +261,11 @@ bool MPIFunctionClassifier::isCollectiveType(
     return cont::isContained(mpiCollectiveTypes_, identInfo);
 }
 
+bool MPIFunctionClassifier::isCollToColl(
+    const IdentifierInfo *identInfo) const {
+    return cont::isContained(mpiCollToCollTypes_, identInfo);
+}
+
 bool MPIFunctionClassifier::isScatterType(
     const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Scatter_ ||

@@ -69,6 +69,7 @@ void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &firstCase,
 void MPICheckerAST::checkReachbility() {
     MPIRankCase::unmarkCalls();
 
+    // multiple send/recv phases per rank case are allowdd
     for (int i = 0; i < 4; ++i) {
         // search send/recv pairs for interacting cases
         for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
@@ -449,18 +450,8 @@ bool MPICheckerAST::matchExactWidthType(
  * @param mpiCall to check the arguments for
  */
 void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
-    bool performCheck{false};
-
-    llvm::SmallVector<size_t, 4> indicesToCheck;
-    if (funcClassifier_.isPointToPointType(mpiCall)) {
-        indicesToCheck.push_back(MPIPointToPoint::kCount);
-        indicesToCheck.push_back(MPIPointToPoint::kRank);
-        indicesToCheck.push_back(MPIPointToPoint::kTag);
-        performCheck = true;
-    }
-
-    if (!performCheck) return;
-    // TODO add more mpi types
+    std::vector<size_t> indicesToCheck = integerIndicesOfCall(mpiCall);
+    if (!indicesToCheck.size()) return;
 
     // iterate indices which should not have float arguments
     for (const size_t idx : indicesToCheck) {
@@ -495,6 +486,43 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
             }
         }
     }
+}
+
+/**
+ * Return an array of indices that must be integer values for a given call.
+ *
+ * @param mpiCall
+ *
+ * @return int indices
+ */
+std::vector<size_t> MPICheckerAST::integerIndicesOfCall(
+    const MPICall &mpiCall) const {
+    // std vector to allow init lists
+    std::vector<size_t> intIndices;
+
+    if (funcClassifier_.isPointToPointType(mpiCall)) {
+        intIndices = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,
+                      MPIPointToPoint::kTag};
+    } else if (funcClassifier_.isScatterType(mpiCall) ||
+               funcClassifier_.isGatherType(mpiCall)) {
+        if (funcClassifier_.isAllgatherType(mpiCall)) {
+            intIndices = {1, 4};
+        } else {
+            intIndices = {1, 4, 6};
+        }
+    } else if (funcClassifier_.isAlltoallType(mpiCall)) {
+        intIndices = {1, 4};
+    } else if (funcClassifier_.isReduceType(mpiCall)) {
+        if (funcClassifier_.isCollToColl(mpiCall)) {
+            intIndices = {2};
+        } else {
+            intIndices = {2, 5};
+        }
+    } else if (funcClassifier_.isBcastType(mpiCall)) {
+        intIndices = {1, 3};
+    }
+
+    return intIndices;
 }
 
 /**

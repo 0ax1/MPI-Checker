@@ -23,6 +23,7 @@ public:
 
     // collective identifiers––––––––––––––––––––––––––––––––––––––––––––––
     bool isCollectiveType(const clang::IdentifierInfo *) const;
+    bool isCollToColl(const clang::IdentifierInfo *) const;
     bool isScatterType(const clang::IdentifierInfo *) const;
     bool isGatherType(const clang::IdentifierInfo *) const;
     bool isAllgatherType(const clang::IdentifierInfo *) const;
