@@ -13,7 +13,7 @@ namespace mpi {
  */
 class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
-    StmtVisitor(const clang::Stmt *stmt) : stmt_{stmt} {
+    StmtVisitor(const clang::Stmt *const stmt) : stmt_{stmt} {
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
     }
 
@@ -44,13 +44,28 @@ public:
     bool containsNonCommutativeOps() const;
 
     // complete statement
-    const clang::Stmt *stmt_;
+    const clang::Stmt *const stmt_;
 
+    const llvm::SmallVector<ComponentType, 4> &typeSequence() const;
+    const llvm::SmallVector<ComponentType, 4> &typeSequenceNoOps() const;
+    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators()
+        const;
+    const llvm::SmallVector<clang::VarDecl *, 1> &vars() const;
+    const llvm::SmallVector<std::string, 1> &varNames() const;
+    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions() const;
+    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals()
+        const;
+    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals()
+        const;
+    const llvm::SmallVector<llvm::APInt, 1> &intValues() const;
+    const llvm::SmallVector<llvm::APFloat, 0> &floatValues() const;
+    const llvm::SmallVector<clang::CallExpr *, 8> &callExprs() const;
+
+private:
     // sequential series of component types
     llvm::SmallVector<ComponentType, 4> typeSequence_;
     // without operators
     llvm::SmallVector<ComponentType, 4> typeSequenceNoOps_;
-
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
@@ -72,6 +87,10 @@ public:
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
 
+    const clang::VarDecl *arrayVarDecl() { return arrayVarDecl_; }
+    const llvm::SmallVector<clang::VarDecl *, 4> &vars() { return vars_; }
+
+private:
     // complete VarDecl expression
     clang::VarDecl *arrayVarDecl_;
     // extracted components

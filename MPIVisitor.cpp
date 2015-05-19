@@ -26,7 +26,7 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 bool MPIVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
     StmtVisitor stmtVisitor{ifStmt->getCond()};
-    for (const VarDecl *const varDecl : stmtVisitor.vars_) {
+    for (const VarDecl *const varDecl : stmtVisitor.vars()) {
         if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
             isInRankBranch = true;
             break;
@@ -68,7 +68,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 
     // check if collective calls are used in rank rankCase
     for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
-        for (const MPICall &call : rankCase.mpiCalls_) {
+        for (const MPICall &call : rankCase.mpiCalls()) {
             checkerAST_.checkForCollectiveCall(call);
         }
     }

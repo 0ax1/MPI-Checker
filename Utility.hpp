@@ -13,7 +13,7 @@ namespace util {
  *
  * @return code part as string ref
  */
-clang::StringRef sourceRangeAsStringRef(clang::SourceRange,
+clang::StringRef sourceRangeAsStringRef(const clang::SourceRange &,
                                         clang::ento::AnalysisManager &);
 
 /**

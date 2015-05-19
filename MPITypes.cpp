@@ -6,7 +6,7 @@ using namespace ento;
 
 namespace mpi {
 
-unsigned long MPICall::id{0};
+unsigned long MPICall::idCounter{0};
 
 namespace MPIRank {
 llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
@@ -29,7 +29,7 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
     return !(*this == callToCompare);
 }
 
-bool MPIRankCase::isConditionAmbiguous() {
+bool MPIRankCase::isConditionAmbiguous() const {
     // no matched condition means is else case
     if (!matchedCondition_) return true;
 
@@ -40,7 +40,7 @@ bool MPIRankCase::isConditionAmbiguous() {
                 BinaryOperatorKind::BO_LE == op ||
                 BinaryOperatorKind::BO_GE == op);
     };
-    for (const auto op : matchedCondition_->binaryOperators_) {
+    for (const auto op : matchedCondition_->binaryOperators()) {
         if (isRangeComparison(op)) return true;
     }
 
@@ -54,7 +54,8 @@ bool MPIRankCase::isConditionAmbiguous() {
  *
  * @return if they are equal
  */
-bool MPIRankCase::isConditionUnambiguouslyEqual(MPIRankCase &rankCase) {
+bool MPIRankCase::isConditionUnambiguouslyEqual(
+    const MPIRankCase &rankCase) const {
     if (isConditionAmbiguous() || rankCase.isConditionAmbiguous()) {
         return false;
     }

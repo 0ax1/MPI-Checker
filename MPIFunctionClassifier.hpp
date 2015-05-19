@@ -12,30 +12,30 @@ public:
     }
 
     // general identifiers–––––––––––––––––––––––––––––––––––––––––––––––––
-    bool isMPIType(const clang::IdentifierInfo *) const;
-    bool isBlockingType(const clang::IdentifierInfo *) const;
-    bool isNonBlockingType(const clang::IdentifierInfo *) const;
+    bool isMPIType(const clang::IdentifierInfo *const) const;
+    bool isBlockingType(const clang::IdentifierInfo *const) const;
+    bool isNonBlockingType(const clang::IdentifierInfo *const) const;
 
     // point to point identifiers––––––––––––––––––––––––––––––––––––––––––
-    bool isPointToPointType(const clang::IdentifierInfo *) const;
-    bool isSendType(const clang::IdentifierInfo *) const;
-    bool isRecvType(const clang::IdentifierInfo *) const;
+    bool isPointToPointType(const clang::IdentifierInfo *const) const;
+    bool isSendType(const clang::IdentifierInfo *const) const;
+    bool isRecvType(const clang::IdentifierInfo *const) const;
 
     // collective identifiers––––––––––––––––––––––––––––––––––––––––––––––
-    bool isCollectiveType(const clang::IdentifierInfo *) const;
-    bool isCollToColl(const clang::IdentifierInfo *) const;
-    bool isScatterType(const clang::IdentifierInfo *) const;
-    bool isGatherType(const clang::IdentifierInfo *) const;
-    bool isAllgatherType(const clang::IdentifierInfo *) const;
-    bool isAlltoallType(const clang::IdentifierInfo *) const;
-    bool isReduceType(const clang::IdentifierInfo *) const;
-    bool isBcastType(const clang::IdentifierInfo *) const;
+    bool isCollectiveType(const clang::IdentifierInfo *const) const;
+    bool isCollToColl(const clang::IdentifierInfo *const) const;
+    bool isScatterType(const clang::IdentifierInfo *const) const;
+    bool isGatherType(const clang::IdentifierInfo *const) const;
+    bool isAllgatherType(const clang::IdentifierInfo *const) const;
+    bool isAlltoallType(const clang::IdentifierInfo *const) const;
+    bool isReduceType(const clang::IdentifierInfo *const) const;
+    bool isBcastType(const clang::IdentifierInfo *const) const;
 
     // additional identifiers ––––––––––––––––––––––––––––––––––––––––––––––
-    bool isMPI_Comm_rank(const clang::IdentifierInfo *) const;
-    bool isMPI_Wait(const clang::IdentifierInfo *) const;
-    bool isMPI_Waitall(const clang::IdentifierInfo *) const;
-    bool isWaitType(const clang::IdentifierInfo *) const;
+    bool isMPI_Comm_rank(const clang::IdentifierInfo *const) const;
+    bool isMPI_Wait(const clang::IdentifierInfo *const) const;
+    bool isMPI_Waitall(const clang::IdentifierInfo *const) const;
+    bool isWaitType(const clang::IdentifierInfo *const) const;
 
 private:
     void identifierInit(clang::ento::AnalysisManager &);

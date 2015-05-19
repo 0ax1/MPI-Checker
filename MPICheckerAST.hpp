@@ -21,15 +21,16 @@ public:
           bugReporter_{bugReporter, checkerBase, analysisManager},
           analysisManager_{analysisManager} {}
 
-    void checkPointToPointSchema();
-    void checkReachbility();
+    void checkPointToPointSchema() const;
+    void checkReachbility() const;
     void checkForRedundantCalls() const;
     void checkForCollectiveCall(const MPICall &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     typedef llvm::SmallVector<std::pair<size_t, size_t>, 2> IndexPairs;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
-    void setCurrentlyVisitedFunction(clang::FunctionDecl *functionDecl) {
+    void setCurrentlyVisitedFunction(
+        const clang::FunctionDecl *const functionDecl) {
         bugReporter_.currentFunctionDecl_ = functionDecl;
     }
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
@@ -37,8 +38,8 @@ public:
 private:
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
     void checkUnmatchedCalls() const;
-    void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &);
-    void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &);
+    void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;
+    void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &) const;
     void checkForRedundantCall(const MPICall &callToCheck,
                                const MPIRankCase &) const;
     bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;

@@ -14,7 +14,8 @@ const std::string MPIWarning{"MPI Warning"};
  * @param call
  * @return line number as string
  */
-std::string MPIBugReporter::lineNumberForCallExpr(const CallExpr *call) const {
+std::string MPIBugReporter::lineNumberForCallExpr(
+    const CallExpr *const call) const {
     std::string lineNo =
         call->getCallee()->getSourceRange().getBegin().printToString(
             bugReporter_.getSourceManager());
@@ -173,9 +174,9 @@ void MPIBugReporter::reportRedundantCall(
 }
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
-void MPIBugReporter::reportDoubleNonblocking(const CallExpr *observedCall,
-                                             const RequestVar &requestVar,
-                                             ExplodedNode *node) const {
+void MPIBugReporter::reportDoubleNonblocking(
+    const CallExpr *const observedCall, const RequestVar &requestVar,
+    const ExplodedNode *const node) const {
     std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
     std::string lastUser =
         requestVar.lastUser_->getDirectCallee()->getNameAsString();
@@ -184,16 +185,16 @@ void MPIBugReporter::reportDoubleNonblocking(const CallExpr *observedCall,
                           " in line " + lineNo + ". "};
 
     BugReport *bugReport =
-        new BugReport(*DoubleNonblockingBugType, errorText, node);
+        new BugReport(*doubleNonblockingBugType_, errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(bugReport);
 }
 
-void MPIBugReporter::reportDoubleWait(const CallExpr *observedCall,
+void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
                                       const RequestVar &requestVar,
-                                      ExplodedNode *node) const {
+                                      const ExplodedNode *const node) const {
     std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
     std::string lastUser =
         requestVar.lastUser_->getDirectCallee()->getNameAsString();
@@ -201,7 +202,7 @@ void MPIBugReporter::reportDoubleWait(const CallExpr *observedCall,
                           " is already waited upon by " + lastUser +
                           " in line " + lineNo + ". "};
 
-    BugReport *bugReport = new BugReport(*DoubleWaitBugType, errorText, node);
+    BugReport *bugReport = new BugReport(*doubleWaitBugType_, errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
@@ -209,12 +210,12 @@ void MPIBugReporter::reportDoubleWait(const CallExpr *observedCall,
 }
 
 void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
-                                       ExplodedNode *node) const {
+                                       const ExplodedNode *const node) const {
     std::string errorText{"Nonblocking call using request " +
                           requestVar.varDecl_->getNameAsString() +
                           " has no matching wait. "};
 
-    BugReport *bugReport = new BugReport(*MissingWaitBugType, errorText, node);
+    BugReport *bugReport = new BugReport(*missingWaitBugType_, errorText, node);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReporter_.emitReport(bugReport);
@@ -222,12 +223,12 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
 
 void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
                                          const VarDecl *requestVar,
-                                         ExplodedNode *node) const {
+                                         const ExplodedNode *const node) const {
     std::string errorText{"Request " + requestVar->getNameAsString() +
                           " has no matching nonblocking call. "};
 
     BugReport *bugReport =
-        new BugReport(*UnmatchedWaitBugType, errorText, node);
+        new BugReport(*unmatchedWaitBugType_, errorText, node);
     bugReport->addRange(callExpr->getSourceRange());
     bugReport->addRange(requestVar->getSourceRange());
     bugReporter_.emitReport(bugReport);

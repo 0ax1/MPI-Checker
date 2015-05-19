@@ -26,7 +26,7 @@ std::vector<std::string> split(const std::string &s, char delim) {
 }
 
 clang::StringRef sourceRangeAsStringRef(
-    clang::SourceRange sourceRange,
+    const clang::SourceRange &sourceRange,
     clang::ento::AnalysisManager &analysisManager) {
     auto charSourceRange = clang::CharSourceRange::getTokenRange(sourceRange);
     return clang::Lexer::getSourceText(charSourceRange,

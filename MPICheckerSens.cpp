@@ -16,8 +16,8 @@ void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
     auto RequestVars = state->get<RequestVarMap>();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    auto arg = mpiCall.arguments_[mpiCall.callExpr_->getNumArgs() - 1];
-    auto requestVarDecl = arg.vars_.front();
+    auto arg = mpiCall.arguments()[mpiCall.callExpr()->getNumArgs() - 1];
+    auto requestVarDecl = arg.vars().front();
     const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
     state = state->set<RequestVarMap>(
         requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
@@ -46,17 +46,18 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
     llvm::SmallVector<VarDecl *, 1> requestVector;
     if (funcClassifier_.isMPI_Wait(mpiCall)) {
-        requestVector.push_back(mpiCall.arguments_[0].vars_.front());
+        requestVector.push_back(mpiCall.arguments()[0].vars().front());
     } else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
-        ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
-        arrayVisitor.vars_.resize(arrayVisitor.vars_.size() / 2);  // hack
+        ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
+        llvm::SmallVector<clang::VarDecl *, 4> vars = arrayVisitor.vars();
+        vars.resize(vars.size() / 2);  // hack
 
-        for (auto &requestVar : arrayVisitor.vars_) {
+        for (const auto &requestVar : vars) {
             requestVector.push_back(requestVar);
         }
     }
 
-    auto node = ctx.addTransition();
+    const ExplodedNode *const node = ctx.addTransition();
 
     for (VarDecl *requestVarDecl : requestVector) {
         const RequestVar *requestVar =
