@@ -1,5 +1,5 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "ArgumentVisitor.hpp"
+#include "StatementVisitor.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
 
@@ -9,7 +9,7 @@ using namespace ento;
 namespace mpi {
 
 // variables or functions can be a declrefexpr
-bool ArgumentVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
+bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
@@ -24,7 +24,7 @@ bool ArgumentVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     return true;
 }
 
-bool ArgumentVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
+bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
     if (op->isComparisonOp()) {
         typeSequence_.push_back(ComponentType::kComparsison);
@@ -41,7 +41,7 @@ bool ArgumentVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     return true;
 }
 
-bool ArgumentVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
+bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     typeSequence_.push_back(ComponentType::kInt);
 
@@ -55,7 +55,7 @@ bool ArgumentVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     return true;
 }
 
-bool ArgumentVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
+bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     typeSequence_.push_back(ComponentType::kFloat);
 
@@ -64,7 +64,7 @@ bool ArgumentVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     return true;
 }
 
-bool ArgumentVisitor::isEqual(const ArgumentVisitor &visitorToCompare) const {
+bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
     if (containsMinus() || visitorToCompare.containsMinus()) {
         return isEqualOrdered(visitorToCompare);
     } else {
@@ -72,16 +72,16 @@ bool ArgumentVisitor::isEqual(const ArgumentVisitor &visitorToCompare) const {
     }
 }
 
-bool ArgumentVisitor::isEqualOrdered(
-    const ArgumentVisitor &visitorToCompare) const {
+bool StatementVisitor::isEqualOrdered(
+    const StatementVisitor &visitorToCompare) const {
     if (typeSequence_ != visitorToCompare.typeSequence_) return false;
     if (valueSequence_ != visitorToCompare.valueSequence_) return false;
 
     return true;
 }
 
-bool ArgumentVisitor::isEqualPermutative(
-    const ArgumentVisitor &visitorToCompare) const {
+bool StatementVisitor::isEqualPermutative(
+    const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
     if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
         return false;
@@ -93,7 +93,7 @@ bool ArgumentVisitor::isEqualPermutative(
     return true;
 }
 
-bool ArgumentVisitor::containsMinus() const {
+bool StatementVisitor::containsMinus() const {
     for (const auto binaryOperator : binaryOperators_) {
         if (binaryOperator == BinaryOperatorKind::BO_Sub) {
             return true;
@@ -102,8 +102,8 @@ bool ArgumentVisitor::containsMinus() const {
     return false;
 }
 
-bool ArgumentVisitor::isLastOperatorInverse(
-    const ArgumentVisitor &visitor) const {
+bool StatementVisitor::isLastOperatorInverse(
+    const StatementVisitor &visitor) const {
     // last operator must be inverse
     return (BinaryOperatorKind::BO_Add == binaryOperators_.front() &&
             BinaryOperatorKind::BO_Sub == visitor.binaryOperators().front()) ||

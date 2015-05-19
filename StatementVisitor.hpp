@@ -1,5 +1,5 @@
-#ifndef ArgumentVisitor_HPP_9UDA2XCC
-#define ArgumentVisitor_HPP_9UDA2XCC
+#ifndef StatementVisitor_HPP_9UDA2XCC
+#define StatementVisitor_HPP_9UDA2XCC
 
 #include "clang/AST/RecursiveASTVisitor.h"
 
@@ -10,9 +10,9 @@ namespace mpi {
  * On the way it collects binary operators, variable decls, function decls,
  * integer literals, floating literals, call expressions.
  */
-class ArgumentVisitor : public clang::RecursiveASTVisitor<ArgumentVisitor> {
+class StatementVisitor : public clang::RecursiveASTVisitor<StatementVisitor> {
 public:
-    ArgumentVisitor(const clang::Stmt *const stmt) : stmt_{stmt} {
+    StatementVisitor(const clang::Stmt *const stmt) : stmt_{stmt} {
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
     }
 
@@ -34,11 +34,11 @@ public:
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
 
     // non visitor functions
-    bool isEqual(const ArgumentVisitor &) const;
-    bool isEqualOrdered(const ArgumentVisitor &) const;
-    bool isEqualPermutative(const ArgumentVisitor &) const;
+    bool isEqual(const StatementVisitor &) const;
+    bool isEqualOrdered(const StatementVisitor &) const;
+    bool isEqualPermutative(const StatementVisitor &) const;
     bool containsMinus() const;
-    bool isLastOperatorInverse(const ArgumentVisitor &) const;
+    bool isLastOperatorInverse(const StatementVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
     const llvm::SmallVectorImpl<ComponentType> &typeSequence() const {
@@ -90,4 +90,4 @@ private:
 
 }  // end of namespace: mpi
 
-#endif  // end of include guard: ArgumentVisitor_HPP_9UDA2XCC
+#endif  // end of include guard: StatementVisitor_HPP_9UDA2XCC

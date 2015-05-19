@@ -15,6 +15,8 @@ namespace mpi {
  */
 class MPICheckerAST : public clang::RecursiveASTVisitor<MPICheckerAST> {
 public:
+    typedef StatementVisitor ArgumentVisitor;
+
     MPICheckerAST(clang::ento::BugReporter &bugReporter,
                   const clang::ento::CheckerBase &checkerBase,
                   clang::ento::AnalysisManager &analysisManager)
