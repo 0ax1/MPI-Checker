@@ -81,7 +81,7 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
     ctx.addTransition(state);
 }
 
-void MPICheckerSens::checkMissingWait(CheckerContext &ctx) {
+void MPICheckerSens::checkMissingWaits(CheckerContext &ctx) {
     ProgramStateRef state = ctx.getState();
     auto requestVars = state->get<RequestVarMap>();
     ExplodedNode *node = ctx.addTransition();

@@ -141,7 +141,7 @@ public:
         // true if the current LocationContext has no caller context
         if (ctx.inTopFrame()) {
             dynamicInit(ctx);
-            checkerSens_->checkMissingWait(ctx);
+            checkerSens_->checkMissingWaits(ctx);
             checkerSens_->clearRequestVars(ctx);
         }
     }

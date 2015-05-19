@@ -20,7 +20,7 @@ public:
                                 clang::ento::CheckerContext &) const;
     void checkWaitUsage(const clang::CallExpr *,
                         clang::ento::CheckerContext &) const;
-    void checkMissingWait(clang::ento::CheckerContext &);
+    void checkMissingWaits(clang::ento::CheckerContext &);
     void clearRequestVars(clang::ento::CheckerContext &) const;
 
 private:
