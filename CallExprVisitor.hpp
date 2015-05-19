@@ -6,7 +6,7 @@ namespace mpi {
 class CallExprVisitor : public clang::RecursiveASTVisitor<CallExprVisitor> {
 public:
     CallExprVisitor(const clang::Stmt *const stmt) {
-        TraverseStmt(const_cast<clang::Stmt*>(stmt));
+        TraverseStmt(const_cast<clang::Stmt *>(stmt));
     }
 
     bool VisitCallExpr(clang::CallExpr *callExpr) {

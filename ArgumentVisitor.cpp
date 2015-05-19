@@ -72,7 +72,8 @@ bool ArgumentVisitor::isEqual(const ArgumentVisitor &visitorToCompare) const {
     }
 }
 
-bool ArgumentVisitor::isEqualOrdered(const ArgumentVisitor &visitorToCompare) const {
+bool ArgumentVisitor::isEqualOrdered(
+    const ArgumentVisitor &visitorToCompare) const {
     if (typeSequence_ != visitorToCompare.typeSequence_) return false;
     if (valueSequence_ != visitorToCompare.valueSequence_) return false;
 
@@ -101,7 +102,8 @@ bool ArgumentVisitor::containsMinus() const {
     return false;
 }
 
-bool ArgumentVisitor::isLastOperatorInverse(const ArgumentVisitor &visitor) const {
+bool ArgumentVisitor::isLastOperatorInverse(
+    const ArgumentVisitor &visitor) const {
     // last operator must be inverse
     return (BinaryOperatorKind::BO_Add == binaryOperators_.front() &&
             BinaryOperatorKind::BO_Sub == visitor.binaryOperators().front()) ||

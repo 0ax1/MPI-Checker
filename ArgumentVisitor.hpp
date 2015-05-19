@@ -86,7 +86,6 @@ private:
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
-
 };
 
 }  // end of namespace: mpi
