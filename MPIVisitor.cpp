@@ -59,19 +59,16 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
+        checkerAST_.checkForCollectiveCalls(
+            MPIRankCase::visitedRankCases.back());
     }
 
     // collect mpi calls in else
     if (stmt) {
         MPIRankCase::visitedRankCases.emplace_back(
             stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier());
-    }
-
-    // check if collective calls are used in rank rankCase
-    for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
-        for (const MPICall &call : rankCase.mpiCalls()) {
-            checkerAST_.checkForCollectiveCall(call);
-        }
+        checkerAST_.checkForCollectiveCalls(
+            MPIRankCase::visitedRankCases.back());
     }
 
     return true;

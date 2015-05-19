@@ -135,9 +135,11 @@ void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
  *
  * @param mpiCall
  */
-void MPICheckerAST::checkForCollectiveCall(const MPICall &mpiCall) const {
-    if (funcClassifier_.isCollectiveType(mpiCall)) {
-        bugReporter_.reportCollCallInBranch(mpiCall.callExpr());
+void MPICheckerAST::checkForCollectiveCalls(const MPIRankCase &rankCase) const {
+    for (const MPICall &call : rankCase.mpiCalls()) {
+        if (funcClassifier_.isCollectiveType(call)) {
+            bugReporter_.reportCollCallInBranch(call.callExpr());
+        }
     }
 }
 

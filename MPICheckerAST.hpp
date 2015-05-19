@@ -25,7 +25,7 @@ public:
     void checkPointToPointSchema() const;
     void checkReachbility() const;
     void checkForRedundantCalls() const;
-    void checkForCollectiveCall(const MPICall &) const;
+    void checkForCollectiveCalls(const MPIRankCase &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
