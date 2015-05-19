@@ -32,10 +32,7 @@ public:
     void setCurrentlyVisitedFunction(clang::FunctionDecl *functionDecl) {
         bugReporter_.currentFunctionDecl_ = functionDecl;
     }
-    const MPIFunctionClassifier &funcClassifier() {
-        return funcClassifier_;
-    }
-
+    const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
 
 private:
     bool isSendRecvPair(const MPICall &, const MPICall &) const;

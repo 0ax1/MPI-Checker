@@ -142,7 +142,8 @@ bool ArrayVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 }
 
 bool RankVisitor::VisitCallExpr(CallExpr *callExpr) {
-    if (funcClassifier_.isMPIType(callExpr->getDirectCallee()->getIdentifier())) {
+    if (funcClassifier_.isMPIType(
+            callExpr->getDirectCallee()->getIdentifier())) {
         MPICall mpiCall{callExpr};
         if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
             VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];

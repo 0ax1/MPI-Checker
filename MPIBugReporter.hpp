@@ -38,7 +38,8 @@ public:
     void reportNotReachableCall(const clang::CallExpr *const) const;
 
     // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––
-    void reportMissingWait(const RequestVar &, clang::ento::ExplodedNode *) const;
+    void reportMissingWait(const RequestVar &,
+                           clang::ento::ExplodedNode *) const;
 
     void reportUnmatchedWait(const clang::CallExpr *,
                              const clang::VarDecl *requestVar,

@@ -473,7 +473,7 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
     std::vector<size_t> indicesToCheck = integerIndices(mpiCall);
     if (!indicesToCheck.size()) return;
 
-    // iterate indices which should not have float arguments
+    // iterate indices which should not have integer arguments
     for (const size_t idx : indicesToCheck) {
         // check for invalid variable types
         const auto &arg = mpiCall.arguments_[idx];

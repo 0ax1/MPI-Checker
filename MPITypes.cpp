@@ -19,7 +19,7 @@ bool MPICall::operator==(const MPICall &callToCompare) {
 
     for (size_t i = 0; i < arguments_.size(); ++i) {
         if (!arguments_[i].isEqual(callToCompare.arguments_[i],
-                    StmtVisitor::CompareOperators::kYes)) {
+                                   StmtVisitor::CompareOperators::kYes)) {
             return false;
         }
     }
