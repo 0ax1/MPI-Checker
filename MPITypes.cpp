@@ -14,9 +14,8 @@ llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
 
 llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
 
-bool MPICall::operator==(const MPICall &callToCompare) {
+bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;
-
     for (size_t i = 0; i < arguments_.size(); ++i) {
         if (!arguments_[i].isEqual(callToCompare.arguments_[i],
                                    StmtVisitor::CompareOperators::kYes)) {
@@ -26,7 +25,7 @@ bool MPICall::operator==(const MPICall &callToCompare) {
     return true;
 }
 
-bool MPICall::operator!=(const MPICall &callToCompare) {
+bool MPICall::operator!=(const MPICall &callToCompare) const {
     return !(*this == callToCompare);
 }
 

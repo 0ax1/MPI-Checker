@@ -20,8 +20,9 @@ public:
         init(callExpr);
     };
 
-    bool operator==(const MPICall &);
-    bool operator!=(const MPICall &);
+    bool operator==(const MPICall &) const;
+    bool operator!=(const MPICall &) const;
+
     // implicit conversion function
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
