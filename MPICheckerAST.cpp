@@ -167,10 +167,8 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
 
     // compare ranks
-    // TODO cut arguments last 2 elements to allow flexible comparison
     if (!sendCall.arguments_[MPIPointToPoint::kRank].isEqualOrdered(
             recvCall.arguments_[MPIPointToPoint::kRank],
-            // TODO drop this
             StmtVisitor::CompareOperators::kNo)) {
         return false;
     }

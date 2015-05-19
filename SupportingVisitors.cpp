@@ -70,26 +70,6 @@ bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
     }
 }
 
-// TODO
-// bool StmtVisitor::areVariablesEqual(const StmtVisitor &visitorToCompare) const {
-
-    // // variables are compared by name, to make them comparable
-    // // beyond their scope, across different branches, functions
-    // for (size_t i = 0; i < vars_.size(); ++i) {
-        // if (vars_[i]->getNameAsString() !=
-            // visitorToCompare.vars_[i]->getNameAsString()) {
-            // // vars are rated as equal if they are both rank variables
-            // if (cont::isContained(MPIRank::visitedRankVariables, vars_[i]) &&
-                // cont::isContained(MPIRank::visitedRankVariables,
-                                  // visitorToCompare.vars_[i]))
-                // continue;
-
-            // return false;
-        // }
-    // }
-    // return true;
-// }
-
 bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
                                  CompareOperators compareOperators) const {
     // include operator comparison
