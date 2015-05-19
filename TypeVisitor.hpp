@@ -1,7 +1,7 @@
 #ifndef TYPEVISITOR_HPP_KOZYUVZH
 #define TYPEVISITOR_HPP_KOZYUVZH
 
-#include "MPIFunctionClassifier.hpp"
+#include "clang/AST/RecursiveASTVisitor.h"
 
 namespace mpi {
 
