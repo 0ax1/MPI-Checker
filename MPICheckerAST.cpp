@@ -284,15 +284,15 @@ void MPICheckerAST::selectTypeMatcher(
     const mpi::TypeVisitor &typeVisitor, const MPICall &mpiCall,
     const StringRef mpiDatatypeString,
     const std::pair<size_t, size_t> &idxPair) const {
-    clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType_;
+    const clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType();
     bool isTypeMatching{true};
 
     // check for exact width types (e.g. int16_t, uint32_t)
-    if (typeVisitor.isTypedefType_) {
+    if (typeVisitor.isTypedefType()) {
         isTypeMatching = matchExactWidthType(typeVisitor, mpiDatatypeString);
     }
     // check for complex-floating types (e.g. float _Complex)
-    else if (typeVisitor.complexType_) {
+    else if (typeVisitor.complexType()) {
         isTypeMatching = matchComplexType(typeVisitor, mpiDatatypeString);
     }
     // check for basic builtin types (e.g. int, char)
@@ -322,7 +322,7 @@ bool MPICheckerAST::matchBoolType(const mpi::TypeVisitor &visitor,
 bool MPICheckerAST::matchCharType(const mpi::TypeVisitor &visitor,
                                   const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
-    switch (visitor.builtinType_->getKind()) {
+    switch (visitor.builtinType()->getKind()) {
         case BuiltinType::SChar:
             isTypeMatching =
                 (mpiDatatype == "MPI_CHAR" || mpiDatatype == "MPI_SIGNED_CHAR");
@@ -355,7 +355,7 @@ bool MPICheckerAST::matchSignedType(const mpi::TypeVisitor &visitor,
                                     const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
-    switch (visitor.builtinType_->getKind()) {
+    switch (visitor.builtinType()->getKind()) {
         case BuiltinType::Int:
             isTypeMatching = (mpiDatatype == "MPI_INT");
             break;
@@ -380,7 +380,7 @@ bool MPICheckerAST::matchUnsignedType(const mpi::TypeVisitor &visitor,
                                       const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
-    switch (visitor.builtinType_->getKind()) {
+    switch (visitor.builtinType()->getKind()) {
         case BuiltinType::UInt:
             isTypeMatching = (mpiDatatype == "MPI_UNSIGNED");
             break;
@@ -404,7 +404,7 @@ bool MPICheckerAST::matchFloatType(const mpi::TypeVisitor &visitor,
                                    const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
-    switch (visitor.builtinType_->getKind()) {
+    switch (visitor.builtinType()->getKind()) {
         case BuiltinType::Float:
             isTypeMatching = (mpiDatatype == "MPI_FLOAT");
             break;
@@ -424,7 +424,7 @@ bool MPICheckerAST::matchComplexType(const mpi::TypeVisitor &visitor,
                                      const llvm::StringRef mpiDatatype) const {
     bool isTypeMatching;
 
-    switch (visitor.builtinType_->getKind()) {
+    switch (visitor.builtinType()->getKind()) {
         case BuiltinType::Float:
             isTypeMatching = (mpiDatatype == "MPI_C_COMPLEX" ||
                               mpiDatatype == "MPI_C_FLOAT_COMPLEX");
@@ -446,7 +446,7 @@ bool MPICheckerAST::matchExactWidthType(
     const mpi::TypeVisitor &visitor, const llvm::StringRef mpiDatatype) const {
     // check typedef type match
     // no break needs to be specified for string switch
-    bool isTypeMatching = llvm::StringSwitch<bool>(visitor.typedefTypeName_)
+    bool isTypeMatching = llvm::StringSwitch<bool>(visitor.typedefTypeName())
                               .Case("int8_t", (mpiDatatype == "MPI_INT8_T"))
                               .Case("int16_t", (mpiDatatype == "MPI_INT16_T"))
                               .Case("int32_t", (mpiDatatype == "MPI_INT32_T"))
@@ -480,8 +480,8 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         const auto &vars = arg.vars();
         for (const auto &var : vars) {
             const mpi::TypeVisitor typeVisitor{var->getType()};
-            if (!typeVisitor.builtinType_ ||
-                !typeVisitor.builtinType_->isIntegerType()) {
+            if (!typeVisitor.builtinType() ||
+                !typeVisitor.builtinType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
                     mpiCall.callExpr(), idx, var->getSourceRange(), "Variable");
             }
@@ -498,8 +498,8 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         const auto &functions = arg.functions();
         for (const auto &function : functions) {
             const mpi::TypeVisitor typeVisitor{function->getReturnType()};
-            if (!typeVisitor.builtinType_ ||
-                !typeVisitor.builtinType_->isIntegerType()) {
+            if (!typeVisitor.builtinType() ||
+                !typeVisitor.builtinType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
                     mpiCall.callExpr(), idx, function->getSourceRange(),
                     "Return value");

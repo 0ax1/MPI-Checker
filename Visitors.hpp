@@ -104,7 +104,9 @@ private:
  */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
-    TypeVisitor(clang::QualType qualType) { TraverseType(qualType); }
+    TypeVisitor(clang::QualType qualType) : qualType_{qualType} {
+        TraverseType(qualType);
+    }
 
     // must be public to trigger callbacks
     bool VisitTypedefType(clang::TypedefType *tdt) {
@@ -124,8 +126,13 @@ public:
     }
 
     // passed qual type
-    clang::QualType *qualType_;
+    const clang::QualType qualType_;
+    bool isTypedefType() const { return isTypedefType_; }
+    const std::string typedefTypeName() const & { return typedefTypeName_; }
+    const clang::BuiltinType *builtinType() const { return builtinType_; }
+    const clang::ComplexType *complexType() const { return complexType_; }
 
+private:
     bool isTypedefType_{false};
     std::string typedefTypeName_;
 

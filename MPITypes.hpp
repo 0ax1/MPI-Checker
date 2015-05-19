@@ -1,7 +1,7 @@
 #ifndef MPITYPES_HPP_IC7XR2MI
 #define MPITYPES_HPP_IC7XR2MI
 
-#include "SupportingVisitors.hpp"
+#include "Visitors.hpp"
 #include "MPIFunctionClassifier.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––
