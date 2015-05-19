@@ -22,11 +22,12 @@ namespace mpi {
  * through MPICheckerAST.
  *
  */
-class TranslationUnitVisitor : public clang::RecursiveASTVisitor<TranslationUnitVisitor> {
+class TranslationUnitVisitor
+    : public clang::RecursiveASTVisitor<TranslationUnitVisitor> {
 public:
     TranslationUnitVisitor(clang::ento::BugReporter &bugReporter,
-               const clang::ento::CheckerBase &checkerBase,
-               clang::ento::AnalysisManager &analysisManager)
+                           const clang::ento::CheckerBase &checkerBase,
+                           clang::ento::AnalysisManager &analysisManager)
         : checkerAST_{bugReporter, checkerBase, analysisManager} {}
 
     // visitor callbacks
