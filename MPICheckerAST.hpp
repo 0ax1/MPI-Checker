@@ -29,9 +29,13 @@ public:
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     typedef llvm::SmallVector<std::pair<size_t, size_t>, 2> IndexPairs;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
+    void setCurrentlyVisitedFunction(clang::FunctionDecl *functionDecl) {
+        bugReporter_.currentFunctionDecl_ = functionDecl;
+    }
+    const MPIFunctionClassifier &funcClassifier() {
+        return funcClassifier_;
+    }
 
-    MPIFunctionClassifier funcClassifier_;
-    MPIBugReporter bugReporter_;
 
 private:
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
@@ -57,6 +61,8 @@ private:
     bool matchExactWidthType(const mpi::TypeVisitor &,
                              const llvm::StringRef) const;
 
+    MPIFunctionClassifier funcClassifier_;
+    MPIBugReporter bugReporter_;
     clang::ento::AnalysisManager &analysisManager_;
 };
 

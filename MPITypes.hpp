@@ -60,9 +60,9 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 
 // to capture rank cases from branches
 struct MPIRankCase {
-    MPIRankCase(clang::Stmt *then, clang::Stmt *matchedCondition,
+    MPIRankCase(const clang::Stmt *then, const clang::Stmt *matchedCondition,
                 const std::vector<StmtVisitor> &unmatchedConditions,
-                MPIFunctionClassifier &funcClassifier)
+                const MPIFunctionClassifier &funcClassifier)
 
         : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {

@@ -13,10 +13,20 @@ namespace mpi {
  */
 class StmtVisitor : public clang::RecursiveASTVisitor<StmtVisitor> {
 public:
-    StmtVisitor(clang::Stmt *stmt) : stmt_{stmt} { TraverseStmt(stmt_); }
+    StmtVisitor(const clang::Stmt *stmt) : stmt_{stmt} {
+        TraverseStmt(const_cast<clang::Stmt *>(stmt_));
+    }
 
-    enum class ComponentType { kInt, kFloat, kVar, kFunc, kComparsison,
-        kAddOp, kSubOp, kOperator };
+    enum class ComponentType {
+        kInt,
+        kFloat,
+        kVar,
+        kFunc,
+        kComparsison,
+        kAddOp,
+        kSubOp,
+        kOperator
+    };
 
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
@@ -34,7 +44,7 @@ public:
     bool containsNonCommutativeOps() const;
 
     // complete statement
-    clang::Stmt *stmt_;
+    const clang::Stmt *stmt_;
 
     // sequential series of component types
     llvm::SmallVector<ComponentType, 4> typeSequence_;

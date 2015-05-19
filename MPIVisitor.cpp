@@ -11,7 +11,7 @@ bool MPIVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
         // to make display of function in diagnostics available
-        checkerAST_.bugReporter_.currentFunctionDecl_ = functionDecl;
+        checkerAST_.setCurrentlyVisitedFunction(functionDecl);
     }
     return true;
 }
@@ -54,7 +54,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
         MPIRankCase::visitedRankCases.emplace_back(
             ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions,
-            checkerAST_.funcClassifier_);
+            checkerAST_.funcClassifier());
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
@@ -63,7 +63,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in else
     if (stmt) {
         MPIRankCase::visitedRankCases.emplace_back(
-            stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier_);
+            stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier());
     }
 
     // check if collective calls are used in rank rankCase
@@ -86,7 +86,7 @@ bool MPIVisitor::VisitIfStmt(IfStmt *ifStmt) {
 bool MPIVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
 
-    if (checkerAST_.funcClassifier_.isMPIType(functionDecl->getIdentifier())) {
+    if (checkerAST_.funcClassifier().isMPIType(functionDecl->getIdentifier())) {
         MPICall mpiCall{callExpr};
 
         checkerAST_.checkBufferTypeMatch(mpiCall);
