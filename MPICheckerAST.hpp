@@ -55,7 +55,6 @@ public:
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &);
     void checkReachbility();
     void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &);
-    void unmarkCalls();
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
