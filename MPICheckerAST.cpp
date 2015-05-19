@@ -42,15 +42,15 @@ void MPICheckerAST::checkPointToPointSchema() {
  * @param rankCase1
  * @param rankCase2
  */
-void MPICheckerAST::checkSendRecvMatches(MPIRankCase &firstCase,
-                                         MPIRankCase &secondCase) {
+void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &firstCase,
+                                         const MPIRankCase &secondCase) {
     // find send/recv pairs
-    for (MPICall &send : firstCase.mpiCalls_) {
+    for (const MPICall &send : firstCase.mpiCalls_) {
         // skip non sends for case 1
         if (!funcClassifier_.isSendType(send) || send.isMarked_) continue;
 
         // skip non recvs for case 2
-        for (MPICall &recv : secondCase.mpiCalls_) {
+        for (const MPICall &recv : secondCase.mpiCalls_) {
             if (!funcClassifier_.isRecvType(recv) || recv.isMarked_) continue;
 
             // check if pair matches
@@ -92,14 +92,14 @@ void MPICheckerAST::checkReachbility() {
     }
 }
 
-void MPICheckerAST::checkReachbilityPair(MPIRankCase &firstCase,
-                                         MPIRankCase &secondCase) {
+void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
+                                         const MPIRankCase &secondCase) {
     // find send/recv pairs
-    for (MPICall &send : firstCase.mpiCalls_) {
+    for (const MPICall &send : firstCase.mpiCalls_) {
         send.isReachable_ = true;
         if (send.isMarked_) continue;
 
-        for (MPICall &recv : secondCase.mpiCalls_) {
+        for (const MPICall &recv : secondCase.mpiCalls_) {
             recv.isReachable_ = true;
             if (recv.isMarked_) continue;
 
@@ -115,7 +115,7 @@ void MPICheckerAST::checkReachbilityPair(MPIRankCase &firstCase,
             }
         }
 
-        // to matching recv found in all cases
+        // no matching recv found in all cases
         if (funcClassifier_.isBlockingType(send) && !send.isMarked_) {
             return;
         }
@@ -498,6 +498,44 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
 }
 
 /**
+ * Check if there are redundant mpi calls within a rank case.
+ *
+ * @param callEvent
+ * @param mpiFnCallSet set searched for identical calls
+ *
+ * @return is equal call in list
+ */
+void MPICheckerAST::checkForRedundantCalls() const {
+    MPIRankCase::unmarkCalls();
+
+    for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+        for (MPICall &callToCheck : rankCase.mpiCalls_) {
+            checkForRedundantCall(callToCheck, rankCase);
+        }
+    }
+}
+
+/**
+ * Check if there is a redundant call to the call passed.
+ *
+ * @param callToCheck
+ */
+void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck,
+                                          const MPIRankCase &rankCase) const {
+    for (const MPICall &comparedCall : rankCase.mpiCalls_) {
+        if (qualifyRedundancyCheck(callToCheck, comparedCall)) {
+            if (callToCheck == comparedCall) {
+                bugReporter_.reportRedundantCall(callToCheck.callExpr_,
+                                                 comparedCall.callExpr_);
+                callToCheck.isMarked_ = true;
+                callToCheck.isMarked_ = true;
+            }
+        }
+    }
+    return;
+}
+
+/**
  * Check if two calls qualify for a redundancy check.
  *
  * @param callToCheck
@@ -541,90 +579,6 @@ bool MPICheckerAST::qualifyRedundancyCheck(const MPICall &callToCheck,
                 funcClassifier_.isReduceType(comparedCall));
     }
     return false;
-}
-
-/**
- * Check if there is a redundant call to the call passed.
- *
- * @param callToCheck
- */
-void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck) const {
-    // SmallVector<size_t, 3> indicesToCheckComponents;
-    // SmallVector<size_t, 2> indicesToCheckAsString;
-
-    // if (funcClassifier_.isPointToPointType(callToCheck)) {
-    // indicesToCheckComponents = {MPIPointToPoint::kCount,
-    // MPIPointToPoint::kRank,
-    // MPIPointToPoint::kTag};
-    // indicesToCheckAsString = {MPIPointToPoint::kDatatype};
-    // } else if (funcClassifier_.isReduceType(callToCheck)) {
-    // indicesToCheckComponents = {2};
-    // indicesToCheckAsString = {3, 4};
-    // } else if (funcClassifier_.isScatterType(callToCheck) ||
-    // funcClassifier_.isGatherType(callToCheck) ||
-    // funcClassifier_.isAlltoallType(callToCheck)) {
-    // indicesToCheckComponents = {1, 4, 6};
-    // indicesToCheckAsString = {2, 5};
-    // } else if (funcClassifier_.isBcastType(callToCheck)) {
-    // indicesToCheckComponents = {1, 3};
-    // indicesToCheckAsString = {2};
-    // }
-
-    // for (const MPICall &comparedCall : MPICall::visitedCalls) {
-    // if (!qualifyRedundancyCheck(callToCheck, comparedCall)) continue;
-
-    // // argument types which are compared by all 'components' –––––––
-    // bool identical = true;
-    // for (const size_t idx : indicesToCheckComponents) {
-    // if (!areComponentsOfArgEqual(callToCheck, comparedCall, idx)) {
-    // identical = false;
-    // break;  // end inner loop
-    // }
-    // }
-    // // compare specified mpi datatypes –––––––––––––––––––––––––––––
-    // for (const size_t idx : indicesToCheckAsString) {
-    // if (!areDatatypesEqual(callToCheck, comparedCall, idx)) {
-    // identical = false;
-    // break;  // end inner loop
-    // }
-    // }
-    // if (!identical) continue;
-
-    // // if function reaches this point all arguments have been equal
-    // // mark call to omit symmetric duplicate report
-    // callToCheck.isMarked_ = true;
-
-    // SmallVector<size_t, 5> checkedIndices;
-    // cont::copy(indicesToCheckComponents, checkedIndices);
-    // cont::copy(indicesToCheckAsString, checkedIndices);
-
-    // bugReporter_.reportRedundantCall(
-    // callToCheck.callExpr_, comparedCall.callExpr_, checkedIndices);
-
-    // // do not match against further calls
-    // // still all duplicate calls will appear in the diagnostics
-    // // due to transitivity of duplicates
-    // return;
-    // }
-}
-
-/**
- * Check if there are redundant mpi calls.
- *
- * @param callEvent
- * @param mpiFnCallSet set searched for identical calls
- *
- * @return is equal call in list
- */
-void MPICheckerAST::checkForRedundantCalls() const {
-    // for (const MPICall &mpiCall : MPICall::visitedCalls) {
-    // checkForRedundantCall(mpiCall);
-    // }
-
-    // // unmark calls
-    // for (const MPICall &mpiCall : MPICall::visitedCalls) {
-    // mpiCall.isMarked_ = false;
-    // }
 }
 
 }  // end of namespace: mpi

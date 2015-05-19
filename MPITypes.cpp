@@ -14,6 +14,22 @@ llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
 
 llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
 
+bool MPICall::operator==(const MPICall &callToCompare) {
+    if (arguments_.size() != callToCompare.arguments_.size()) return false;
+
+    for (size_t i = 0; i < arguments_.size(); ++i) {
+        if (!arguments_[i].isEqual(callToCompare.arguments_[i],
+                    StmtVisitor::CompareOperators::kYes)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool MPICall::operator!=(const MPICall &callToCompare) {
+    return !(*this == callToCompare);
+}
+
 bool MPIRankCase::isConditionAmbiguous() {
     if (!matchedCondition_) return true;
 
@@ -47,6 +63,5 @@ bool MPIRankCase::isConditionUnambiguouslyEqual(MPIRankCase &rankCase) {
     return matchedCondition_->isEqual(*rankCase.matchedCondition_,
                                       StmtVisitor::CompareOperators::kYes);
 }
-
 
 }  // end of namespace: mpi

@@ -24,7 +24,9 @@ public:
     // validation functions
     void checkForInvalidArgs(const MPICall &) const;
 
-    void checkForRedundantCall(const MPICall &) const;
+    void checkForRedundantCall(const MPICall &callToCheck,
+                               const MPIRankCase &rankCase) const;
+    void checkForRedundantCalls() const;
     bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
 
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
@@ -42,15 +44,14 @@ public:
     bool matchExactWidthType(const mpi::TypeVisitor &,
                              const llvm::StringRef) const;
 
-    void checkForRedundantCalls() const;
     void checkForCollectiveCall(const MPICall &) const;
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
 
     void checkUnmatchedCalls() const;
     void checkPointToPointSchema();
-    void checkSendRecvMatches(MPIRankCase &, MPIRankCase &);
+    void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &);
     void checkReachbility();
-    void checkReachbilityPair(MPIRankCase &, MPIRankCase &);
+    void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &);
     void unmarkCalls();
 
     MPIFunctionClassifier funcClassifier_;

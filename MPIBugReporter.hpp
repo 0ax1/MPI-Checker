@@ -31,8 +31,7 @@ public:
                                    const clang::SourceRange,
                                    const std::string &) const;
     void reportRedundantCall(const clang::CallExpr *const,
-                             const clang::CallExpr *const,
-                             const llvm::SmallVectorImpl<size_t> &) const;
+                             const clang::CallExpr *const) const;
 
     void reportCollCallInBranch(const clang::CallExpr *const) const;
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;

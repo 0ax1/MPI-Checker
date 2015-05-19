@@ -20,6 +20,8 @@ public:
         init(callExpr);
     };
 
+    bool operator==(const MPICall &);
+    bool operator!=(const MPICall &);
     // implicit conversion function
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
@@ -29,8 +31,9 @@ public:
     unsigned long id_{id++};  // unique call identification
     // marking can be changed freely by clients
     // semantic depends on context of usage
-    bool isMarked_{false};
-    bool isReachable_{false};
+    mutable bool isMarked_{false};
+    mutable bool isReachable_{false};
+
 
 private:
     /**

@@ -120,12 +120,12 @@ public:
         visitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
-        // check point to point schema at the end of a translation unit
-        // visitor.checkerAST_.checkForRedundantCalls();
+        // check after tu traversal
         visitor.checkerAST_.checkPointToPointSchema();
         visitor.checkerAST_.checkReachbility();
+        visitor.checkerAST_.checkForRedundantCalls();
 
-        // // clear after every translation unit
+        // clear after every translation unit
         MPIRank::visitedRankVariables.clear();
         MPIRankCase::visitedRankCases.clear();
     }
