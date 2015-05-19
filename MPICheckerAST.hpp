@@ -28,7 +28,7 @@ public:
     void checkForCollectiveCall(const MPICall &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
-    using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2> ;
+    using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
     void setCurrentlyVisitedFunction(
         const clang::FunctionDecl *const functionDecl) {
