@@ -21,17 +21,28 @@ public:
           bugReporter_{bugReporter, checkerBase, analysisManager},
           analysisManager_{analysisManager} {}
 
-    void checkForInvalidArgs(const MPICall &) const;
-    std::vector<size_t> integerIndices(const MPICall &) const;
-
-    void checkForRedundantCall(const MPICall &callToCheck,
-                               const MPIRankCase &rankCase) const;
+    void checkPointToPointSchema();
+    void checkReachbility();
     void checkForRedundantCalls() const;
-    bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
-
+    void checkForCollectiveCall(const MPICall &) const;
+    void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     typedef llvm::SmallVector<std::pair<size_t, size_t>, 2> IndexPairs;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
+
+    MPIFunctionClassifier funcClassifier_;
+    MPIBugReporter bugReporter_;
+
+private:
+    bool isSendRecvPair(const MPICall &, const MPICall &) const;
+    void checkUnmatchedCalls() const;
+    void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &);
+    void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &);
+    void checkForRedundantCall(const MPICall &callToCheck,
+                               const MPIRankCase &) const;
+    bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
+    std::vector<size_t> integerIndices(const MPICall &) const;
+
     void selectTypeMatcher(const mpi::TypeVisitor &, const MPICall &,
                            const clang::StringRef,
                            const std::pair<size_t, size_t> &) const;
@@ -46,17 +57,6 @@ public:
     bool matchExactWidthType(const mpi::TypeVisitor &,
                              const llvm::StringRef) const;
 
-    void checkForCollectiveCall(const MPICall &) const;
-    bool isSendRecvPair(const MPICall &, const MPICall &) const;
-
-    void checkUnmatchedCalls() const;
-    void checkPointToPointSchema();
-    void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &);
-    void checkReachbility();
-    void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &);
-
-    MPIFunctionClassifier funcClassifier_;
-    MPIBugReporter bugReporter_;
     clang::ento::AnalysisManager &analysisManager_;
 };
 

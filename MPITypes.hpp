@@ -34,7 +34,6 @@ public:
     mutable bool isMarked_{false};
     mutable bool isReachable_{false};
 
-
 private:
     /**
      * Init function shared by ctors.
