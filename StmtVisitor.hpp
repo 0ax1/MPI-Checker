@@ -32,22 +32,17 @@ public:
     bool VisitBinaryOperator(clang::BinaryOperator *);
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
-    bool VisitCallExpr(clang::CallExpr *);
 
     // non visitor functions
-    enum class CompareOperators { kYes, kNo };
-    bool isEqual(const StmtVisitor &visitor, CompareOperators) const;
-    bool isEqualOrdered(const StmtVisitor &visitor, CompareOperators) const;
-    bool isEqualPermutative(const StmtVisitor &visitor) const;
-    bool containsNonCommutativeOps() const;
+    bool isEqual(const StmtVisitor &) const;
+    bool isEqualOrdered(const StmtVisitor &) const;
+    bool isEqualPermutative(const StmtVisitor &) const;
+    bool containsMinus() const;
+    bool isLastOperatorInverse(const StmtVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
     const llvm::SmallVectorImpl<ComponentType> &typeSequence() const {
         return typeSequence_;
-    }
-
-    const llvm::SmallVectorImpl<ComponentType> &typeSequenceNoOps() const {
-        return typeSequenceNoOps_;
     }
 
     const llvm::SmallVectorImpl<clang::BinaryOperatorKind> &binaryOperators()
@@ -57,10 +52,6 @@ public:
 
     const llvm::SmallVectorImpl<clang::VarDecl *> &vars() const {
         return vars_;
-    }
-
-    const llvm::SmallVectorImpl<std::string> &varNames() const {
-        return varNames_;
     }
 
     const llvm::SmallVectorImpl<clang::FunctionDecl *> &functions() const {
@@ -85,8 +76,8 @@ public:
         return floatValues_;
     }
 
-    const llvm::SmallVectorImpl<clang::CallExpr *> &callExprs() const {
-        return callExprs_;
+    const std::vector<std::string> &valueSequence() const {
+        return valueSequence_;
     }
 
     // complete statement
@@ -95,19 +86,16 @@ public:
 private:
     // sequential series of component types
     llvm::SmallVector<ComponentType, 4> typeSequence_;
-    // without operators
-    llvm::SmallVector<ComponentType, 4> typeSequenceNoOps_;
     // extracted components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;
-    llvm::SmallVector<std::string, 1> varNames_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
     llvm::SmallVector<llvm::APInt, 1> intValues_;
     llvm::SmallVector<llvm::APFloat, 0> floatValues_;
 
-    llvm::SmallVector<clang::CallExpr *, 8> callExprs_;
+    std::vector<std::string> valueSequence_;
 };
 
 }  // end of namespace: mpi

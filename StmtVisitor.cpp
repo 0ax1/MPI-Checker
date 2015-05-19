@@ -1,6 +1,7 @@
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "StmtVisitor.hpp"
 #include "Container.hpp"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "Utility.hpp"
 
 using namespace clang;
 using namespace ento;
@@ -12,14 +13,13 @@ bool StmtVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
         vars_.push_back(var);
-        varNames_.push_back(var->getNameAsString());
         typeSequence_.push_back(ComponentType::kVar);
-        typeSequenceNoOps_.push_back(ComponentType::kVar);
+        valueSequence_.push_back(var->getNameAsString());
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
         functions_.push_back(fn);
         typeSequence_.push_back(ComponentType::kFunc);
-        typeSequenceNoOps_.push_back(ComponentType::kFunc);
+        valueSequence_.push_back(fn->getNameAsString());
     }
     return true;
 }
@@ -30,11 +30,14 @@ bool StmtVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
         typeSequence_.push_back(ComponentType::kComparsison);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
         typeSequence_.push_back(ComponentType::kAddOp);
-    } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
+    } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {
         typeSequence_.push_back(ComponentType::kSubOp);
     } else {
         typeSequence_.push_back(ComponentType::kOperator);
     }
+
+    valueSequence_.push_back(op->getOpcodeStr());
+
     return true;
 }
 
@@ -42,7 +45,14 @@ bool StmtVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     intValues_.push_back(intLiteral->getValue());
     typeSequence_.push_back(ComponentType::kInt);
-    typeSequenceNoOps_.push_back(ComponentType::kInt);
+
+    SmallVector<char, 4> intValAsString;
+    intLiteral->getValue().toStringUnsigned(intValAsString);
+    std::string val;
+    for (char c : intValAsString) {
+        val.push_back(c);
+    }
+    valueSequence_.push_back(val);
     return true;
 }
 
@@ -50,49 +60,23 @@ bool StmtVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     floatValues_.push_back(floatLiteral->getValue());
     typeSequence_.push_back(ComponentType::kFloat);
-    typeSequenceNoOps_.push_back(ComponentType::kFloat);
+
+    valueSequence_.push_back(
+        std::to_string(floatLiteral->getValueAsApproximateDouble()));
     return true;
 }
 
-bool StmtVisitor::VisitCallExpr(clang::CallExpr *callExpr) {
-    callExprs_.push_back(callExpr);
-    return true;
-}
-
-bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare,
-                          CompareOperators compareOperators) const {
-    if (containsNonCommutativeOps() ||
-        visitorToCompare.containsNonCommutativeOps()) {
-        return isEqualOrdered(visitorToCompare, compareOperators);
+bool StmtVisitor::isEqual(const StmtVisitor &visitorToCompare) const {
+    if (containsMinus() || visitorToCompare.containsMinus()) {
+        return isEqualOrdered(visitorToCompare);
     } else {
         return isEqualPermutative(visitorToCompare);
     }
 }
 
-bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare,
-                                 CompareOperators compareOperators) const {
-    // include operator comparison
-    if (compareOperators == CompareOperators::kYes) {
-        // complete type sequence must match
-        if (typeSequence_ != visitorToCompare.typeSequence_) return false;
-    }
-    // omit operator comparison
-    else {
-        // type sequence without operators
-        if (typeSequenceNoOps_ != visitorToCompare.typeSequenceNoOps_)
-            return false;
-    }
-
-    // int literals
-    if (intValues_ != visitorToCompare.intValues_) return false;
-    // functions
-    if (functions_ != visitorToCompare.functions_) return false;
-    // variables
-    if (varNames_ != visitorToCompare.varNames_) return false;
-    // operators
-    if (compareOperators == CompareOperators::kYes) {
-        if (binaryOperators_ != visitorToCompare.binaryOperators_) return false;
-    }
+bool StmtVisitor::isEqualOrdered(const StmtVisitor &visitorToCompare) const {
+    if (typeSequence_ != visitorToCompare.typeSequence_) return false;
+    if (valueSequence_ != visitorToCompare.valueSequence_) return false;
 
     return true;
 }
@@ -103,34 +87,29 @@ bool StmtVisitor::isEqualPermutative(
     if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
         return false;
     }
-
-    // operators
-    if (!cont::isPermutation(binaryOperators_,
-                             visitorToCompare.binaryOperators_))
+    if (!cont::isPermutation(valueSequence_, visitorToCompare.valueSequence_)) {
         return false;
-    // variables (are compared by name, to make them comparable
-    // beyond their scope, across different branches, functions)
-    if (!cont::isPermutation(varNames_, visitorToCompare.varNames_))
-        return false;
-
-    // int literals
-    if (!cont::isPermutation(intValues_, visitorToCompare.intValues_))
-        return false;
-
-    // functions
-    if (!cont::isPermutation(functions_, visitorToCompare.functions_))
-        return false;
+    }
 
     return true;
 }
 
-bool StmtVisitor::containsNonCommutativeOps() const {
+bool StmtVisitor::containsMinus() const {
     for (const auto binaryOperator : binaryOperators_) {
         if (binaryOperator == BinaryOperatorKind::BO_Sub) {
             return true;
         }
     }
     return false;
+}
+
+bool StmtVisitor::isLastOperatorInverse(const StmtVisitor &visitor) const {
+    // last operator must be inverse
+    return (BinaryOperatorKind::BO_Add == binaryOperators_.front() &&
+            BinaryOperatorKind::BO_Sub == visitor.binaryOperators().front()) ||
+
+           (BinaryOperatorKind::BO_Sub == binaryOperators_.front() &&
+            BinaryOperatorKind::BO_Add == visitor.binaryOperators().front());
 }
 
 }  // end of namespace: mpi

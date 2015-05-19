@@ -141,6 +141,22 @@ void MPICheckerAST::checkForCollectiveCall(const MPICall &mpiCall) const {
     }
 }
 
+bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
+                                      const MPICall &recvCall) const {
+    // compare mpi datatype
+    llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
+        sendCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt_->getSourceRange(),
+        analysisManager_);
+
+    llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
+        recvCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt_->getSourceRange(),
+        analysisManager_);
+
+    return sendDataType == recvDataType;
+}
+
 /**
  * Check if two calls are a send/recv pair.
  *
@@ -153,60 +169,50 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
                                    const MPICall &recvCall) const {
     if (!funcClassifier_.isSendType(sendCall)) return false;
     if (!funcClassifier_.isRecvType(recvCall)) return false;
-
-    // compare mpi datatype
-    llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments()[MPIPointToPoint::kDatatype]
-            .stmt_->getSourceRange(),
-        analysisManager_);
-
-    llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments()[MPIPointToPoint::kDatatype]
-            .stmt_->getSourceRange(),
-        analysisManager_);
-
-    if (sendDataType != recvDataType) return false;
+    if (!areDatatypesEqual(sendCall, recvCall)) return false;
 
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!sendCall.arguments()[idx].isEqual(
-                recvCall.arguments()[idx],
-                StmtVisitor::CompareOperators::kYes)) {
+        if (!sendCall.arguments()[idx].isEqual(recvCall.arguments()[idx])) {
             return false;
         }
     }
 
     // compare ranks
-    if (!sendCall.arguments()[MPIPointToPoint::kRank].isEqualOrdered(
-            recvCall.arguments()[MPIPointToPoint::kRank],
-            StmtVisitor::CompareOperators::kNo)) {
-        return false;
-    }
-
-    // compare rank operators
     const auto &rankArgSend = sendCall.arguments()[MPIPointToPoint::kRank];
     const auto &rankArgRecv = recvCall.arguments()[MPIPointToPoint::kRank];
-    const auto &operatorsSend = rankArgSend.binaryOperators();
-    const auto &operatorsRecv = rankArgRecv.binaryOperators();
 
-    if (operatorsSend.size() != operatorsRecv.size()) {
+    if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
         return false;
+
+    // build sequences without last operator
+    std::vector<StmtVisitor::ComponentType> seq1, seq2;
+    std::vector<std::string> val1, val2;
+    bool containsMinus{false};
+    for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
+        seq1.push_back(rankArgSend.typeSequence()[i]);
+        val1.push_back(rankArgSend.valueSequence()[i]);
+        seq2.push_back(rankArgRecv.typeSequence()[i]);
+        val2.push_back(rankArgRecv.valueSequence()[i]);
+        if (rankArgSend.valueSequence()[i] == "-") containsMinus = true;
+        if (rankArgRecv.valueSequence()[i] == "-") containsMinus = true;
     }
-    // operators except last one must be equal
-    // (operator list is reversed to notation in code)
-    for (size_t i = 1; i < operatorsSend.size(); ++i) {
-        if (operatorsSend[i] != operatorsRecv[i]) {
+
+    if (containsMinus) {
+        // must be the same in order
+        if (seq1 != seq2 || val1 != val2) return false;
+    } else {
+        // check as permutation
+        if ((!cont::isPermutation(seq1, seq2)) ||
+            (!cont::isPermutation(val1, val2))) {
             return false;
         }
     }
+    // last (value|var|function) must be identical
+    if (val1.back() != val2.back()) return false;
 
     // last operator must be inverse
-    if (!((BinaryOperatorKind::BO_Add == operatorsSend.front() &&
-           BinaryOperatorKind::BO_Sub == operatorsRecv.front()) ||
-
-          (BinaryOperatorKind::BO_Sub == operatorsSend.front() &&
-           BinaryOperatorKind::BO_Add == operatorsRecv.front())))
-        return false;
+    if (!rankArgSend.isLastOperatorInverse(rankArgRecv)) return false;
 
     return true;
 }

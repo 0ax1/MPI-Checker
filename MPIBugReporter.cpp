@@ -216,7 +216,7 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                           " has no matching wait. "};
 
     PathDiagnosticLocation p{requestVar.lastUser_->getLocStart(),
-        analysisManager_.getSourceManager()};
+                             analysisManager_.getSourceManager()};
 
     BugReport *bugReport = new BugReport(*missingWaitBugType_, errorText, p);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());

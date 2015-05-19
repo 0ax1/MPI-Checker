@@ -3,6 +3,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "StmtVisitor.hpp"
+#include "CallExprVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––
@@ -78,8 +79,9 @@ struct MPIRankCase {
             matchedCondition_.reset(new StmtVisitor{matchedCondition});
         }
 
-        const StmtVisitor stmtVisitor{then};  // collect call exprs
-        for (const clang::CallExpr *const callExpr : stmtVisitor.callExprs()) {
+        const CallExprVisitor callExprVisitor{then};  // collect call exprs
+        for (const clang::CallExpr *const callExpr :
+             callExprVisitor.callExprs()) {
             // add mpi calls only
             if (funcClassifier.isMPIType(
                     callExpr->getDirectCallee()->getIdentifier())) {

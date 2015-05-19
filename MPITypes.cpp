@@ -17,8 +17,7 @@ llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
 bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;
     for (size_t i = 0; i < arguments_.size(); ++i) {
-        if (!arguments_[i].isEqual(callToCompare.arguments_[i],
-                                   StmtVisitor::CompareOperators::kYes)) {
+        if (!arguments_[i].isEqual(callToCompare.arguments_[i])) {
             return false;
         }
     }
@@ -61,8 +60,7 @@ bool MPIRankCase::isConditionUnambiguouslyEqual(
     }
 
     // both not ambiguos, compare matched condition
-    return matchedCondition_->isEqual(*rankCase.matchedCondition_,
-                                      StmtVisitor::CompareOperators::kYes);
+    return matchedCondition_->isEqual(*rankCase.matchedCondition_);
 }
 
 }  // end of namespace: mpi

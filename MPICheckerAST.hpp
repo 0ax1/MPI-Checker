@@ -38,6 +38,7 @@ public:
 
 private:
     bool isSendRecvPair(const MPICall &, const MPICall &) const;
+    bool areDatatypesEqual(const MPICall &, const MPICall &) const;
     void checkUnmatchedCalls() const;
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;
     void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &) const;
