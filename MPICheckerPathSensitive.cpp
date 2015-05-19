@@ -1,4 +1,4 @@
-#include "MPICheckerSens.hpp"
+#include "MPICheckerPathSensitive.hpp"
 #include "ArrayVisitor.hpp"
 
 namespace mpi {
@@ -6,8 +6,8 @@ namespace mpi {
 using namespace clang;
 using namespace ento;
 
-void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
-                                            CheckerContext &ctx) const {
+void MPICheckerPathSensitive::checkDoubleNonblocking(
+    const CallExpr *callExpr, CheckerContext &ctx) const {
     if (!funcClassifier_.isNonBlockingType(
             callExpr->getDirectCallee()->getIdentifier())) {
         return;
@@ -33,8 +33,8 @@ void MPICheckerSens::checkDoubleNonblocking(const CallExpr *callExpr,
     }
 }
 
-void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
-                                    CheckerContext &ctx) const {
+void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
+                                             CheckerContext &ctx) const {
     if (!funcClassifier_.isWaitType(
             callExpr->getDirectCallee()->getIdentifier())) {
         return;
@@ -81,7 +81,7 @@ void MPICheckerSens::checkWaitUsage(const CallExpr *callExpr,
     ctx.addTransition(state);
 }
 
-void MPICheckerSens::checkMissingWaits(CheckerContext &ctx) {
+void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     ProgramStateRef state = ctx.getState();
     auto requestVars = state->get<RequestVarMap>();
     ExplodedNode *node = ctx.addTransition();
@@ -96,7 +96,7 @@ void MPICheckerSens::checkMissingWaits(CheckerContext &ctx) {
     }
 }
 
-void MPICheckerSens::clearRequestVars(CheckerContext &ctx) const {
+void MPICheckerPathSensitive::clearRequestVars(CheckerContext &ctx) const {
     ProgramStateRef state = ctx.getState();
     auto requestVars = state->get<RequestVarMap>();
     // clear rank container

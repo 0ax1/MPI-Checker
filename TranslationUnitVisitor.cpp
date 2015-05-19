@@ -1,5 +1,5 @@
 #include "TranslationUnitVisitor.hpp"
-#include "MPICheckerSens.hpp"
+#include "MPICheckerPathSensitive.hpp"
 
 using namespace clang;
 using namespace ento;

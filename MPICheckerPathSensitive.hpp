@@ -1,5 +1,5 @@
-#ifndef MPICHECKERSENS_HPP_BKYOQUPL
-#define MPICHECKERSENS_HPP_BKYOQUPL
+#ifndef MPICheckerPathSensitive_HPP_BKYOQUPL
+#define MPICheckerPathSensitive_HPP_BKYOQUPL
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "MPIFunctionClassifier.hpp"
@@ -8,11 +8,11 @@
 
 namespace mpi {
 
-class MPICheckerSens {
+class MPICheckerPathSensitive {
 public:
-    MPICheckerSens(clang::ento::AnalysisManager &analysisManager,
-                   const clang::ento::CheckerBase *checkerBase,
-                   clang::ento::BugReporter &bugReporter)
+    MPICheckerPathSensitive(clang::ento::AnalysisManager &analysisManager,
+                            const clang::ento::CheckerBase *checkerBase,
+                            clang::ento::BugReporter &bugReporter)
         : funcClassifier_{analysisManager},
           bugReporter_{bugReporter, *checkerBase, analysisManager} {}
 
@@ -29,4 +29,4 @@ private:
 };
 }  // end of namespace: mpi
 
-#endif  // end of include guard: MPICHECKERSENS_HPP_BKYOQUPL
+#endif  // end of include guard: MPICheckerPathSensitive_HPP_BKYOQUPL

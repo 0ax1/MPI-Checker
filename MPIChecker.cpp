@@ -1,5 +1,5 @@
 #include "TranslationUnitVisitor.hpp"
-#include "MPICheckerSens.hpp"
+#include "MPICheckerPathSensitive.hpp"
 #include "RankVisitor.hpp"
 
 using namespace clang;
@@ -57,13 +57,13 @@ public:
     }
 
 private:
-    const std::unique_ptr<MPICheckerSens> checkerSens_;
+    const std::unique_ptr<MPICheckerPathSensitive> checkerSens_;
 
     void dynamicInit(CheckerContext &ctx) const {
         if (!checkerSens_) {
-            const_cast<std::unique_ptr<MPICheckerSens> &>(checkerSens_)
-                .reset(new MPICheckerSens(ctx.getAnalysisManager(), this,
-                                          ctx.getBugReporter()));
+            const_cast<std::unique_ptr<MPICheckerPathSensitive> &>(checkerSens_)
+                .reset(new MPICheckerPathSensitive(ctx.getAnalysisManager(),
+                                                   this, ctx.getBugReporter()));
         }
     }
 };
