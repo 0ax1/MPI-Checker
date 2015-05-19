@@ -29,7 +29,9 @@ public:
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *callExpr() const { return callExpr_; }
-    const std::vector<StatementVisitor> &arguments() const { return arguments_; }
+    const std::vector<StatementVisitor> &arguments() const {
+        return arguments_;
+    }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
 
@@ -68,7 +70,8 @@ extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
 // to capture rank cases from branches
-struct MPIRankCase {
+class MPIRankCase {
+public:
     typedef StatementVisitor ConditionVisitor;
 
     MPIRankCase(const clang::Stmt *const then,
