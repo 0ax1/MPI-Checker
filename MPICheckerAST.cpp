@@ -185,7 +185,7 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
         return false;
 
-    // build sequences without last operator
+    // build sequences without last operator(skip first element)
     std::vector<StmtVisitor::ComponentType> seq1, seq2;
     std::vector<std::string> val1, val2;
     bool containsMinus{false};
@@ -199,10 +199,10 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
 
     if (containsMinus) {
-        // must be the same in order
+        // check ordered
         if (seq1 != seq2 || val1 != val2) return false;
     } else {
-        // check as permutation
+        // check permutation
         if ((!cont::isPermutation(seq1, seq2)) ||
             (!cont::isPermutation(val1, val2))) {
             return false;
