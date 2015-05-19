@@ -39,26 +39,56 @@ public:
     bool isEqual(const StmtVisitor &visitor, CompareOperators) const;
     bool isEqualOrdered(const StmtVisitor &visitor, CompareOperators) const;
     bool isEqualPermutative(const StmtVisitor &visitor) const;
-
     bool containsNonCommutativeOps() const;
+
+    // getters –––––––––––––––––––––––––––––––––––––––––––––
+    const llvm::SmallVector<ComponentType, 4> &typeSequence() const {
+        return typeSequence_;
+    }
+
+    const llvm::SmallVector<ComponentType, 4> &typeSequenceNoOps() const {
+        return typeSequenceNoOps_;
+    }
+
+    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators()
+        const {
+        return binaryOperators_;
+    }
+
+    const llvm::SmallVector<clang::VarDecl *, 1> &vars() const { return vars_; }
+
+    const llvm::SmallVector<std::string, 1> &varNames() const {
+        return varNames_;
+    }
+
+    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions() const {
+        return functions_;
+    }
+
+    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals()
+        const {
+        return integerLiterals_;
+    }
+
+    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals()
+        const {
+        return floatingLiterals_;
+    }
+
+    const llvm::SmallVector<llvm::APInt, 1> &intValues() const {
+        return intValues_;
+    }
+
+    const llvm::SmallVector<llvm::APFloat, 0> &floatValues() const {
+        return floatValues_;
+    }
+
+    const llvm::SmallVector<clang::CallExpr *, 8> &callExprs() const {
+        return callExprs_;
+    }
 
     // complete statement
     const clang::Stmt *const stmt_;
-
-    const llvm::SmallVector<ComponentType, 4> &typeSequence() const;
-    const llvm::SmallVector<ComponentType, 4> &typeSequenceNoOps() const;
-    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators()
-        const;
-    const llvm::SmallVector<clang::VarDecl *, 1> &vars() const;
-    const llvm::SmallVector<std::string, 1> &varNames() const;
-    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions() const;
-    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals()
-        const;
-    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals()
-        const;
-    const llvm::SmallVector<llvm::APInt, 1> &intValues() const;
-    const llvm::SmallVector<llvm::APFloat, 0> &floatValues() const;
-    const llvm::SmallVector<clang::CallExpr *, 8> &callExprs() const;
 
 private:
     // sequential series of component types

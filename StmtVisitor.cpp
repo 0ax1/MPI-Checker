@@ -7,57 +7,6 @@ using namespace ento;
 
 namespace mpi {
 
-// getters –––––––––––––––––––––––––––––––––––––––––––––
-const llvm::SmallVector<StmtVisitor::ComponentType, 4> &
-StmtVisitor::typeSequence() const {
-    return typeSequence_;
-}
-
-const llvm::SmallVector<StmtVisitor::ComponentType, 4> &
-StmtVisitor::typeSequenceNoOps() const {
-    return typeSequenceNoOps_;
-}
-
-const llvm::SmallVector<clang::BinaryOperatorKind, 1> &
-StmtVisitor::binaryOperators() const {
-    return binaryOperators_;
-}
-
-const llvm::SmallVector<clang::VarDecl *, 1> &StmtVisitor::vars() const {
-    return vars_;
-}
-
-const llvm::SmallVector<std::string, 1> &StmtVisitor::varNames() const {
-    return varNames_;
-}
-
-const llvm::SmallVector<clang::FunctionDecl *, 0> &StmtVisitor::functions()
-    const {
-    return functions_;
-}
-
-const llvm::SmallVector<clang::IntegerLiteral *, 1> &
-StmtVisitor::integerLiterals() const {
-    return integerLiterals_;
-}
-
-const llvm::SmallVector<clang::FloatingLiteral *, 0> &
-StmtVisitor::floatingLiterals() const {
-    return floatingLiterals_;
-}
-
-const llvm::SmallVector<llvm::APInt, 1> &StmtVisitor::intValues() const {
-    return intValues_;
-}
-
-const llvm::SmallVector<llvm::APFloat, 0> &StmtVisitor::floatValues() const {
-    return floatValues_;
-}
-
-const llvm::SmallVector<clang::CallExpr *, 8> &StmtVisitor::callExprs() const {
-    return callExprs_;
-}
-
 // variables or functions can be a declrefexpr
 bool StmtVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
