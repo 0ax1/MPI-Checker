@@ -1,29 +1,9 @@
-#ifndef SUPPORTINGVISITORS_HPP_NWUC3OWQ
-#define SUPPORTINGVISITORS_HPP_NWUC3OWQ
+#ifndef TYPEVISITOR_HPP_KOZYUVZH
+#define TYPEVISITOR_HPP_KOZYUVZH
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "MPIFunctionClassifier.hpp"
-#include "StmtVisitor.hpp"
 
 namespace mpi {
-
-class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
-public:
-    ArrayVisitor(clang::VarDecl *varDecl) : arrayVarDecl_{varDecl} {
-        TraverseVarDecl(arrayVarDecl_);
-    }
-    // must be public to trigger callbacks
-    bool VisitDeclRefExpr(clang::DeclRefExpr *);
-
-    const clang::VarDecl *arrayVarDecl() { return arrayVarDecl_; }
-    const llvm::SmallVector<clang::VarDecl *, 4> &vars() { return vars_; }
-
-private:
-    // complete VarDecl expression
-    clang::VarDecl *arrayVarDecl_;
-    // extracted components
-    llvm::SmallVector<clang::VarDecl *, 4> vars_;
-};
 
 /**
  * Class to find out type information for a given qualified type.
@@ -68,21 +48,5 @@ private:
     clang::ComplexType *complexType_{nullptr};
 };
 
-/**
- * Visitor class to collect rank variables.
- */
-class RankVisitor : public clang::RecursiveASTVisitor<RankVisitor> {
-public:
-    RankVisitor(clang::ento::AnalysisManager &analysisManager)
-        : funcClassifier_{analysisManager} {}
-
-    // collect rank vars
-    bool VisitCallExpr(clang::CallExpr *);
-
-private:
-    MPIFunctionClassifier funcClassifier_;
-};
-
 }  // end of namespace: mpi
-
-#endif  // end of include guard: SUPPORTINGVISITORS_HPP_NWUC3OWQ
+#endif  // end of include guard: TYPEVISITOR_HPP_KOZYUVZH

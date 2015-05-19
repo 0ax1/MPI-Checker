@@ -1,7 +1,8 @@
 #ifndef MPITYPES_HPP_IC7XR2MI
 #define MPITYPES_HPP_IC7XR2MI
 
-#include "Visitors.hpp"
+#include "llvm/ADT/SmallSet.h"
+#include "StmtVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––

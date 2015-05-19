@@ -1,5 +1,6 @@
 #include "MPIVisitor.hpp"
 #include "MPICheckerSens.hpp"
+#include "RankVisitor.hpp"
 
 using namespace clang;
 using namespace ento;

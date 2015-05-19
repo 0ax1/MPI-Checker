@@ -1,4 +1,5 @@
 #include "MPICheckerSens.hpp"
+#include "ArrayVisitor.hpp"
 
 namespace mpi {
 

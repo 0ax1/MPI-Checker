@@ -6,6 +6,7 @@
 #include "MPIBugReporter.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
+#include "TypeVisitor.hpp"
 
 namespace mpi {
 
@@ -45,19 +46,16 @@ private:
     bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
     std::vector<size_t> integerIndices(const MPICall &) const;
 
-    void selectTypeMatcher(const mpi::TypeVisitor &, const MPICall &,
+    void selectTypeMatcher(const TypeVisitor &, const MPICall &,
                            const clang::StringRef,
                            const std::pair<size_t, size_t> &) const;
-    bool matchBoolType(const mpi::TypeVisitor &, const llvm::StringRef) const;
-    bool matchCharType(const mpi::TypeVisitor &, const llvm::StringRef) const;
-    bool matchSignedType(const mpi::TypeVisitor &, const llvm::StringRef) const;
-    bool matchUnsignedType(const mpi::TypeVisitor &,
-                           const llvm::StringRef) const;
-    bool matchFloatType(const mpi::TypeVisitor &, const llvm::StringRef) const;
-    bool matchComplexType(const mpi::TypeVisitor &,
-                          const llvm::StringRef) const;
-    bool matchExactWidthType(const mpi::TypeVisitor &,
-                             const llvm::StringRef) const;
+    bool matchBoolType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchCharType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchSignedType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchUnsignedType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchFloatType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchComplexType(const TypeVisitor &, const llvm::StringRef) const;
+    bool matchExactWidthType(const TypeVisitor &, const llvm::StringRef) const;
 
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
