@@ -21,7 +21,7 @@ if [[ $? -eq 0 ]]; then
     svn co http://llvm.org/svn/llvm-project/cfe/branches/release_36/ clang
 
     # clone mpi-checker project
-    cd ../tools/clang/lib/StaticAnalyzer/Checkers
+    cd clang/lib/StaticAnalyzer/Checkers
     git clone https://github.com/0ax1/MPI-Checker.git
 
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––

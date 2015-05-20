@@ -1,6 +1,10 @@
 # analyze
 function analyze() {
-    # setup build paths before
+    # create build folder if not there
+    if [[ ! -d build/analyse ]]; then
+        mkdir -p build/analyse
+    fi
+
     cd build/analyse
     ninja clean
     cmake ../../ \
