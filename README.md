@@ -11,7 +11,7 @@ Current versions of:
 - git
 - cmake
 - ninja
-- sed (install gnu-sed with homebrew if you're on osx)
+- sed (install gnu-sed with brew if you're on osx)
 
 ## Installation
 Download and run this [script] (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/llvmSetupFull.sh) to setup LLVM 3.6 with Clang and the MPI-Checker.<br>

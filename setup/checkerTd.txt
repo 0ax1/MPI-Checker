@@ -3,6 +3,6 @@ def Lx : Package<"lx">;
 
 let ParentPackage = Lx in {
 def MPIChecker : Checker<"MPIChecker">,
-  HelpText<"MPI checker">,
+  HelpText<"A static analysis checker for MPI code written in C">,
   DescFile<"MPIChecker.cpp">;
 } // end "Lx"
