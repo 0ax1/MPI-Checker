@@ -58,7 +58,7 @@ void MPIBugReporter::reportTypeMismatch(
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"buffer type mismatch"};
+    std::string bugName{"type mismatch"};
     std::string errorText{"Buffer type and specified MPI type do not match. "};
 
     llvm::SmallVector<SourceRange, 2> sourceRanges;
