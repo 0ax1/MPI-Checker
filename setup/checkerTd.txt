@@ -1,0 +1,8 @@
+
+def Lx : Package<"lx">;
+
+let ParentPackage = Lx in {
+def MPIChecker : Checker<"MPIChecker">,
+  HelpText<"MPI checker">,
+  DescFile<"MPIChecker.cpp">;
+} // end "Lx"

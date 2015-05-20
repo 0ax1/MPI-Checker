@@ -1,7 +1,7 @@
 #ifndef MPICHECKERAST_HPP_O1KSUWZO
 #define MPICHECKERAST_HPP_O1KSUWZO
 
-#include "../ClangSACheckers.h"
+#include "../../ClangSACheckers.h"
 #include "MPIFunctionClassifier.hpp"
 #include "MPIBugReporter.hpp"
 #include "Container.hpp"
