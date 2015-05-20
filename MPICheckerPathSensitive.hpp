@@ -1,5 +1,5 @@
-#ifndef MPICheckerPathSensitive_HPP_BKYOQUPL
-#define MPICheckerPathSensitive_HPP_BKYOQUPL
+#ifndef MPICHECKERPATHSENSITIVE_HPP_BKYOQUPL
+#define MPICHECKERPATHSENSITIVE_HPP_BKYOQUPL
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "MPIFunctionClassifier.hpp"
@@ -29,4 +29,4 @@ private:
 };
 }  // end of namespace: mpi
 
-#endif  // end of include guard: MPICheckerPathSensitive_HPP_BKYOQUPL
+#endif  // end of include guard: MPICHECKERPATHSENSITIVE_HPP_BKYOQUPL
