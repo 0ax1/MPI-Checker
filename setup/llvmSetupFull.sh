@@ -22,7 +22,7 @@ if [[ $? -eq 0 ]]; then
 
     # clone mpi-checker project
     cd ../tools/clang/lib/StaticAnalyzer/Checkers
-    git clone https://github.com/0ax1/MPI-Checker/tree/master
+    git clone https://github.com/0ax1/MPI-Checker.git
 
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # pipe checker registration
@@ -37,11 +37,10 @@ if [[ $? -eq 0 ]]; then
         sed=gsed
     fi
 
-    ((lineNo -= 1))
-    $sed "${lineNo}i FILE (GLOB MPI-CHECKER MPI-Checker/src/*.cpp)" \
+    $sed -i "${lineNo}i FILE (GLOB MPI-CHECKER MPI-Checker/src/*.cpp)" \
         CMakeLists.txt
     ((lineNo += 2))
-    $sed "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
+    $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
 
     cd ../../../../../../
 

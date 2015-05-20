@@ -1,21 +1,17 @@
 # MPI-Checker
-A static analysis checker for [MPI] (https://en.wikipedia.org/wiki/Message_Passing_Interface) code
-written in C.
+A static analysis checker for [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface) code
+written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 
 <img src="https://raw.github.com/0ax1/lx/master/pictures/lx-colorscheme.jpg" width="500">
 
+## Prerequisites
+- zsh
+- svn
+- git
+- cmake
+- ninja
+- sed (install gnu-sed with homebrew if you're on osx)
+
 ## Installation
-Depending on your plugin manager add one of the following lines to your (n)vimrc:<br>
-[Vundle](https://github.com/gmarik/Vundle.vim): `Plugin '0ax1/lxvc'`<br>
-[vim-plug](https://github.com/junegunn/vim-plug): `Plug '0ax1/lxvc'`<br>
-
-*Run your manager specific install command after that.*
-
-lxvc Colors for Plugins
------
-A [vim-airline](https://github.com/bling/vim-airline) theme is contained. 
-Set it with: `let g:airline_theme = 'lxvc'` in your n/vimrc.<br>
-Furthermore colors for [tagbar](https://github.com/majutsushi/tagbar), 
-[vim-indent-guides](https://github.com/nathanaelkane/vim-indent-guides), 
-[vimwiki](https://github.com/vimwiki/vimwiki) &
-[vim-startify](https://github.com/mhinz/vim-startify) are set automatically.
+Download and run this [script] (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/llvmSetupFull.sh) to setup LLVM 3.6 with Clang and the MPI-Checker.<br>
+This will download, config and build all components in ./llvm36.
