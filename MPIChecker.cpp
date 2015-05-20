@@ -8,9 +8,9 @@ using namespace ento;
 namespace mpi {
 
 /**
- * Checker host class that registers the checker for static analysis.
+ * Main class which serves as an entry point for analysis.
  * Class name determines checker name to specify on the command line.
- * Is created once for every translation unit.
+ * It is created once for every translation unit.
  */
 class MPIChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>,
@@ -70,6 +70,7 @@ private:
 
 }  // end of namespace: mpi
 
+// registers the checker for static analysis.
 void ento::registerMPIChecker(CheckerManager &mgr) {
     mgr.registerChecker<mpi::MPIChecker>();
 }
