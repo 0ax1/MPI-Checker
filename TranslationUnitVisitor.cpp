@@ -6,7 +6,6 @@ using namespace ento;
 
 namespace mpi {
 
-// visitor functions –––––––––––––––––––––––––––––––––––––––––––––––––––––
 bool TranslationUnitVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {

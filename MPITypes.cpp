@@ -59,7 +59,7 @@ bool MPIRankCase::isConditionUnambiguouslyEqual(
         return false;
     }
 
-    // both not ambiguos, compare matched condition
+    // both not ambiguous, compare matched condition
     return matchedCondition_->isEqual(*rankCase.matchedCondition_);
 }
 

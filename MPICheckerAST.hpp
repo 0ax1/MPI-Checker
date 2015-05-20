@@ -11,7 +11,7 @@
 namespace mpi {
 
 /**
- * Class to implement the actual checks.
+ * Class to check the mpi schema based on AST information.
  */
 class MPICheckerAST : public clang::RecursiveASTVisitor<MPICheckerAST> {
 public:

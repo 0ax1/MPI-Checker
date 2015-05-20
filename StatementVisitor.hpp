@@ -8,7 +8,7 @@ namespace mpi {
 /**
  * Visitor class to traverse a statement.
  * On the way it collects binary operators, variable decls, function decls,
- * integer literals, floating literals, call expressions.
+ * integer literals, floating literals.
  */
 class StatementVisitor : public clang::RecursiveASTVisitor<StatementVisitor> {
 public:
