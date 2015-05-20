@@ -31,5 +31,5 @@ Add these locations to your search path:<br>
 `.../llvm36/repo/tools/clang/tools/scan-view`<br>
 
 ## Example
-Try the `basic` example from the examples folder. Have a look at the CMakeLists.txt file to see how it is set up.
+Try `basic` from the examples folder. Have a look at the CMakeLists.txt file to see how it is set up.
 To invoke the MPI-Checker add [this](https://github.com/0ax1/MPI-Checker/blob/master/setup/analyse.sh) to your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.
