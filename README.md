@@ -9,9 +9,9 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `unmatched point to point call`: Point to point schema validation.
 - `unreachable call`: Unreachable calls caused by deadlocks.
 - `type mismatch`: Buffer type and specified MPI type do not match.
-- `invalid argument type`: Non integer values are used where only integer values are allowed.
+- `invalid argument type`: Non integer type used where only integer types are allowed.
 - `redundant call`: Calls with identical arguments that can be summarized.
-- `collective call in rank branch`: Collective calls inside a branch whose condition depends on a rank var.
+- `collective call in rank branch`: Collective call inside a rank branch.
 
 #### Path-Sensitive-Checks 
 - `double nonblocking`: Double request usage of nonblocking calls without intermediate wait. 
@@ -25,11 +25,11 @@ Current versions of: `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install gnu-s
 ## Installation
 Download this [script] (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/llvmSetupFull.sh), make it executable with `chmod +x llvmSetupFull.sh` and run it to setup LLVM 3.6 with Clang and the MPI-Checker. This will download, config and build all components in `./llvm36`.
 
-Add these locations to your search path:<br>
+After that add these locations to your search path:<br>
 `.../llvm36/build/release/bin`<br>
 `.../llvm36/repo/tools/clang/tools/scan-build`<br>
 `.../llvm36/repo/tools/clang/tools/scan-view`<br>
 
-## Example
-Try `basic` from the examples folder. Have a look at the CMakeLists.txt file to see how it is set up.
-To invoke the MPI-Checker add [this](https://github.com/0ax1/MPI-Checker/blob/master/setup/analyse.sh) to your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.
+## Examples
+Have a look at the `examples` folder. Inspect one of the `CMakeLists.txt` files to see how it is set up for MPI.
+To invoke the MPI-Checker add [this](https://github.com/0ax1/MPI-Checker/blob/master/setup/analyze.sh) to your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path. If there are any bugs found your browser will automatically open showing an overview of the detected erros. Those can be clicked to inspect them in detail.
