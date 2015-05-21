@@ -7,7 +7,7 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 ## Integrated checks
 #### AST-Checks
 - `unmatched point to point call`: Point to point schema validation.
-- `unreachable call`: Unreachable calls caused by deadlocks.
+- `unreachable call`: Unreachable calls caused by deadlocks from blocking calls.
 - `type mismatch`: Buffer type and specified MPI type do not match.
 - `invalid argument type`: Non integer type used where only integer types are allowed.
 - `redundant call`: Calls with identical arguments that can be summarized.
@@ -19,8 +19,21 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `missing wait`: Nonblocking call without matching wait.
 - `unmatched wait`: Waiting for a request that was never used by a nonblocking call.
 
-All of these checks should produce zero false positives. Bug reports are only omitted if the checker
+All of these checks should produce zero false positives. Bug reports are only emitted if the checker
 is sure that an invariant was violated.
+
+###Point to Point Schema Validation
+If only additions for an argument are used operands are accepted as a match if they appear as a permutation.
+Else if subtractions are used operands have to be in the same order. 
+To match point to point calls the checker has to make some assumptions how 
+arguments are specified. To match variables across cases and functions the same variable name has to be used.
+For the rank argument the checker expects the last operator to be "inverse"
+and the last operand to be equal.
+If none except the last operator are additions also rank operands (excluding the last) are matched
+if they appear as a permutation:
+<br>`MPI_Isend(&buf, 1, MPI_INT, f() + N + 3 + rank + 1, 0, MPI_COMM_WORLD, &sendReq1);`<br>
+`MPI_Irecv(&buf, 1, MPI_INT, N + f() + 3 + rank - 1, 0, MPI_COMM_WORLD, &recvReq1);`<br>
+
 
 ## Prerequisites
 Current versions of: `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
