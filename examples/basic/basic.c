@@ -23,16 +23,13 @@ void communicate1() {
         MPI_Request sendReq1;
         MPI_Request recvReq1;
 
-        MPI_Isend(&buf, 1, MPI_DOUBLE, f() + N + 3 + rank + 1, 0, MPI_COMM_WORLD,
-                  &sendReq1);
+        MPI_Isend(&buf, 1, MPI_DOUBLE, f() + N + 3 + rank + 1, 0,
+                  MPI_COMM_WORLD, &sendReq1);
         MPI_Irecv(&buf, 1, MPI_INT, N + f() + 3 + rank - 1, 0, MPI_COMM_WORLD,
                   &recvReq1);
 
         MPI_Request r[2] = {sendReq1, recvReq1};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
-
-        MPI_Bcast(&N, 2, MPI_INT, 0 , MPI_COMM_WORLD);
-        MPI_Bcast(&N, 2, MPI_INT, 0 , MPI_COMM_WORLD);
 
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
     }
