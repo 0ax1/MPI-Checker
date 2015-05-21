@@ -49,7 +49,7 @@ private:
         identInfo_ = functionDeclNew->getIdentifier();
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // emplace triggers ExprVisitor ctor
+            // emplace triggers ArgumentVisitor ctor
             arguments_.emplace_back(callExpr->getArg(i));
         }
     }
