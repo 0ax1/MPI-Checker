@@ -33,7 +33,7 @@ public:
         // check after tu traversal
         visitor.checkerAST_.checkPointToPointSchema();
         visitor.checkerAST_.checkReachbility();
-        visitor.checkerAST_.checkForRedundantCalls();
+        // visitor.checkerAST_.checkForRedundantCalls();
 
         // clear after every translation unit
         MPIRank::visitedRankVariables.clear();
