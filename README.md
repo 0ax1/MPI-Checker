@@ -10,7 +10,6 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `unreachable call`: Unreachable calls caused by deadlocks from blocking calls.
 - `type mismatch`: Buffer type and specified MPI type do not match.
 - `invalid argument type`: Non integer type used where only integer types are allowed.
-- `redundant call`: Calls with identical arguments that can be summarized.
 - `collective call in rank branch`: Collective call inside a rank branch.
 
 #### Path-Sensitive-Checks
