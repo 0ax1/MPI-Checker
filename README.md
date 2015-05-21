@@ -19,19 +19,22 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `missing wait`: Nonblocking call without matching wait.
 - `unmatched wait`: Waiting for a request that was never used by a nonblocking call.
 
+All of these checks should produce zero false positives. Bug reports are only omitted if the checker
+is sure that an invariant was violated.
+
 ## Prerequisites
 Current versions of: `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
 gnu-sed with brew if you're on osx)
 
 ## Installation
-Download the [`fullSetup.sh` script]
-(https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
-make it executable with `chmod +x llvmSetupFull.sh` and run it to setup LLVM 3.6
-with Clang and the MPI-Checker. This will download, config and build all
-components in `./llvm36`.
+Download the [`fullSetup.sh`]
+(https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh)
+script, make it executable with `chmod +x llvmSetupFull.sh` and run it to setup
+LLVM 3.6 with Clang and the MPI-Checker. This will download, config and build
+all components in `./llvm36`.
 
-Else if you have the LLVM 3.6 source already, go to the top of the LLVM
-source path execute [`addMPI-Checker.sh`]
+If you have the LLVM 3.6 source already, `cd` to the top of the repository,
+execute [`addMPI-Checker.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/addMPI-Checker.sh)
 and then rerun your build system manually.
 
