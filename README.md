@@ -27,11 +27,13 @@ Current versions of: `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
 gnu-sed with brew if you're on osx)
 
 ## Installation
-Download the [`fullSetup.sh`]
-(https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh)
-script, make it executable with `chmod +x llvmSetupFull.sh` and run it to setup
-LLVM 3.6 with Clang and the MPI-Checker. This will download, config and build
-all components in `./llvm36`.
+Download [`fullSetup.sh`]
+(https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
+make it executable with `chmod +x` and run it to setup LLVM 3.6 with Clang and
+the MPI-Checker.  This will download, config and build all components in
+`./llvm36`. <br>As a "one liner":`wget
+https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
+chmod +x fullSetup.sh && ./fullSetup.sh`
 
 If you have the LLVM 3.6 source already, `cd` to the top of the repository,
 execute [`addMPI-Checker.sh`]

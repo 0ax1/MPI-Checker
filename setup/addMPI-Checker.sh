@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# script to download & build the llvm toolchain including the mpi-checker
+# script to setup mpi-checker
 
 # check for internet connectivity
 ping -c 1 www.google.com
