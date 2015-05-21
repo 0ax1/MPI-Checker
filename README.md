@@ -31,7 +31,7 @@ Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
 make it executable with `chmod +x` and run it to setup LLVM 3.6 with Clang and
 the MPI-Checker.  This will download, config and build all components in
-`./llvm36`. <br>As a "one liner":`wget
+`./llvm36`. <br>In "one line": `wget
 https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
 chmod +x fullSetup.sh && ./fullSetup.sh`
 
@@ -47,8 +47,8 @@ After that add these locations to your search path:<br>
 
 ## Examples
 Have a look at the `examples` folder. Inspect one of the `CMakeLists.txt` files
-to see how it is set up for MPI.  To invoke the MPI-Checker add [this]
-(https://github.com/0ax1/MPI-Checker/blob/master/setup/analyze.sh) to your
-`.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.  If there
-are any bugs found your browser will automatically open showing an overview of
-the detected erros. Those can be clicked to inspect them in detail.
+to see how it is set up for MPI and static analysis. To invoke the MPI-Checker
+add [this] (https://github.com/0ax1/MPI-Checker/blob/master/setup/analyze.sh) to
+your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.  If
+there are any bugs found your browser will automatically open showing an
+overview of the detected erros. Those can be clicked to inspect them in detail.

@@ -7,7 +7,7 @@ ping -c 1 www.google.com
 if [[ $? -eq 0 ]]; then
     echo "internet connectivity established"
 
-    echo "––––––––––––llvm––––––––––––"
+    echo "–––––––––––––LLVM––––––––––––––"
     #download –––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # contains seperated source and build folder
     mkdir llvm36
@@ -24,18 +24,20 @@ if [[ $? -eq 0 ]]; then
     cd clang/lib/StaticAnalyzer/Checkers
     git clone https://github.com/0ax1/MPI-Checker.git
 
+    echo "––––––––––MPI-Checker––––––––––––"
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # pipe checker registration
     cat MPI-Checker/setup/checkerTd.txt >> Checkers.td
 
-    # add sources to cmake
-    lineNo=$(grep -nr add_clang_library CMakeLists.txt | sed -E 's/[^0-9]*//g')
     # use gsed if available (osx, homebrew, gnu-sed)
     sed=sed
     hash gsed 2>/dev/null
     if [[ $? -eq 0 ]]; then
         sed=gsed
     fi
+
+    # add sources to cmake
+    lineNo=$(grep -nr add_clang_library CMakeLists.txt | sed -E 's/[^0-9]*//g')
 
     $sed -i "${lineNo}i FILE (GLOB MPI-CHECKER MPI-Checker/src/*.cpp)" \
         CMakeLists.txt
