@@ -20,21 +20,16 @@
 import os
 import ycm_core
 
-# These are the compilation flags that will be used in case there's no
-# compilation database set (by default, one is not set).
-# CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
-
 # do not set flags manually, use compilation database
 flags = []
 
+# cd path to ycm-file
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
 
-# Set this to the absolute path to the folder (NOT the file!) containing the
-# compile_commands.json file to use that instead of 'flags'. See here for
-# more details: http://clang.llvm.org/docs/JSONCompilationDatabase.html
-#
-# Most projects will NOT need to set this to anything; you can just change the
-# 'flags' list of compilation flags.
-compilation_database_folder = '/Users/lx/Documents/Text/Uni/SoSe_2015/Bach/code/llvm/build/debug'
+compilation_database_path = os.path.abspath("../../../../../../../build/debug")
+compilation_database_folder = compilation_database_path
 
 if os.path.exists( compilation_database_folder ):
   database = ycm_core.CompilationDatabase( compilation_database_folder )
