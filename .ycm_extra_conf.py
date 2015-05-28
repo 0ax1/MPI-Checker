@@ -24,12 +24,11 @@ import ycm_core
 flags = []
 
 # cd path to ycm-file
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-compilation_database_path = os.path.abspath("../../../../../../../build/debug")
-compilation_database_folder = compilation_database_path
+# set compilation database path
+compilation_database_folder = \
+    os.path.abspath("../../../../../../../build/debug")
 
 if os.path.exists( compilation_database_folder ):
   database = ycm_core.CompilationDatabase( compilation_database_folder )
