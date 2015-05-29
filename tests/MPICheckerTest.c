@@ -59,3 +59,84 @@ void missingNonBlocking() {
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // expected-warning{{Request sendReq1 has no matching nonblocking call.}}
     }
 }
+
+void missingReceive() {
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{No matching receive function found.}}
+    }
+}
+
+void missingSend() {
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Recv(&buf, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{No matching send function found.}}
+    }
+}
+
+void typeMismatch() {
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+}
+
+void collectiveInBranch() {
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        float global_sum;
+        MPI_Reduce(MPI_IN_PLACE, &global_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Collective calls must be executed by all processes. Move this call out of the rank branch. }}
+    }
+}
+
+void invalidArgTypeLiteral() {
+    int rank = 0;
+    int buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, rank + 1.1, 0, MPI_COMM_WORLD); // expected-warning{{Literal type used at index 3 is not valid.}}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1.1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Literal type used at index 3 is not valid.}}
+    }
+}
+
+double doubleVal() {
+    return 1.1;
+}
+void invalidReturnType() {
+    int rank = 0;
+    int buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, rank + doubleVal(), 0, MPI_COMM_WORLD); // expected-warning{{Return value type used at index 3 is not valid.}}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1, MPI_INT, rank - doubleVal(), 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Return value type used at index 3 is not valid.}}
+    }
+}
+
+void unreachableCall() {
+    int rank = 0;
+    int buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD);
+        MPI_Recv(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Call is not reachable. Schema leads to a deadlock.}}
+    }
+    else if (rank == 1) {
+        MPI_Send(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD);
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Call is not reachable. Schema leads to a deadlock.}}
+    }
+}
