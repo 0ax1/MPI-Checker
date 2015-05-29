@@ -6,6 +6,9 @@
 
 namespace mpi {
 
+/**
+ * Emits bug reports for ast and path sensitive checks.
+ */
 class MPIBugReporter {
 public:
     MPIBugReporter(clang::ento::BugReporter &bugReporter,

@@ -1,6 +1,18 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=lx.MPIChecker -verify %s
+// RUN: %clang_cc1 -I/usr/local/include/ -analyze -analyzer-checker=lx.MPIChecker -verify %s
 
-#include </usr/local/include/mpi.h>
+// add the mpi include path to the first line with -I/...
+// if mpi.h is not found
+
+// clang -cc1 is the compiler frontend.
+// If cc1 is used no machine code gets compiled.
+
+#include <mpi.h>
+
+/*
+ * Perform black box "mid-level integration testing"
+ * by means of example functions.
+ * http://clang-developers.42468.n3.nabble.com/unit-tests-for-Clang-TDD-td3423630.html
+ */
 
 void doubleWait() {
     int rank = 0;
@@ -16,7 +28,7 @@ void doubleWait() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &recvReq1);
         MPI_Request r[2] = {sendReq1, recvReq1};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Waitall in line 18.}}
+        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Waitall in line 30.}}
     }
 }
 
@@ -45,7 +57,7 @@ void doubleNonblocking() {
         MPI_Request recvReq1;
 
         MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 47. }}
+        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 59. }}
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
     }
 }

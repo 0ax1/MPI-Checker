@@ -174,6 +174,13 @@ void MPIBugReporter::reportRedundantCall(
 }
 
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
+/**
+ * Report duplicate request use by nonblocking calls.
+ *
+ * @param observedCall
+ * @param requestVar
+ * @param node
+ */
 void MPIBugReporter::reportDoubleNonblocking(
     const CallExpr *const observedCall, const RequestVar &requestVar,
     const ExplodedNode *const node) const {
@@ -192,6 +199,13 @@ void MPIBugReporter::reportDoubleNonblocking(
     bugReporter_.emitReport(bugReport);
 }
 
+/**
+ * Report duplicate request use by waits.
+ *
+ * @param observedCall
+ * @param requestVar
+ * @param node
+ */
 void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
                                       const RequestVar &requestVar,
                                       const ExplodedNode *const node) const {
@@ -209,6 +223,12 @@ void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
     bugReporter_.emitReport(bugReport);
 }
 
+/**
+ * Report a missing wait for a nonblocking call.
+ *
+ * @param requestVar
+ * @param node
+ */
 void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                                        const ExplodedNode *const node) const {
     std::string errorText{"Nonblocking call using request " +
@@ -224,6 +244,13 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
     bugReporter_.emitReport(bugReport);
 }
 
+/**
+ * Report there's no matching nonblocking call for request var used by wait.
+ *
+ * @param callExpr
+ * @param requestVar
+ * @param node
+ */
 void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
                                          const VarDecl *requestVar,
                                          const ExplodedNode *const node) const {

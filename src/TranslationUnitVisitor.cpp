@@ -6,6 +6,13 @@ using namespace ento;
 
 namespace mpi {
 
+/**
+ * Visited for each appearing function declaration.
+ *
+ * @param functionDecl
+ *
+ * @return continue visiting
+ */
 bool TranslationUnitVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
     // to keep track which function implementation is currently analysed
     if (functionDecl->clang::Decl::hasBody() && !functionDecl->isInlined()) {
@@ -16,31 +23,12 @@ bool TranslationUnitVisitor::VisitFunctionDecl(FunctionDecl *functionDecl) {
 }
 
 /**
- * Checks if a rank variable is used in branch condition.
- *
- * @param ifStmt
- *
- * @return if rank var is used
- */
-bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
-    bool isInRankBranch{false};
-    ConditionVisitor ConditionVisitor{ifStmt->getCond()};
-    for (const VarDecl *const varDecl : ConditionVisitor.vars()) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
-            isInRankBranch = true;
-            break;
-        }
-    }
-    return isInRankBranch;
-}
-
-/**
  * Visits rankCases. Checks if a rank variable is involved.
  * Visits all if and else if!
  *
  * @param ifStmt
  *
- * @return
+ * @return continue visiting
  */
 bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
@@ -77,7 +65,7 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
  *
  * @param callExpr
  *
- * @return
+ * @return continue visiting
  */
 bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
     const FunctionDecl *functionDecl = callExpr->getDirectCallee();
@@ -91,5 +79,25 @@ bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
 
     return true;
 }
+
+/**
+ * Checks if a rank variable is used in branch condition.
+ *
+ * @param ifStmt
+ *
+ * @return if rank var is used
+ */
+bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
+    bool isInRankBranch{false};
+    ConditionVisitor ConditionVisitor{ifStmt->getCond()};
+    for (const VarDecl *const varDecl : ConditionVisitor.vars()) {
+        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
+            isInRankBranch = true;
+            break;
+        }
+    }
+    return isInRankBranch;
+}
+
 
 }  // end of namespace: mpi

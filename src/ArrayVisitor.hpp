@@ -5,6 +5,9 @@
 
 namespace mpi {
 
+/**
+ * Visitor class to collect variables from an array.
+ */
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
 public:
     ArrayVisitor(clang::VarDecl *varDecl) : arrayVarDecl_{varDecl} {

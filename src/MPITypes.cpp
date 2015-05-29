@@ -28,6 +28,11 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
     return !(*this == callToCompare);
 }
 
+/**
+ * Check if case condition is ambiguous.
+ *
+ * @return ambiguity
+ */
 bool MPIRankCase::isConditionAmbiguous() const {
     // no matched condition means is else case
     if (!matchedCondition_) return true;

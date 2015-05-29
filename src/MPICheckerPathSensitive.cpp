@@ -6,6 +6,13 @@ namespace mpi {
 using namespace clang;
 using namespace ento;
 
+/**
+ * Checks if a request is used by nonblocking calls multiple times
+ * before intermediate wait.
+ *
+ * @param callExpr
+ * @param ctx
+ */
 void MPICheckerPathSensitive::checkDoubleNonblocking(
     const CallExpr *callExpr, CheckerContext &ctx) const {
     if (!funcClassifier_.isNonBlockingType(
@@ -33,6 +40,13 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     }
 }
 
+/**
+ * Checks if a request is used by wait multiple times without intermediate
+ * nonblocking call.
+ *
+ * @param callExpr
+ * @param ctx
+ */
 void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
                                              CheckerContext &ctx) const {
     if (!funcClassifier_.isWaitType(
@@ -81,6 +95,11 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     ctx.addTransition(state);
 }
 
+/**
+ * Check if a nonblocking call has no matching wait.
+ *
+ * @param ctx
+ */
 void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     ProgramStateRef state = ctx.getState();
     auto requestVars = state->get<RequestVarMap>();
@@ -96,6 +115,11 @@ void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     }
 }
 
+/**
+ * Erase all request vars from the path sensitive map.
+ *
+ * @param ctx
+ */
 void MPICheckerPathSensitive::clearRequestVars(CheckerContext &ctx) const {
     ProgramStateRef state = ctx.getState();
     auto requestVars = state->get<RequestVarMap>();

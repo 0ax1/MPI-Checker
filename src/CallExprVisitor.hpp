@@ -3,6 +3,9 @@
 
 namespace mpi {
 
+/**
+ * Visitor class to collect call expressions from a statement.
+ */
 class CallExprVisitor : public clang::RecursiveASTVisitor<CallExprVisitor> {
 public:
     CallExprVisitor(const clang::Stmt *const stmt) {

@@ -8,7 +8,14 @@ using namespace ento;
 
 namespace mpi {
 
-// variables or functions can be a declrefexpr
+/**
+ * Collect variables and functions.
+ * Variables or functions can be a declrefexpr.
+ *
+ * @param declRef
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
@@ -24,6 +31,13 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     return true;
 }
 
+/**
+ * Collect binary operators.
+ *
+ * @param op
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
     if (op->isComparisonOp()) {
@@ -41,6 +55,13 @@ bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     return true;
 }
 
+/**
+ * Collect integer literals.
+ *
+ * @param intLiteral
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
     typeSequence_.push_back(ComponentType::kInt);
@@ -55,6 +76,13 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     return true;
 }
 
+/**
+ * Collect float literals.
+ *
+ * @param floatLiteral
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
     typeSequence_.push_back(ComponentType::kFloat);
@@ -64,14 +92,29 @@ bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     return true;
 }
 
+/**
+ * Check if components of statement are equal to compared visitor.
+ * Chosen equality comparison depends on operator commutativity.
+ *
+ * @param visitorToCompare
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
-    if (containsMinus() || visitorToCompare.containsMinus()) {
+    if (containsSubtraction() || visitorToCompare.containsSubtraction()) {
         return isEqualOrdered(visitorToCompare);
     } else {
         return isEqualPermutative(visitorToCompare);
     }
 }
 
+/**
+ * Compare operators and operands as ordered sequence.
+ *
+ * @param visitorToCompare
+ *
+ * @return equality
+ */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
     if (typeSequence_ != visitorToCompare.typeSequence_) return false;
@@ -80,6 +123,13 @@ bool StatementVisitor::isEqualOrdered(
     return true;
 }
 
+/**
+ * Compare operators and operands as permutation.
+ *
+ * @param visitorToCompare
+ *
+ * @return equality
+ */
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
@@ -93,7 +143,12 @@ bool StatementVisitor::isEqualPermutative(
     return true;
 }
 
-bool StatementVisitor::containsMinus() const {
+/**
+ * Check if statement contains a subtraction.
+ *
+ * @return is inverse
+ */
+bool StatementVisitor::containsSubtraction() const {
     for (const auto binaryOperator : binaryOperators_) {
         if (binaryOperator == BinaryOperatorKind::BO_Sub) {
             return true;
@@ -102,6 +157,13 @@ bool StatementVisitor::containsMinus() const {
     return false;
 }
 
+/**
+ * Check if the last operator is "inverse".
+ *
+ * @param visitor
+ *
+ * @return is inverse
+ */
 bool StatementVisitor::isLastOperatorInverse(
     const StatementVisitor &visitor) const {
     // last operator must be inverse

@@ -37,7 +37,7 @@ public:
     bool isEqual(const StatementVisitor &) const;
     bool isEqualOrdered(const StatementVisitor &) const;
     bool isEqualPermutative(const StatementVisitor &) const;
-    bool containsMinus() const;
+    bool containsSubtraction() const;
     bool isLastOperatorInverse(const StatementVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––

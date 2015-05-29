@@ -20,7 +20,6 @@ namespace mpi {
  * Main visitor class to collect information about MPI calls traversing
  * the AST of a translation unit, checking invariants during the traversal
  * through MPICheckerAST.
- *
  */
 class TranslationUnitVisitor
     : public clang::RecursiveASTVisitor<TranslationUnitVisitor> {
