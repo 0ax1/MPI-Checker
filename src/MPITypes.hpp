@@ -141,8 +141,7 @@ private:
     std::unique_ptr<ConditionVisitor> matchedCondition_{nullptr};
 };
 
-// for path sensitive
-// analysis–––––––––––––––––––––––––––––––––––––––––––––––
+// for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
 struct RequestVar {
     RequestVar(const clang::VarDecl *const varDecl,
                const clang::CallExpr *const callExpr)
