@@ -147,7 +147,7 @@ void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
             }
         }
 
-        // no matching recv found in all cases
+        // no matching recv found in second case
         if (funcClassifier_.isBlockingType(send) && !send.isMarked_) {
             return;
         }
