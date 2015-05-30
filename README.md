@@ -64,3 +64,6 @@ add [this] (https://github.com/0ax1/MPI-Checker/blob/master/setup/analyze.sh) to
 your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.  If
 there are any bugs found your browser will automatically open showing an
 overview of the detected erros. Those can be clicked to inspect them in detail.
+
+## Tests
+See [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
