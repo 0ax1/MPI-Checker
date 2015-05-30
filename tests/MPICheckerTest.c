@@ -52,7 +52,7 @@ void doubleWait() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &recvReq1);
         MPI_Request r[2] = {sendReq1, recvReq1};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Waitall in line 30.}}
+        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Waitall in line 54.}}
     }
 }
 
@@ -81,7 +81,7 @@ void doubleNonblocking() {
         MPI_Request recvReq1;
 
         MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 59. }}
+        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 83. }}
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
     }
 }
