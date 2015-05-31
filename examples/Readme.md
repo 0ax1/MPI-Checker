@@ -7,7 +7,7 @@ to your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.
 
 #### Make
 If you use Make you can do `scan-build --use-analyzer clang -enable-checker
-lx.MPIChecker -V make`.
+lx.MPIChecker -V make ANALYZE=1`.
 
 #### Results
 If there are any bugs found your browser will automatically open showing an

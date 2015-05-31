@@ -7,14 +7,17 @@
 # The name of the executable to be created
 BIN_NAME := basic.x
 # Compiler used
-CC = clang # use clang to analysis
-# CC = mpicc # use mpicc to build actual executable
+CC = mpicc # default
+ifeq ($(ANALYZE), 1) # use like this: make (target) ANALYZE=1
+	CC = clang # use clang for analysis
+	LIBS = ompi # used to find definitions for analysis
+endif
 # Extension of source files used in the project
 SRC_EXT = c
 # Path to the source directory, relative to the makefile
 SRC_PATH = .
 # Space-separated pkg-config libraries used by this project
-LIBS = ompi
+LIBS += 
 # General compiler flags
 # -pg gprof-flag -fopenmp openmp-flag
 COMPILE_FLAGS = -std=c99 -Wall -Wextra 
