@@ -45,7 +45,7 @@ make it executable with `chmod +x` and run it to setup LLVM 3.6 with Clang and
 the MPI-Checker.  This will download, config and build all components in
 `./llvm36`. <br>In "one line": `wget
 https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
-chmod +x fullSetup.sh && ./fullSetup.sh`
+chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh`
 
 If you have the LLVM 3.6 source already, `cd` to the top of the repository,
 execute [`addMPI-Checker.sh`]
