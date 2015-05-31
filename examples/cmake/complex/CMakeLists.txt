@@ -8,13 +8,17 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 # mpi
 find_package(MPI REQUIRED)
-include_directories(SYSTEM ${MPI_C_INCLUDE_PATH})
-link_directories(${MPI_C_LINK_FLAGS})
-link_libraries(${MPI_C_LIBRARIES})
-set(CMAKE_COMPILE_FLAGS ${CMAKE_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
 
-# nesting the scan-build wrapper compiler around the mpi wrapper compiler
-# prohibits the static analysis procedure
-# SET(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+# analysis switch
+if(${ANALYZE} MATCHES 1)
+    # nesting the scan-build wrapper compiler around the mpi wrapper compiler
+    # prohibits the static analysis procedure
+    include_directories(SYSTEM ${MPI_C_INCLUDE_PATH})
+    link_directories(${MPI_C_LINK_FLAGS})
+    link_libraries(${MPI_C_LIBRARIES})
+    set(CMAKE_COMPILE_FLAGS ${CMAKE_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
+else()
+    SET(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+endif()
 
-add_executable(core.x askparams.c partdiff-par.c)
+add_executable(core.x partdiff-par.c askparams.c)

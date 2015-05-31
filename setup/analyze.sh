@@ -22,6 +22,8 @@
  SOFTWARE.
 _
 
+# cmake–––––––––––––––––––––––––––––––––––––––––––––––
+
 # analyze
 function analyze() {
     # create build folder if not there
@@ -33,6 +35,7 @@ function analyze() {
     ninja clean
     cmake ../../ \
         -G Ninja \
+        -DANALYZE=1 \
         -DCMAKE_BUILD_TYPE=DEBUG \
         -DCMAKE_C_COMPILER=ccc-analyzer \
         -DCMAKE_CXX_COMPILER=c++-analyzer
@@ -45,5 +48,27 @@ function analyze() {
 
     cd ../../
 }
-
 alias checkMPI='analyze -enable-checker lx.MPIChecker'
+
+# debug
+function cmd() {
+    if [[ ! -d build/debug ]]; then
+        mkdir -p build/debug
+    fi
+    cd build/debug
+    cmake -GNinja -DCMAKE_BUILD_TYPE=DEBUG ../../
+    ninja
+    cd ../../
+}
+
+# release
+function cmr() {
+    if [[ ! -d build/release ]]; then
+        mkdir -p build/release
+    fi
+    cd build/release
+    cmake -GNinja -DCMAKE_BUILD_TYPE=RELEASE ../../
+    ninja
+    cd ../../
+}
+
