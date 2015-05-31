@@ -44,11 +44,11 @@ if [[ $? -eq 0 ]]; then
     cd repo/tools
     svn co http://llvm.org/svn/llvm-project/cfe/branches/release_36/ clang
 
+    echo "––––––––––MPI-Checker––––––––––––"
     # clone mpi-checker project
     cd clang/lib/StaticAnalyzer/Checkers
     git clone https://github.com/0ax1/MPI-Checker.git
 
-    echo "––––––––––MPI-Checker––––––––––––"
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # pipe checker registration
     cat MPI-Checker/setup/checkerTd.txt >> Checkers.td
@@ -67,6 +67,10 @@ if [[ $? -eq 0 ]]; then
         CMakeLists.txt
     ((lineNo += 2))
     $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
+
+    # symlink test source
+    ln -s MPI-Checker/tests/MPICheckerTest.c \
+        ../../../../test/Analysis/MPICheckerTest.c
 
     cd ../../../../../../
 

@@ -56,6 +56,10 @@ if [[ $? -eq 0 ]]; then
     ((lineNo += 2))
     $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
 
+    # symlink test source
+    ln -s MPI-Checker/tests/MPICheckerTest.c \
+        ../../../../test/Analysis/MPICheckerTest.c
+
 else
     # echo as error (pipe stdout to stderr)
     echo "no internet connectivity" 1>&2
