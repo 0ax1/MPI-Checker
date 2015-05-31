@@ -23,8 +23,8 @@ is sure that an invariant was violated.
 
 ###Point to Point Schema Validation
 If only additions for an argument are used operands are accepted as a match if they appear as a permutation.
-Else if subtractions are used operands have to be in the same order. 
-To match point to point calls the checker has to make some assumptions how 
+Else if subtractions are used operands have to be in the same order.
+To match point to point calls the checker has to make some assumptions how
 arguments are specified. To match variables across cases and functions the same variable name has to be used.
 For the rank argument the checker expects the last operator to be "inverse"
 and the last operand to be equal.
@@ -58,12 +58,7 @@ After that add these locations to your search path:<br>
 `.../llvm36/repo/tools/clang/tools/scan-view`<br>
 
 ## Examples
-Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/master/examples). 
-Inspect one of the `CMakeLists.txt` files to see how it is set up for MPI and static analysis. 
-To invoke the MPI-Checker add [this] (https://github.com/0ax1/MPI-Checker/blob/master/setup/analyze.sh) 
-to your `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.  If
-there are any bugs found your browser will automatically open showing an
-overview of the detected erros. Those can be clicked to inspect them in detail.
+Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/master/examples).
 
 ## Tests
-See [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
+See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
