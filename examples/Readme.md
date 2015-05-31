@@ -14,4 +14,4 @@ static analysis.  To invoke the MPI-Checker add [this]
 
 #### Make
 If you use Make you can do ```scan-build --use-analyzer `which clang`
--enable-checker lx.MPIChecker -V make ANALYZE=1```.
+-enable-checker lx.MPIChecker -V make debug ANALYZE=1```.

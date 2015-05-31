@@ -8,7 +8,7 @@
 BIN_NAME := basic.x
 # Compiler used
 CC = mpicc # default
-ifeq ($(ANALYZE), 1) # use like this: make (target) ANALYZE=1
+ifeq ($(ANALYZE), 1)
 	CC = clang # use clang for analysis
 	LIBS = ompi # used to find definitions for analysis
 endif
