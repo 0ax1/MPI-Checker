@@ -58,7 +58,7 @@ if [[ $? -eq 0 ]]; then
 
     # symlink test source
     ln -s MPI-Checker/tests/MPICheckerTest.c \
-        ../../../../test/Analysis/MPICheckerTest.c
+        ../../../test/Analysis/MPICheckerTest.c
 
 else
     # echo as error (pipe stdout to stderr)

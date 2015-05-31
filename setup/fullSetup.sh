@@ -70,7 +70,7 @@ if [[ $? -eq 0 ]]; then
 
     # symlink test source
     ln -s MPI-Checker/tests/MPICheckerTest.c \
-        ../../../../test/Analysis/MPICheckerTest.c
+        ../../../test/Analysis/MPICheckerTest.c
 
     cd ../../../../../../
 
