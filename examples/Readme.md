@@ -1,9 +1,10 @@
 ### Examples
 
-Remember that only build source files are analyzed.  So to do a complete
-analysis you have to do a complete build. Clean your analysis target to ensure
-this. All example builds work with a flag `ANALYZE=x` passed to trigger the
-analysis or not.
+Remember that only build source files are analyzed.  To do a complete analysis
+you have to do a complete build. Clean your analysis target to ensure this. All
+example builds work with a flag `ANALYZE=x` passed to trigger the analysis.
+If there are any bugs found your browser will automatically open showing an
+overview of the detected erros. Those can be clicked to inspect them in detail.
 
 #### CMake
 Inspect one of the `CMakeLists.txt` files to see how it is set up for MPI and
@@ -12,9 +13,5 @@ static analysis.  To invoke the MPI-Checker add [this]
 `.zshrc`. Then run `checkMPI` in the projects `CMakeLists.txt` path.
 
 #### Make
-If you use Make you can do `scan-build --use-analyzer clang -enable-checker
-lx.MPIChecker -V make ANALYZE=1`.
-
-#### Results
-If there are any bugs found your browser will automatically open showing an
-overview of the detected erros. Those can be clicked to inspect them in detail.
+If you use Make you can do ```scan-build --use-analyzer `which clang`
+-enable-checker lx.MPIChecker -V make ANALYZE=1```.
