@@ -57,8 +57,11 @@ if [[ $? -eq 0 ]]; then
     $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
 
     # symlink test source
-    ln -s MPI-Checker/tests/MPICheckerTest.c \
-        ../../../test/Analysis/MPICheckerTest.c
+    abspath() {
+        [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+    }
+    ln -s `abspath MPI-Checker/tests/MPICheckerTest.c` \
+        `abspath ../../../test/Analysis/MPICheckerTest.c`
 
 else
     # echo as error (pipe stdout to stderr)
