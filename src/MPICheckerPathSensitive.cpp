@@ -88,14 +88,15 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     if (funcClassifier_.isMPI_Wait(mpiCall)) {
         requestVector.push_back(mpiCall.arguments()[0].vars().front());
     }
-    // waitall, waitany, waitsome
-    else {
+    // waitall
+    else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
         ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
 
         for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
         }
     }
+    // TODO how to handle waitany, waitsome?
 
     const ExplodedNode *const node = ctx.addTransition();
 
