@@ -252,11 +252,11 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
                             struct calculation_results* results,
                             struct options const* options, int localRowCount,
                             int startRowIdx) {
-    int i, j;
-    int m1, m2;
-    double star;
-    double residuum;
-    double maxresiduum;
+    int i, j;           /* local variables for loops  */
+    int m1, m2;         /* used as indices for old and new matrices       */
+    double star;        /* four times center value minus 4 neigh.b values */
+    double residuum;    /* residuum of current iteration                  */
+    double maxresiduum; /* maximum residuum value of a slave in iteration */
 
     int const N = arguments->N;
     double const h = arguments->h;
@@ -266,6 +266,7 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
 
     int term_iteration = options->term_iteration;
 
+    /* initialize m1 and m2 depending on algorithm */
     if (options->method == METH_JACOBI) {
         m1 = 0;
         m2 = 1;
@@ -285,6 +286,7 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
 
         maxresiduum = 0;
 
+        /* over all rows */
         for (i = 1; i < localRowCount - 1; ++i) {
             double fpisin_i = 0.0;
 
@@ -292,6 +294,7 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
                 fpisin_i = fpisin * sin(pih * (double)(i + startRowIdx));
             }
 
+            /* over all columns */
             for (j = 1; j < N; ++j) {
                 star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] +
                                Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
@@ -322,7 +325,7 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
                           rank + 1, 0, MPI_COMM_WORLD, &sendReq1);
                 // recv from next
                 MPI_Irecv(Matrix_Out[localRowCount - 1], (N + 1), MPI_DOUBLE,
-                          rank - 1, 0, MPI_COMM_WORLD, &recvReq1);
+                          rank + 1, 0, MPI_COMM_WORLD, &recvReq1);
 
                 MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
                 MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
@@ -351,7 +354,7 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
                           rank + 1, 0, MPI_COMM_WORLD, &recvReq1);
 
                 // send to prev
-                MPI_Isend(Matrix_Out[1], (N + 1), MPI_DOUBLE, rank - 1, 0,
+                MPI_Isend(Matrix_Out[1], (N + 1), MPI_DOUBLE, rank + 1, 0,
                           MPI_COMM_WORLD, &sendReq2);
 
                 // recv from prev
@@ -372,10 +375,12 @@ static void calculateJacobi(struct calculation_arguments const* arguments,
                       MPI_COMM_WORLD);
         results->stat_precision = maxresiduum;
 
+        /* exchange m1 and m2 */
         i = m1;
         m1 = m2;
         m2 = i;
 
+        /* check for stopping calculation, depending on termination method */
         if (options->termination == TERM_PREC) {
             if (maxresiduum < options->term_precision) {
                 term_iteration = 0;
@@ -525,6 +530,9 @@ void calcRowSetup(int completeRowCount, int* localRowCount, int* startRow) {
 
     *startRow = startRow_;
     *localRowCount = localRowCount_;
+    /* printf("localRowCount%i \n", *localRowCount); */
+    /* printf("startRowIdx%i \n", *startRow); */
+    /* printf("endRowIdx%i \n", *startRow + *localRowCount - 1); */
 }
 
 /* ************************************************************************ */
