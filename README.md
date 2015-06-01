@@ -42,9 +42,9 @@ gnu-sed with brew if you're on osx)
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
 make it executable with `chmod +x` and run it to setup LLVM 3.6 
-with [Clang](http://libcxx.llvm.org/), [libcxx](http://libcxx.llvm.org/),
+with [Clang](http://clang.llvm.org/), [libcxx](http://libcxx.llvm.org/),
  [compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**. 
-This will download, config and build all components in `./llvm36`. <br>In "one line": 
+This will download, config and build all components in `./llvm36`. In "one line": 
 `wget https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
 chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh`
 
