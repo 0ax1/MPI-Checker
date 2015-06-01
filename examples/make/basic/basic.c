@@ -35,27 +35,31 @@ int f2n() { return 22; }
 
 int rank = 0;
 int buf;
-int N;
+int N = 0;
 
 int f() { return rand(); }
 
 void communicate1() {
+    MPI_Request req1, req2;
+
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     if (rank == 1) {
-    } else if (rank == 2) {
-    } else {
-        MPI_Request sendReq1;
-        MPI_Request recvReq1;
+        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &req1);
+        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &req2);
 
-        MPI_Isend(&buf, 1, MPI_DOUBLE, f() + N + 3 + rank + 1, 0,
-                  MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_INT, N + f() + 3 + rank - 1, 0, MPI_COMM_WORLD,
-                  &recvReq1);
-
-        MPI_Request r[2] = {sendReq1, recvReq1};
+        MPI_Request r[2] = {req1, req2};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
 
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
+    } else if (rank == 2) {
+
+        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1);
+        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2);
+
+        MPI_Request r[2] = {req1, req2};
+        MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
+
+        MPI_Wait(&req1, MPI_STATUS_IGNORE);
     }
 }
 
