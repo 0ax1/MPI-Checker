@@ -37,12 +37,19 @@ if [[ $? -eq 0 ]]; then
     mkdir llvm36
     cd llvm36
 
-    # init llvm-architecture repo(sitory) folder
+    # get llvm
     svn co http://llvm.org/svn/llvm-project/llvm/branches/release_36/ repo
 
-    # tools folder
+    # get clang
     cd repo/tools
     svn co http://llvm.org/svn/llvm-project/cfe/branches/release_36/ clang
+
+    # get libcxx
+    cd ../projects
+    svn co http://llvm.org/svn/llvm-project/libcxx/branches/release_36/ libcxx
+
+    # get sanitizers
+    svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt
 
     echo "––––––––––MPI-Checker––––––––––––"
     # clone mpi-checker project
