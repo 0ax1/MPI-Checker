@@ -84,9 +84,12 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     // collect request vars
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
     llvm::SmallVector<VarDecl *, 1> requestVector;
+    // wait for single request
     if (funcClassifier_.isMPI_Wait(mpiCall)) {
         requestVector.push_back(mpiCall.arguments()[0].vars().front());
-    } else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
+    }
+    // waitall, waitany, waitsome
+    else {
         ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
 
         for (const auto &requestVar : arrayVisitor.vars()) {

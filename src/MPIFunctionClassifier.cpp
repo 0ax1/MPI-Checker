@@ -244,6 +244,14 @@ void MPIFunctionClassifier::initAdditionalIdentifiers(
     mpiType_.push_back(identInfo_MPI_Waitall_);
     assert(identInfo_MPI_Waitall_);
 
+    identInfo_MPI_Waitany_ = &context.Idents.get("MPI_Waitany");
+    mpiType_.push_back(identInfo_MPI_Waitany_);
+    assert(identInfo_MPI_Waitany_);
+
+    identInfo_MPI_Waitsome_ = &context.Idents.get("MPI_Waitsome");
+    mpiType_.push_back(identInfo_MPI_Waitsome_);
+    assert(identInfo_MPI_Waitsome_);
+
     identInfo_MPI_Barrier_ = &context.Idents.get("MPI_Barrier");
     mpiCollectiveTypes_.push_back(identInfo_MPI_Barrier_);
     mpiType_.push_back(identInfo_MPI_Barrier_);
@@ -344,9 +352,21 @@ bool MPIFunctionClassifier::isMPI_Waitall(
     return identInfo == identInfo_MPI_Waitall_;
 }
 
+bool MPIFunctionClassifier::isMPI_Waitany(
+    const IdentifierInfo *identInfo) const {
+    return identInfo == identInfo_MPI_Waitany_;
+}
+
+bool MPIFunctionClassifier::isMPI_Waitsome(
+    const IdentifierInfo *identInfo) const {
+    return identInfo == identInfo_MPI_Waitsome_;
+}
+
 bool MPIFunctionClassifier::isWaitType(const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Wait_ ||
-           identInfo == identInfo_MPI_Waitall_;
+           identInfo == identInfo_MPI_Waitall_ ||
+           identInfo == identInfo_MPI_Waitany_ ||
+           identInfo == identInfo_MPI_Waitsome_;
 }
 
 }  // end of namespace: mpi

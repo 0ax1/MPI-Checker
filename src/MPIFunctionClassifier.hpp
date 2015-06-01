@@ -59,6 +59,8 @@ public:
     bool isMPI_Comm_rank(const clang::IdentifierInfo *const) const;
     bool isMPI_Wait(const clang::IdentifierInfo *const) const;
     bool isMPI_Waitall(const clang::IdentifierInfo *const) const;
+    bool isMPI_Waitany(const clang::IdentifierInfo *const) const;
+    bool isMPI_Waitsome(const clang::IdentifierInfo *const) const;
     bool isWaitType(const clang::IdentifierInfo *const) const;
 
 private:
@@ -103,7 +105,8 @@ private:
 
     // additional functions
     clang::IdentifierInfo *identInfo_MPI_Comm_rank_{nullptr},
-        *identInfo_MPI_Wait_{nullptr}, *identInfo_MPI_Waitall_{nullptr};
+        *identInfo_MPI_Wait_{nullptr}, *identInfo_MPI_Waitall_{nullptr},
+        *identInfo_MPI_Waitany_{nullptr}, *identInfo_MPI_Waitsome_{nullptr};
 };
 
 }  // end of namespace: mpi
