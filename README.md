@@ -21,7 +21,7 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 All of these checks should produce zero false positives. Bug reports are only emitted if the checker
 is sure that an invariant was violated.
 
-###Point to Point Schema Validation
+### Point to Point Schema Validation
 If only additions for an argument are used operands are accepted as a match if they appear as a permutation.
 Else if subtractions are used operands have to be in the same order.
 To match point to point calls the checker has to make some assumptions how
@@ -35,16 +35,17 @@ if they appear as a permutation:
 
 
 ## Prerequisites
-Current versions of: `the compiler set for cc, c++`, `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
+Current versions of: `your default compiler`, `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
 gnu-sed with brew if you're on osx)
 
 ## Installation
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
-make it executable with `chmod +x` and run it to setup LLVM 3.6 with Clang and
-the MPI-Checker.  This will download, config and build all components in
-`./llvm36`. <br>In "one line": `wget
-https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
+make it executable with `chmod +x` and run it to setup LLVM 3.6 
+with [Clang](http://libcxx.llvm.org/), [libcxx](http://libcxx.llvm.org/),
+ [compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**. 
+This will download, config and build all components in `./llvm36`. <br>In "one line": 
+`wget https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
 chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh`
 
 If you have the LLVM 3.6 source already, `cd` to the top of the repository,
@@ -53,9 +54,14 @@ execute [`addMPI-Checker.sh`]
 and then rerun your build system manually.
 
 After that add these locations to your search path:<br>
-`.../llvm36/build/release/bin`<br>
-`.../llvm36/repo/tools/clang/tools/scan-build`<br>
-`.../llvm36/repo/tools/clang/tools/scan-view`<br>
+`llvm36/build/release/bin`<br>
+`llvm36/repo/tools/clang/tools/scan-build`<br>
+`llvm36/repo/tools/clang/tools/scan-view`<br>
+
+## Update
+To update **MPI-Checker** call `git pull` in `llvm36/repo/tools/clang/lib/StaticAnalyzer/Checkers/MPI-Checker`.
+Then run `ninja` in `llvm36/build/release`.
+
 
 ## Examples
 Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/master/examples).
