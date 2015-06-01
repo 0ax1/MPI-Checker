@@ -155,7 +155,7 @@ void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
 }
 
 /**
- * Checks if a collective call. Triggers bug reporter.
+ * Checks for collective calls in rank case. Triggers bug reporter.
  *
  * @param mpiCall
  */
@@ -192,7 +192,7 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
 }
 
 /**
- * Check if two calls are a send/recv pair.
+ * Checks if two (point to point) calls are a send/recv pair.
  *
  * @param sendCall
  * @param recvCall

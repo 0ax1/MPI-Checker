@@ -76,7 +76,7 @@ bool MPIRankCase::isConditionAmbiguous() const {
 }
 
 /**
- * Check if rank cases are rated as equal.
+ * Check if two rank case conditions are rated as equal.
  *
  * @param rankCase to compare
  *

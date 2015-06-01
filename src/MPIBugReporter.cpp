@@ -54,8 +54,8 @@ std::string MPIBugReporter::lineNumberForCallExpr(
 // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
 
 /**
- * Reports if a collective call is used inside a rank branch.
- * @param callExpr collective call
+ * Reports unreachable calls.
+ * @param call to report
  */
 void MPIBugReporter::reportNotReachableCall(
     const CallExpr *const callExpr) const {
@@ -71,6 +71,7 @@ void MPIBugReporter::reportNotReachableCall(
     bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
                                  MPIError, errorText, location, range);
 }
+
 /**
  * Reports mismach between buffer type and mpi datatype.
  * @param callExpr
@@ -136,6 +137,7 @@ void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
 
 /**
  * Report non-integer value usage at indices where not allowed.
+ * (e.g. count, rank)
  *
  * @param callExpr
  * @param idx
