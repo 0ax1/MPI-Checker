@@ -62,3 +62,10 @@ Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/ma
 
 ## Tests
 See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
+
+## Limitations
+- Point to point communication must be enclosed within the scope of a translation unit. 
+  This stems from the general limitation of Clang's Static Analyzer to analyze one translation unit in isolation. 
+- Unreachable calls can only be detected if caused by blocking MPI calls. The reason for this is that
+  point to point schema validation can only be achieved by non path sensitive (ast) analysis 
+  while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
