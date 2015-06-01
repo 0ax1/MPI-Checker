@@ -96,7 +96,10 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
             requestVector.push_back(requestVar);
         }
     }
-    // TODO how to handle waitany, waitsome?
+    // waitany, waitsome requests are regarded as unwaited
+    else {
+        return;
+    }
 
     const ExplodedNode *const node = ctx.addTransition();
 
