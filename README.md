@@ -69,3 +69,5 @@ See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
 - Unreachable calls can only be detected if caused by blocking MPI calls. The reason for this is that
   point to point schema validation can only be achieved by non path sensitive (ast) analysis 
   while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
+- There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect 
+  depends on what is done at runtime. Because of that they are not taken into account.
