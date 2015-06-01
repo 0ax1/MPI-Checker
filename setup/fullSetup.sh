@@ -53,7 +53,7 @@ if [[ $? -eq 0 ]]; then
 
     echo "––––––––––MPI-Checker––––––––––––"
     # clone mpi-checker project
-    cd clang/lib/StaticAnalyzer/Checkers
+    cd ../tools/clang/lib/StaticAnalyzer/Checkers
     git clone https://github.com/0ax1/MPI-Checker.git
 
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
