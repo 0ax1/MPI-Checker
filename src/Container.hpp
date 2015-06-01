@@ -78,7 +78,7 @@ void erase(T &container, E &elementToErase) {
  * @param elementToErase
  */
 template <typename T, typename E>
-void eraseAll(T &container, E &&elementToErase) {
+void eraseAll(T &container, E &elementToErase) {
     container.erase(
         std::remove(container.begin(), container.end(), elementToErase),
         container.end());
