@@ -35,7 +35,7 @@ if they appear as a permutation:
 
 
 ## Prerequisites
-Current versions of: `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
+Current versions of: `the compiler set for cc, c++`, `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
 gnu-sed with brew if you're on osx)
 
 ## Installation
