@@ -152,7 +152,6 @@ void MPIFunctionClassifier::initCollectiveIdentifiers(
     identInfo_MPI_Igather_ = &context.Idents.get("MPI_Igather");
     mpiCollectiveTypes_.push_back(identInfo_MPI_Igather_);
     mpiCollToPointTypes_.push_back(identInfo_MPI_Igather_);
-    mpiBlockingTypes_.push_back(identInfo_MPI_Gather_);
     mpiNonBlockingTypes_.push_back(identInfo_MPI_Igather_);
     mpiType_.push_back(identInfo_MPI_Igather_);
     assert(identInfo_MPI_Igather_);
