@@ -52,7 +52,7 @@ std::vector<std::string> split(const std::string &, char);
 
 
 /**
- * Retrive identifier info for a call expression.
+ * Retrieve identifier info for a call expression.
  * Returns nullptr if there's no direct callee.
  *
  * @param callExpr
