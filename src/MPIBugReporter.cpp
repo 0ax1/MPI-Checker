@@ -86,7 +86,7 @@ void MPIBugReporter::reportTypeMismatch(
     std::string bugName{"type mismatch"};
     std::string errorText{"Buffer type and specified MPI type do not match. "};
 
-    llvm::SmallVector<SourceRange, 2> sourceRanges;
+    llvm::SmallVector<SourceRange, 3> sourceRanges;
     sourceRanges.push_back(callRange);
     sourceRanges.push_back(callExpr->getArg(idxPair.first)->getSourceRange());
     sourceRanges.push_back(callExpr->getArg(idxPair.second)->getSourceRange());
@@ -157,10 +157,12 @@ void MPIBugReporter::reportInvalidArgumentType(
     std::string errorText{typeAsString + " type used at index " +
                           indexAsString + " is not valid. "};
 
+    SmallVector<SourceRange, 3> sourceRanges;
+    sourceRanges.push_back(callExprRange);
+    sourceRanges.push_back(invalidSourceRange);
+    sourceRanges.push_back(callExpr->getArg(idx)->getSourceRange());
     bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugName, MPIError,
-                                 errorText, location,
-                                 {callExprRange, invalidSourceRange,
-                                  callExpr->getArg(idx)->getSourceRange()});
+                                 errorText, location, sourceRanges);
 }
 
 /**
@@ -182,7 +184,7 @@ void MPIBugReporter::reportRedundantCall(
     std::string lineNo = lineNumberForCallExpr(matchedCall);
 
     // build source ranges vector
-    SmallVector<SourceRange, 10> sourceRanges;
+    SmallVector<SourceRange, 2> sourceRanges;
     sourceRanges.push_back(matchedCall->getCallee()->getSourceRange());
     sourceRanges.push_back(duplicateCall->getCallee()->getSourceRange());
 
