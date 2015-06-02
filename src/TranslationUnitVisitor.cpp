@@ -92,9 +92,7 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
  * @return continue visiting
  */
 bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
-    const FunctionDecl *functionDecl = callExpr->getDirectCallee();
-
-    if (checkerAST_.funcClassifier().isMPIType(functionDecl->getIdentifier())) {
+    if (checkerAST_.funcClassifier().isMPIType(util::getIdentInfo(callExpr))) {
         MPICall mpiCall{callExpr};
 
         checkerAST_.checkBufferTypeMatch(mpiCall);
@@ -122,6 +120,5 @@ bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     }
     return isInRankBranch;
 }
-
 
 }  // end of namespace: mpi

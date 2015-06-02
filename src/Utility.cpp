@@ -58,4 +58,12 @@ clang::StringRef sourceRangeAsStringRef(
                                        clang::LangOptions());
 }
 
+const clang::IdentifierInfo *getIdentInfo(const clang::CallExpr *callExpr) {
+    if (callExpr->getDirectCallee()) {
+        return callExpr->getDirectCallee()->getIdentifier();
+    } else {
+        return nullptr;
+    }
+}
+
 }  // end of namespace: util

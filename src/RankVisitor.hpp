@@ -26,6 +26,7 @@
 #define RANKVISITOR_HPP_WZL2H4SR
 
 #include "MPIFunctionClassifier.hpp"
+#include "Utility.hpp"
 
 namespace mpi {
 
@@ -39,8 +40,7 @@ public:
 
     // collect rank vars
     bool VisitCallExpr(clang::CallExpr *callExpr) {
-        if (funcClassifier_.isMPIType(
-                callExpr->getDirectCallee()->getIdentifier())) {
+        if (funcClassifier_.isMPIType(util::getIdentInfo(callExpr))) {
             MPICall mpiCall{callExpr};
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
                 clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];

@@ -29,6 +29,7 @@
 #include "StatementVisitor.hpp"
 #include "CallExprVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
+#include "Utility.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––
 
@@ -68,9 +69,7 @@ private:
      * @param callExpr mpi call captured
      */
     void init(const clang::CallExpr *const callExpr) {
-        const clang::FunctionDecl *functionDeclNew =
-            callExpr_->getDirectCallee();
-        identInfo_ = functionDeclNew->getIdentifier();
+        identInfo_ = util::getIdentInfo(callExpr_);
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
             // emplace triggers ArgumentVisitor ctor
@@ -108,8 +107,7 @@ public:
         for (const clang::CallExpr *const callExpr :
              callExprVisitor.callExprs()) {
             // add mpi calls only
-            if (funcClassifier.isMPIType(
-                    callExpr->getDirectCallee()->getIdentifier())) {
+            if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
                 mpiCalls_.push_back(callExpr);
             }
         }

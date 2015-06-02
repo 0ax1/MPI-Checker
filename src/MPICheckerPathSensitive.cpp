@@ -24,6 +24,7 @@
 
 #include "MPICheckerPathSensitive.hpp"
 #include "ArrayVisitor.hpp"
+#include "Utility.hpp"
 
 namespace mpi {
 
@@ -39,8 +40,7 @@ using namespace ento;
  */
 void MPICheckerPathSensitive::checkDoubleNonblocking(
     const CallExpr *callExpr, CheckerContext &ctx) const {
-    if (!funcClassifier_.isNonBlockingType(
-            callExpr->getDirectCallee()->getIdentifier())) {
+    if (!funcClassifier_.isNonBlockingType(util::getIdentInfo(callExpr))) {
         return;
     }
 
@@ -56,9 +56,8 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     auto node = ctx.addTransition(state);
 
     if (requestVar && requestVar->lastUser_) {
-        auto lastUserID =
-            requestVar->lastUser_->getDirectCallee()->getIdentifier();
-        if (funcClassifier_.isNonBlockingType(lastUserID)) {
+        if (funcClassifier_.isNonBlockingType(
+                util::getIdentInfo(requestVar->lastUser_))) {
             bugReporter_.reportDoubleNonblocking(callExpr, *requestVar, node);
         }
     }
@@ -73,8 +72,7 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
  */
 void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
                                              CheckerContext &ctx) const {
-    if (!funcClassifier_.isWaitType(
-            callExpr->getDirectCallee()->getIdentifier())) {
+    if (!funcClassifier_.isWaitType(util::getIdentInfo(callExpr))) {
         return;
     }
 
@@ -110,10 +108,9 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
             requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
 
         if (requestVar && requestVar->lastUser_) {
-            auto lastUserID =
-                requestVar->lastUser_->getDirectCallee()->getIdentifier();
             // check for double wait
-            if (funcClassifier_.isWaitType(lastUserID)) {
+            if (funcClassifier_.isWaitType(
+                    util::getIdentInfo(requestVar->lastUser_))) {
                 bugReporter_.reportDoubleWait(callExpr, *requestVar, node);
             }
         }
@@ -139,8 +136,7 @@ void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     for (auto &requestVar : requestVars) {
         if (requestVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
-                requestVar.second.lastUser_->getDirectCallee()
-                    ->getIdentifier())) {
+                util::getIdentInfo(requestVar.second.lastUser_))) {
             bugReporter_.reportMissingWait(requestVar.second, node);
         }
     }

@@ -50,6 +50,17 @@ clang::StringRef sourceRangeAsStringRef(const clang::SourceRange &,
  */
 std::vector<std::string> split(const std::string &, char);
 
+
+/**
+ * Retrive identifier info for a call expression.
+ * Returns nullptr if there's no direct callee.
+ *
+ * @param callExpr
+ *
+ * @return
+ */
+const clang::IdentifierInfo *getIdentInfo(const clang::CallExpr *);
+
 }  // end of namespace: util
 
 #endif  // end of include guard: UTILITY_HPP_SVQZWTL8
