@@ -44,14 +44,14 @@ void communicate1() {
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (rank == 1) {
+    if (rank == 0) {
         MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &req1);
         MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &req2);
 
         MPI_Request r[2] = {req1, req2};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
 
-    } else if (rank == 2) {
+    } else if (rank == 1) {
 
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1);
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2);
