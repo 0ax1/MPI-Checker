@@ -216,7 +216,14 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     const auto &rankArgSend = sendCall.arguments()[MPIPointToPoint::kRank];
     const auto &rankArgRecv = recvCall.arguments()[MPIPointToPoint::kRank];
 
-    if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
+    // check if sequence sizes match
+    if (rankArgSend.typeSequence().size() !=
+            rankArgRecv.typeSequence().size() ||
+        rankArgSend.valueSequence().size() !=
+            rankArgRecv.valueSequence().size() ||
+        rankArgSend.typeSequence().size() !=
+            rankArgRecv.valueSequence().size() ||
+        rankArgSend.valueSequence().size() != rankArgRecv.typeSequence().size())
         return false;
 
     // build sequences without last operator(skip first element)
