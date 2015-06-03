@@ -41,10 +41,10 @@ gnu-sed with brew if you're on osx)
 ## Installation
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
-make it executable with `chmod +x` and run it to setup LLVM 3.6 
+make it executable with `chmod +x` and run it to setup LLVM 3.6
 with [Clang](http://clang.llvm.org/), [libcxx](http://libcxx.llvm.org/),
- [compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**. 
-This will download, config and build all components in `./llvm36`. In "one line": 
+ [compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**.
+This will download, config and build all components in `./llvm36`. In "one line":
 `wget https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
 chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh`
 
@@ -70,10 +70,11 @@ Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/ma
 See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
 
 ## Limitations
-- Point to point communication must be enclosed within the scope of a translation unit. 
-  This stems from the general limitation of Clang's Static Analyzer to analyze one translation unit in isolation. 
+- Point to point communication must be enclosed within the scope of a translation unit.
+  This stems from the general limitation of Clang's Static Analyzer to analyze one translation unit in isolation.
 - Unreachable calls can only be detected if caused by blocking MPI calls. The reason for this is that
-  point to point schema validation can only be achieved by non path sensitive (ast) analysis 
+  point to point schema validation can only be achieved by non path sensitive (ast) analysis
   while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
-- There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect 
+- There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect
   depends on what is done at runtime. Because of that they are not taken into account.
+- The analysis is limited to C. Analyzing C++ code is currently not supported.
