@@ -60,7 +60,7 @@ After that add these locations to your search path:<br>
 
 ## Update
 To update MPI-Checker call `git pull` in `llvm36/repo/tools/clang/lib/StaticAnalyzer/Checkers/MPI-Checker`.
-Then run `ninja` in `llvm36/build/release`.
+Then run `ninja && ninja ClangUnitTests` in `llvm36/build/release`.
 
 
 ## Examples

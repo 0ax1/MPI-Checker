@@ -76,18 +76,18 @@ if [[ $? -eq 0 ]]; then
     $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
 
 
-    # symlink integration tests
     abspath() {
         [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
     }
+    # symlink integration tests
     ln -s `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c` \
         `abspath ../../../test/Analysis/MPICheckerTest.c`
 
     # symlink unit tests
-    # ln `abspath MPI-Checker/tests/unit_tests` \
-        # `abspath ../../../unittests/MPI-Checker`
+    ln -s `abspath MPI-Checker/tests/unit_tests` \
+        `abspath ../../../unittests/MPI-Checker`
 
-    # echo "add_subdirectory(MPI-Checker)" >> ../../../unittests/CMakeLists.txt
+    echo "add_subdirectory(MPI-Checker)" >> ../../../unittests/CMakeLists.txt
 
     cd ../../../../../../
 
