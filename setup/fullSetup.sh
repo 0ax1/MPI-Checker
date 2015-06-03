@@ -76,12 +76,18 @@ if [[ $? -eq 0 ]]; then
     $sed -i "${lineNo}i \ \ \${MPI-CHECKER}" CMakeLists.txt
 
 
-    # symlink test source
+    # symlink integration tests
     abspath() {
         [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
     }
-    ln -s `abspath MPI-Checker/tests/MPICheckerTest.c` \
+    ln -s `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c` \
         `abspath ../../../test/Analysis/MPICheckerTest.c`
+
+    # symlink unit tests
+    ln `abspath MPI-Checker/tests/unit_tests` \
+        `abspath ../../../unittests/MPI-Checker`
+
+    echo "add_subdirectory(MPI-Checker)" >> ../../../unittests/CMakeLists.txt
 
     cd ../../../../../../
 
@@ -92,12 +98,13 @@ if [[ $? -eq 0 ]]; then
     cd build/release
 
     # generate ninja file
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=RELEASE \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=DEBUG \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         ../../repo
 
     # build (ninja uses max number of available cpus by default)
     ninja
+    ninja ClangUnitTests
 else
     # echo as error (pipe stdout to stderr)
     echo "no internet connectivity" 1>&2

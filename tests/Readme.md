@@ -1,5 +1,3 @@
-#### Setup
-If you used one of the provided setup scripts `MPICheckerTest.c` was symlinked to `llvm36/repo/tools/clang/test/Analysis`.
-Else please do this manually.
-#### Run Tests
-Execute `ninja clang-test` in `llvm36/build/(debug|release)` to run the test suite.
+## Tests
+- [Integration Tests](https://github.com/0ax1/MPI-Checker/tree/master/tests/integration_tests)
+- [Unit Tests](https://github.com/0ax1/MPI-Checker/tree/master/tests/unit_tests)

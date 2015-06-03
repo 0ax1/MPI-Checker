@@ -60,8 +60,8 @@ if [[ $? -eq 0 ]]; then
     abspath() {
         [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
     }
-    ln -s `abspath MPI-Checker/tests/MPICheckerTest.c` \
-        `abspath ../../../test/Analysis/MPICheckerTest.c`
+    ln -s `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c` \
+        `abspath ../../../test/Analysis/integration_tests/MPICheckerTest.c`
 
 else
     # echo as error (pipe stdout to stderr)
