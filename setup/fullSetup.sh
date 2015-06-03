@@ -53,6 +53,7 @@ if [[ $? -eq 0 ]]; then
 
     # get sanitizers
     svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt
+    # svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt
 
     echo "––––––––––MPI-Checker––––––––––––"
     # clone mpi-checker project
