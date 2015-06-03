@@ -101,7 +101,7 @@ if [[ $? -eq 0 ]]; then
     cd build/release
 
     # generate ninja file
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=DEBUG \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=RELEASE \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         ../../repo
 
