@@ -39,14 +39,17 @@ if [[ $? -eq 0 ]]; then
 
     # get llvm
     svn co http://llvm.org/svn/llvm-project/llvm/branches/release_36/ repo
+    # svn co http://llvm.org/svn/llvm-project/llvm/trunk repo
 
     # get clang
     cd repo/tools
     svn co http://llvm.org/svn/llvm-project/cfe/branches/release_36/ clang
+    # svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
 
     # get libcxx
     cd ../projects
     svn co http://llvm.org/svn/llvm-project/libcxx/branches/release_36/ libcxx
+    # svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx
 
     # get sanitizers
     svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt
