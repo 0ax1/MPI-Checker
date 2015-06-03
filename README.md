@@ -41,19 +41,21 @@ gnu-sed with brew if you're on osx)
 ## Installation
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
-make it executable with `chmod +x` and run it to setup LLVM 3.6
-with [Clang](http://clang.llvm.org/), [libcxx](http://libcxx.llvm.org/),
- [compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**.
-This will download, config and build all components in `./llvm36`. In "one line":
+make it executable with `chmod +x` and run it to setup LLVM 3.6 with
+[Clang](http://clang.llvm.org/), [libcxx](http://libcxx.llvm.org/),
+[compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**.  This will
+download, config and build all components in `./llvm36`. <br><br>In "one line":
 `wget https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
-chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh`
+chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh` <br><br>If you don't
+want libcxx or the compiler-rt to be included you can comment them out in
+`fullSetup.sh` like this `# svn co (libcxx|compiler-rt)`.
 
 If you have the LLVM 3.6 source already, `cd` to the top of the repository,
 execute [`addMPI-Checker.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/addMPI-Checker.sh)
 and then rerun your build system manually.
 
-After that add these locations to your search path:<br>
+Finally that add these locations to your search path:<br>
 `llvm36/build/release/bin`<br>
 `llvm36/repo/tools/clang/tools/scan-build`<br>
 `llvm36/repo/tools/clang/tools/scan-view`<br>

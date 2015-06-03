@@ -48,11 +48,11 @@ if [[ $? -eq 0 ]]; then
 
     # get libcxx
     cd ../projects
-    svn co http://llvm.org/svn/llvm-project/libcxx/branches/release_36/ libcxx
+    svn co http://llvm.org/svn/llvm-project/libcxx/branches/release_36/ libcxx # optional
     # svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx
 
     # get sanitizers
-    svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt
+    svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt # optional
     # svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt
 
     echo "––––––––––MPI-Checker––––––––––––"
