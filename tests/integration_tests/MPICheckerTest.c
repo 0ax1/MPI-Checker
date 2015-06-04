@@ -3,8 +3,8 @@
 // add the mpi include path to the first line with -I/...
 // if mpi.h is not found
 
-// clang -cc1 is the compiler frontend.
-// If cc1 is used no machine code gets compiled.
+// clang -cc1 uses the compiler frontend
+// without the compiler driver.
 
 /*
  The MIT License (MIT)
