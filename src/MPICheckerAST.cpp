@@ -119,7 +119,7 @@ void MPICheckerAST::checkReachbility() const {
 }
 
 /**
- * Check for reachability of calls between to cases.
+ * Check for reachability of calls between two cases.
  *
  * @param firstCase
  * @param secondCase
