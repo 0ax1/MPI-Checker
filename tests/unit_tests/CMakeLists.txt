@@ -5,7 +5,6 @@ include_directories(../../src)
 
 add_clang_unittest(MPI-Checker
     UtilityTest.cpp
-    ArrayVisitorTest.cpp
     ContainerTest.cpp
     )
 
