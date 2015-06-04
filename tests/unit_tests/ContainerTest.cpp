@@ -94,7 +94,6 @@ TEST(Container, copy) {
     EXPECT_EQ(v, comp);
 }
 
-
 TEST(Container, isPermutation) {
     std::vector<int> v1{0, 1, 2, 3};
     std::vector<int> v2{1, 0, 3, 2};
