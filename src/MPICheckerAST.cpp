@@ -622,7 +622,6 @@ void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck,
             }
         }
     }
-    return;
 }
 
 /**
