@@ -53,7 +53,7 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
 }
 
 /**
- * Check if case condition is ambiguous.
+ * Check if rank to enter condition is ambiguous.
  *
  * @return ambiguity
  */
@@ -76,7 +76,7 @@ bool MPIRankCase::isRankAmbiguous() const {
 }
 
 /**
- * Check if two rank case conditions are rated as equal.
+ * Check if two ranks are rated as equal.
  *
  * @param rankCase to compare
  *
