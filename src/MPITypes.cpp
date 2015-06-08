@@ -57,7 +57,7 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
  *
  * @return ambiguity
  */
-bool MPIRankCase::isConditionAmbiguous() const {
+bool MPIRankCase::isRankAmbiguous() const {
     // no matched condition means is else case
     if (!matchedCondition_) return true;
 
@@ -82,9 +82,9 @@ bool MPIRankCase::isConditionAmbiguous() const {
  *
  * @return if they are equal
  */
-bool MPIRankCase::isConditionUnambiguouslyEqual(
+bool MPIRankCase::isRankUnambiguouslyEqual(
     const MPIRankCase &rankCase) const {
-    if (isConditionAmbiguous() || rankCase.isConditionAmbiguous()) {
+    if (isRankAmbiguous() || rankCase.isRankAmbiguous()) {
         return false;
     }
 

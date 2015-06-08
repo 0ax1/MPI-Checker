@@ -121,8 +121,8 @@ public:
         }
     }
 
-    bool isConditionAmbiguous() const;
-    bool isConditionUnambiguouslyEqual(const MPIRankCase &) const;
+    bool isRankAmbiguous() const;
+    bool isRankUnambiguouslyEqual(const MPIRankCase &) const;
     size_t size() const { return mpiCalls_.size(); }
     const std::vector<MPICall> &mpiCalls() const { return mpiCalls_; }
     const std::unique_ptr<ConditionVisitor> &matchedCondition() const {

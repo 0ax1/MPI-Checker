@@ -39,7 +39,7 @@ void MPICheckerAST::checkPointToPointSchema() const {
     for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
         for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
             // rank conditions must be distinct or ambiguous
-            if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
+            if (!rankCase1.isRankUnambiguouslyEqual(rankCase2)) {
                 // rank cases are potential partner
                 checkSendRecvMatches(rankCase1, rankCase2);
             }
@@ -100,7 +100,7 @@ void MPICheckerAST::checkReachbility() const {
         for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
             for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
                 // rank conditions must be distinct or ambiguous
-                if (!rankCase1.isConditionUnambiguouslyEqual(rankCase2)) {
+                if (!rankCase1.isRankUnambiguouslyEqual(rankCase2)) {
                     // rank cases are potential partner
                     checkReachbilityPair(rankCase1, rankCase2);
                 }
