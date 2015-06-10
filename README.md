@@ -55,7 +55,7 @@ execute [`addMPI-Checker.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/addMPI-Checker.sh)
 and then rerun your build system manually.
 
-Finally that add these locations to your search path:<br>
+Finally add these locations to your search path:<br>
 `llvm36/build/release/bin`<br>
 `llvm36/repo/tools/clang/tools/scan-build`<br>
 `llvm36/repo/tools/clang/tools/scan-view`<br>
