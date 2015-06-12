@@ -73,7 +73,7 @@ void MPIBugReporter::reportNotReachableCall(
 }
 
 /**
- * Reports mismach between buffer type and mpi datatype.
+ * Reports mismatch between buffer type and mpi datatype.
  * @param callExpr
  */
 void MPIBugReporter::reportTypeMismatch(
