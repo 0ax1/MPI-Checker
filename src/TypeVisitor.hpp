@@ -36,7 +36,9 @@ namespace mpi {
  */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
-    TypeVisitor(clang::QualType qualType) : qualType_{qualType} {
+    // TODO simplify class
+    TypeVisitor(clang::QualType qualType) : qualType_{qualType},
+        type_{qualType.getTypePtr()}{
         TraverseType(qualType);
     }
 
@@ -59,6 +61,7 @@ public:
 
     // passed qual type
     const clang::QualType qualType_;
+    const clang::Type *type_;
     bool isTypedefType() const { return isTypedefType_; }
     const std::string typedefTypeName() const & { return typedefTypeName_; }
     const clang::BuiltinType *builtinType() const { return builtinType_; }

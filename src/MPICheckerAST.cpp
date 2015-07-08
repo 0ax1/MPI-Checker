@@ -222,6 +222,11 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // build sequences without last operator(skip first element)
     std::vector<ArgumentVisitor::ComponentType> seq1, seq2;
     std::vector<std::string> val1, val2;
+    seq1.reserve(rankArgSend.typeSequence().size()-1);
+    seq2.reserve(rankArgSend.typeSequence().size()-1);
+    val1.reserve(rankArgSend.valueSequence().size()-1);
+    val2.reserve(rankArgSend.valueSequence().size()-1);
+
     bool containsSubtraction{false};
     for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
         seq1.push_back(rankArgSend.typeSequence()[i]);
@@ -521,9 +526,7 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         const auto &arg = mpiCall.arguments()[idx];
         const auto &vars = arg.vars();
         for (const auto &var : vars) {
-            const mpi::TypeVisitor typeVisitor{var->getType()};
-            if (!typeVisitor.builtinType() ||
-                !typeVisitor.builtinType()->isIntegerType()) {
+            if (!var->getType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
                     mpiCall.callExpr(), idx, var->getSourceRange(), "Variable");
             }
@@ -539,9 +542,7 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         // check for invalid return types from functions
         const auto &functions = arg.functions();
         for (const auto &function : functions) {
-            const mpi::TypeVisitor typeVisitor{function->getReturnType()};
-            if (!typeVisitor.builtinType() ||
-                !typeVisitor.builtinType()->isIntegerType()) {
+            if (!function->getReturnType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
                     mpiCall.callExpr(), idx, function->getSourceRange(),
                     "Return value");

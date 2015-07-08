@@ -102,6 +102,9 @@ bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
     return true;
 }
 
+// TODO track assignments of rank variables
+// visit binary operator
+
 /**
  * Checks if a rank variable is used in branch condition.
  *
