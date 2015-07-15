@@ -222,10 +222,6 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // build sequences without last operator(skip first element)
     std::vector<ArgumentVisitor::ComponentType> seq1, seq2;
     std::vector<std::string> val1, val2;
-    seq1.reserve(rankArgSend.typeSequence().size()-1);
-    seq2.reserve(rankArgSend.typeSequence().size()-1);
-    val1.reserve(rankArgSend.valueSequence().size()-1);
-    val2.reserve(rankArgSend.valueSequence().size()-1);
 
     bool containsSubtraction{false};
     for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
