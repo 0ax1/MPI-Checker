@@ -18,9 +18,6 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `missing wait`: Nonblocking call without matching wait.
 - `unmatched wait`: Waiting for a request that was never used by a nonblocking call.
 
-All of these checks should produce zero false positives. Bug reports are only emitted if the checker
-is sure that an invariant was violated.
-
 ### Point to Point Schema Validation
 If only additions for an argument are used operands are accepted as a match if they appear as a permutation.
 Else if subtractions are used operands have to be in the same order.
