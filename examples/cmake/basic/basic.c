@@ -33,7 +33,7 @@
 double fnn() { return 22.22; }
 int f2n() { return 22; }
 
-int rank = 0;
+int rank;
 int buf;
 int N = 0;
 

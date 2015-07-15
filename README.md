@@ -33,6 +33,18 @@ if they appear as a permutation:
 <br>`MPI_Isend(&buf, 1, MPI_INT, f() + N + 3 + rank + 1, 0, MPI_COMM_WORLD, &sendReq1);`<br>
 `MPI_Irecv(&buf, 1, MPI_INT, N + f() + 3 + rank - 1, 0, MPI_COMM_WORLD, &recvReq1);`<br>
 
+### Rank Variables
+Only one rank variable should be used per translation unit, to make rank branch
+conditions comparable. Rank variables used within a struct  or initialized in
+another translation unit are not detected.
+
+```
+int rank;
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+if (rank == 0) {...}
+else if (rank == 1) {...}
+```
 
 ## Prerequisites
 Current versions of: `your default compiler`, `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
