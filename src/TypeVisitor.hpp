@@ -36,7 +36,6 @@ namespace mpi {
  */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
-    // TODO simplify class
     TypeVisitor(clang::QualType qualType) : qualType_{qualType},
         type_{qualType.getTypePtr()}{
         TraverseType(qualType);
