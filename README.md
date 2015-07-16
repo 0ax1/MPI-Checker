@@ -31,7 +31,8 @@ if they appear as a permutation:
 `MPI_Irecv(&buf, 1, MPI_INT, N + f() + 3 + rank - 1, 0, MPI_COMM_WORLD, &recvReq1);`<br>
 
 ### Rank Variables
-Only one rank variable should be used per translation unit, to make rank branch
+Rank variables are identified as such if they get passed to `MPI_Comm_rank`.
+Only one rank variable should be used per translation unit to make rank branch
 conditions comparable. Rank variables used within a struct  or initialized in
 another translation unit are not detected.
 
