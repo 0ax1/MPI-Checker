@@ -89,4 +89,5 @@ See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
   while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
 - There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect
   depends on what is done at runtime. Because of that they are not taken into account.
+- Rank variables used within a struct or initialized in another translation unit are not detected.
 - The analysis is limited to C. Analyzing C++ code is currently not supported.

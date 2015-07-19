@@ -1,6 +1,6 @@
 ### Examples
 
-Remember that only build source files are analyzed.  To do a complete analysis
+Remember that only built source files are analyzed. To do a complete analysis
 you have to do a complete build. Clean your analysis target to ensure this. All
 example builds work with a flag `ANALYZE=x` passed to trigger the analysis.
 If there are any bugs found your browser will automatically open showing an
