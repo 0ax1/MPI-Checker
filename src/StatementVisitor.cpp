@@ -65,7 +65,7 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
     if (op->isComparisonOp()) {
-        typeSequence_.push_back(ComponentType::kComparsison);
+        typeSequence_.push_back(ComponentType::kComparison);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
         typeSequence_.push_back(ComponentType::kAddOp);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {

@@ -45,7 +45,7 @@ public:
         kFloat,
         kVar,
         kFunc,
-        kComparsison,
+        kComparison,
         kAddOp,
         kSubOp,
         kOperator
