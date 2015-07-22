@@ -32,9 +32,9 @@ if they appear as a permutation:
 
 ### Rank Variables
 Rank variables are identified as such if they get passed to `MPI_Comm_rank`.
-Only one rank variable should be used per translation unit to make rank branch
-conditions comparable. Rank variables used within a struct  or initialized in
-another translation unit are not detected.
+Within a translation unit, rank variables must have the same name (if multiple
+are used). Rank variables used within a struct  or initialized in another
+translation unit are not detected.
 
 ```
 int rank;
