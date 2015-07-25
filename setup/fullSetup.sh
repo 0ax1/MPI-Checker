@@ -31,33 +31,31 @@ ping -c 1 www.google.com
 if [[ $? -eq 0 ]]; then
     echo "internet connectivity established"
 
+    llvm='http://llvm.org/svn/llvm-project'
+    # choose version: release|trunk
+    version='branches/release_36'
+    # version='trunk'
+
     echo "–––––––––––––LLVM––––––––––––––"
     #download –––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # contains seperated source and build folder
     mkdir llvm36
     cd llvm36
 
-    # get llvm
-    svn co http://llvm.org/svn/llvm-project/llvm/branches/release_36/ repo
-    # svn co http://llvm.org/svn/llvm-project/llvm/trunk repo
+    # llvm
+    svn co $llvm/llvm/$version/ repo
 
-    # get clang
-    cd repo/tools
-    svn co http://llvm.org/svn/llvm-project/cfe/branches/release_36/ clang
-    # svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
+    # tools
+    tools='repo/tools'
+    svn co $llvm/cfe/$version/ $tools/clang
 
-    # get libcxx
-    cd ../projects
-    svn co http://llvm.org/svn/llvm-project/libcxx/branches/release_36/ libcxx # optional
-    # svn co http://llvm.org/svn/llvm-project/libcxx/trunk libcxx
-
-    # get sanitizers
-    svn co http://llvm.org/svn/llvm-project/compiler-rt/branches/release_36/ compiler-rt # optional
-    # svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk compiler-rt
+    # projects
+    projects='repo/projects'
+    svn co $llvm/compiler-rt/$version/ $projects/compiler-rt
+    svn co $llvm/libcxx/$version/ $projects/libcxx
 
     echo "––––––––––MPI-Checker––––––––––––"
-    # clone mpi-checker project
-    cd ../tools/clang/lib/StaticAnalyzer/Checkers
+    cd repo/tools/clang/lib/StaticAnalyzer/Checkers
     git clone https://github.com/0ax1/MPI-Checker.git
 
     #config ––––––––––––––––––––––––––––––––––––––––––––––––––––––––
