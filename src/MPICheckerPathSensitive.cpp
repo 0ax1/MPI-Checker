@@ -45,15 +45,17 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     }
 
     ProgramStateRef state = ctx.getState();
-    auto RequestVars = state->get<RequestVarMap>();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
     auto arg = mpiCall.arguments()[mpiCall.callExpr()->getNumArgs() - 1];
     auto requestVarDecl = arg.vars().front();
+    // get must be called before set function
     const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
+
     state = state->set<RequestVarMap>(
-        requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
-    auto node = ctx.addTransition(state);
+        requestVarDecl,
+        mpi::RequestVar{requestVarDecl, const_cast<CallExpr *>(callExpr)});
+    const ExplodedNode *const node = ctx.addTransition(state);
 
     if (requestVar && requestVar->lastUser_) {
         if (funcClassifier_.isNonBlockingType(
@@ -77,7 +79,6 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     }
 
     ProgramStateRef state = ctx.getState();
-    auto requestVars = state->get<RequestVarMap>();
 
     // collect request vars
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
