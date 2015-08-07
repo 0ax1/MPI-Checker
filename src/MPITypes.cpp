@@ -37,6 +37,10 @@ namespace MPIRank {
 llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
 }
 
+namespace MPIProcessCount {
+llvm::SmallSet<const VarDecl *, 4> visitedCountVariables;
+}
+
 llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
 
 bool MPICall::operator==(const MPICall &callToCompare) const {

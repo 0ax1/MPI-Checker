@@ -235,6 +235,10 @@ void MPIFunctionClassifier::initAdditionalIdentifiers(
     mpiType_.push_back(identInfo_MPI_Comm_rank_);
     assert(identInfo_MPI_Comm_rank_);
 
+    identInfo_MPI_Comm_size_ = &context.Idents.get("MPI_Comm_size");
+    mpiType_.push_back(identInfo_MPI_Comm_size_);
+    assert(identInfo_MPI_Comm_size_);
+
     identInfo_MPI_Wait_ = &context.Idents.get("MPI_Wait");
     mpiType_.push_back(identInfo_MPI_Wait_);
     assert(identInfo_MPI_Wait_);
@@ -340,6 +344,11 @@ bool MPIFunctionClassifier::isReduceType(
 bool MPIFunctionClassifier::isMPI_Comm_rank(
     const IdentifierInfo *identInfo) const {
     return identInfo == identInfo_MPI_Comm_rank_;
+}
+
+bool MPIFunctionClassifier::isMPI_Comm_size(
+    const IdentifierInfo *identInfo) const {
+    return identInfo == identInfo_MPI_Comm_size_;
 }
 
 bool MPIFunctionClassifier::isMPI_Wait(const IdentifierInfo *identInfo) const {

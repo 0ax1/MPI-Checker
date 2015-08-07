@@ -91,6 +91,11 @@ namespace MPIRank {
 extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
 }
 
+// to capture rank variables
+namespace MPIProcessCount {
+extern llvm::SmallSet<const clang::VarDecl *, 4> visitedCountVariables;
+}
+
 // to capture rank cases from branches
 class MPIRankCase {
 public:

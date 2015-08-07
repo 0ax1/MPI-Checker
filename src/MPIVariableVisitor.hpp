@@ -22,8 +22,8 @@
  SOFTWARE.
 */
 
-#ifndef RANKVISITOR_HPP_WZL2H4SR
-#define RANKVISITOR_HPP_WZL2H4SR
+#ifndef MPIVariableVisitor_HPP_WZL2H4SR
+#define MPIVariableVisitor_HPP_WZL2H4SR
 
 #include "MPIFunctionClassifier.hpp"
 #include "Utility.hpp"
@@ -33,9 +33,9 @@ namespace mpi {
 /**
  * Visitor class to collect rank variables.
  */
-class RankVisitor : public clang::RecursiveASTVisitor<RankVisitor> {
+class MPIVariableVisitor : public clang::RecursiveASTVisitor<MPIVariableVisitor> {
 public:
-    RankVisitor(clang::ento::AnalysisManager &analysisManager)
+    MPIVariableVisitor(clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager} {}
 
     // collect rank vars
@@ -43,8 +43,14 @@ public:
         if (funcClassifier_.isMPIType(util::getIdentInfo(callExpr))) {
             MPICall mpiCall{callExpr};
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
+                // TODO what if variable is in array
                 clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
                 MPIRank::visitedRankVariables.insert(varDecl);
+            }
+            else if (funcClassifier_.isMPI_Comm_size(mpiCall)) {
+                // TODO what if variable is in array
+                clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
+                MPIProcessCount::visitedCountVariables.insert(varDecl);
             }
         }
 
@@ -56,4 +62,4 @@ private:
 };
 
 }  // end of namespace: mpi
-#endif  // end of include guard: RANKVISITOR_HPP_WZL2H4SR
+#endif  // end of include guard: MPIVariableVisitor_HPP_WZL2H4SR

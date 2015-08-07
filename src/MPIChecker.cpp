@@ -24,7 +24,7 @@
 
 #include "TranslationUnitVisitor.hpp"
 #include "MPICheckerPathSensitive.hpp"
-#include "RankVisitor.hpp"
+#include "MPIVariableVisitor.hpp"
 
 using namespace clang;
 using namespace ento;
@@ -45,8 +45,8 @@ public:
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
         // identify rank variables first
-        RankVisitor rankVisitor{analysisManager};
-        rankVisitor.TraverseTranslationUnitDecl(
+        MPIVariableVisitor MPIVariableVisitor{analysisManager};
+        MPIVariableVisitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // traverse translation unit ast
