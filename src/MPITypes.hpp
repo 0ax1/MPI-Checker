@@ -26,6 +26,7 @@
 #define MPITYPES_HPP_IC7XR2MI
 
 #include "llvm/ADT/SmallSet.h"
+// #include "clang/ASTMatchers/ASTMatchers.h"
 #include "StatementVisitor.hpp"
 #include "CallExprVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
@@ -103,6 +104,8 @@ public:
             // TODO rank case ambiguity
             // set it here, by function return
             matchedCondition_.reset(new ConditionVisitor{matchedCondition});
+            // clang::ast_matchers::DeclarationMatcher funcDecl =
+                // clang::ast_matchers::functionDecl().bind("func");
         }
 
         const CallExprVisitor callExprVisitor{then};  // collect call exprs

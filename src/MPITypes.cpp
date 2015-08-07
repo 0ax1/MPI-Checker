@@ -24,6 +24,7 @@
 
 #include "MPITypes.hpp"
 #include "Container.hpp"
+// #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang;
 using namespace ento;
@@ -58,6 +59,9 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
  * @return ambiguity
  */
 bool MPIRankCase::isRankAmbiguous() const {
+    // clang::ast_matchers::DeclarationMatcher funcDecl =
+        // clang::ast_matchers::functionDecl().bind("func");
+
     // no matched condition means is else case
     if (!matchedCondition_) return true;
 
@@ -65,6 +69,10 @@ bool MPIRankCase::isRankAmbiguous() const {
     // rank == 1 && x > 0 would be rated as ambiguous
     // rating must be bound to rank var
     // condition must be changed everything not being == is ambiguous
+    // write down rank if concrete (also as expression
+    // rank = processcount - 1
+    // const for last rank
+    // track, identify process count variables
 
     // ranges used in rank conditions prohibit equality identification
     auto isRangeComparison = [](BinaryOperatorKind op) {
