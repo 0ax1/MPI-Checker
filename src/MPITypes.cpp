@@ -61,6 +61,11 @@ bool MPIRankCase::isRankAmbiguous() const {
     // no matched condition means is else case
     if (!matchedCondition_) return true;
 
+    // TODO make ambiguity criteria more precise
+    // rank == 1 && x > 0 would be rated as ambiguous
+    // rating must be bound to rank var
+    // condition must be changed everything not being == is ambiguous
+
     // ranges used in rank conditions prohibit equality identification
     auto isRangeComparison = [](BinaryOperatorKind op) {
         return (BinaryOperatorKind::BO_LT == op ||

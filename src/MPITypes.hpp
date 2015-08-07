@@ -100,6 +100,8 @@ public:
 
         : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {
+            // TODO rank case ambiguity
+            // set it here, by function return
             matchedCondition_.reset(new ConditionVisitor{matchedCondition});
         }
 
