@@ -33,14 +33,14 @@ if [[ $? -eq 0 ]]; then
 
     llvm='http://llvm.org/svn/llvm-project'
     # choose version: release|trunk
-    version='branches/release_36'
+    version='branches/release_37'
     # version='trunk'
 
     echo "–––––––––––––LLVM––––––––––––––"
     #download –––––––––––––––––––––––––––––––––––––––––––––––––––––––
     # contains seperated source and build folder
-    mkdir llvm36
-    cd llvm36
+    mkdir llvm37
+    cd llvm37
 
     # llvm
     svn co $llvm/llvm/$version/ repo

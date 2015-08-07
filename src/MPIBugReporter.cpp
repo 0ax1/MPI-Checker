@@ -219,12 +219,12 @@ void MPIBugReporter::reportDoubleNonblocking(
                           " is already in use by nonblocking call " + lastUser +
                           " in line " + lineNo + ". "};
 
-    BugReport *bugReport =
-        new BugReport(*doubleNonblockingBugType_, errorText, node);
+    auto bugReport = llvm::make_unique<BugReport>(*doubleNonblockingBugType_,
+                                                  errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
-    bugReporter_.emitReport(bugReport);
+    bugReporter_.emitReport(std::move(bugReport));
 }
 
 /**
@@ -244,11 +244,12 @@ void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
                           " is already waited upon by " + lastUser +
                           " in line " + lineNo + ". "};
 
-    BugReport *bugReport = new BugReport(*doubleWaitBugType_, errorText, node);
+    auto bugReport =
+        llvm::make_unique<BugReport>(*doubleWaitBugType_, errorText, node);
     bugReport->addRange(observedCall->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
-    bugReporter_.emitReport(bugReport);
+    bugReporter_.emitReport(std::move(bugReport));
 }
 
 /**
@@ -266,10 +267,11 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
     PathDiagnosticLocation p{requestVar.lastUser_->getLocStart(),
                              analysisManager_.getSourceManager()};
 
-    BugReport *bugReport = new BugReport(*missingWaitBugType_, errorText, p);
+    auto bugReport =
+        llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, p);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReport->addRange(requestVar.varDecl_->getSourceRange());
-    bugReporter_.emitReport(bugReport);
+    bugReporter_.emitReport(std::move(bugReport));
 }
 
 /**
@@ -285,11 +287,11 @@ void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
     std::string errorText{"Request " + requestVar->getNameAsString() +
                           " has no matching nonblocking call. "};
 
-    BugReport *bugReport =
-        new BugReport(*unmatchedWaitBugType_, errorText, node);
+    auto bugReport =
+        llvm::make_unique<BugReport>(*unmatchedWaitBugType_, errorText, node);
     bugReport->addRange(callExpr->getSourceRange());
     bugReport->addRange(requestVar->getSourceRange());
-    bugReporter_.emitReport(bugReport);
+    bugReporter_.emitReport(std::move(bugReport));
 }
 
 }  // end of namespace: mpi
