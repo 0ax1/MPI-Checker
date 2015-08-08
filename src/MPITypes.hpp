@@ -49,6 +49,11 @@ public:
         init(callExpr);
     };
 
+    MPICall(const MPICall &mpiCall)
+        : arguments_{argumentsPr_}, callExpr_{mpiCall.callExpr_} {
+        init(callExpr_);
+    };
+
     bool operator==(const MPICall &) const;
     bool operator!=(const MPICall &) const;
 
@@ -89,16 +94,12 @@ private:
 
 // to capture rank variables
 namespace MPIRank {
-// TODO change type
-// to decl
-// member is field decl
-extern llvm::SmallSet<const clang::Decl *, 4> visitedVariables;
+extern llvm::SmallSet<const clang::Decl *, 4> variables;
 }
 
 // to capture process count variables
 namespace MPIProcessCount {
-// TODO change type
-extern llvm::SmallSet<const clang::Decl *, 4> visitedVariables;
+extern llvm::SmallSet<const clang::Decl *, 4> variables;
 }
 
 // to capture rank cases from branches
@@ -129,7 +130,7 @@ public:
     }
 
     static void unmarkCalls() {
-        for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+        for (MPIRankCase &rankCase : MPIRankCase::cases) {
             for (MPICall &call : rankCase.mpiCalls_) {
                 call.isMarked_ = false;
             }
@@ -146,7 +147,7 @@ public:
 
     // conditions not fullfilled to enter rank case
     const std::vector<ConditionVisitor> unmatchedConditions_;
-    static llvm::SmallVector<MPIRankCase, 8> visitedRankCases;
+    static llvm::SmallVector<MPIRankCase, 8> cases;
 
 private:
     std::vector<MPICall> mpiCalls_;

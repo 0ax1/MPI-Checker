@@ -39,6 +39,7 @@ public:
         auto ile =
             clang::dyn_cast<clang::InitListExpr>(arrayVarDecl_->getInit());
 
+        // TODO what if no init list?
         if (!ile) return;
         for (const clang::Stmt *stmt : *ile) {
             mpi::StatementVisitor sv{stmt};

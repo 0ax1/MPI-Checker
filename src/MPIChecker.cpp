@@ -60,8 +60,9 @@ public:
         // visitor.checkerAST_.checkForRedundantCalls();
 
         // clear after every translation unit
-        MPIRank::visitedVariables.clear();
-        MPIRankCase::visitedRankCases.clear();
+        MPIRank::variables.clear();
+        MPIProcessCount::variables.clear();
+        MPIRankCase::cases.clear();
     }
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––

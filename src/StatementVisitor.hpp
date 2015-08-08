@@ -42,7 +42,20 @@ public:
           valueSequence_{valueSequencePr_},
           binaryOperators_{binaryOperatorsPr_},
           vars_{varsPr_},
-          fields_{fieldsPr_},
+          members_{membersPr_},
+          functions_{functionsPr_},
+          integerLiterals_{integerLiteralsPr_},
+          floatingLiterals_{floatingLiteralsPr_} {
+        TraverseStmt(const_cast<clang::Stmt *>(stmt_));
+    }
+
+    StatementVisitor(const StatementVisitor &stmtVisitor)
+        : stmt_{stmtVisitor.stmt_},
+          typeSequence_{typeSequencePr_},
+          valueSequence_{valueSequencePr_},
+          binaryOperators_{binaryOperatorsPr_},
+          vars_{varsPr_},
+          members_{membersPr_},
           functions_{functionsPr_},
           integerLiterals_{integerLiteralsPr_},
           floatingLiterals_{floatingLiteralsPr_} {
@@ -75,23 +88,22 @@ public:
     bool isLastOperatorInverse(const StatementVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
-    // complete statement
+    // references to private members
     const clang::Stmt *const stmt_;
 
-    // containers
     const llvm::SmallVector<ComponentType, 4> &typeSequence_;
-    // sequential series of values
     const llvm::SmallVector<std::string, 4> &valueSequence_;
-    // components
+
     const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators_;
     const llvm::SmallVector<clang::VarDecl *, 1> &vars_;
-    const llvm::SmallVector<clang::FieldDecl *, 1>
-        &fields_;  // fields in structs
+    const llvm::SmallVector<clang::ValueDecl *, 1> &members_;  // member vars
     const llvm::SmallVector<clang::FunctionDecl *, 0> &functions_;
     const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals_;
     const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals_;
 
 private:
+    std::string encodeVariable(const clang::NamedDecl *const);
+
     // sequential series of types
     llvm::SmallVector<ComponentType, 4> typeSequencePr_;
     // sequential series of values
@@ -99,7 +111,7 @@ private:
     // components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperatorsPr_;
     llvm::SmallVector<clang::VarDecl *, 1> varsPr_;
-    llvm::SmallVector<clang::FieldDecl *, 1> fieldsPr_;  // fields in structs
+    llvm::SmallVector<clang::ValueDecl *, 1> membersPr_;  // member vars
     llvm::SmallVector<clang::FunctionDecl *, 0> functionsPr_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiteralsPr_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiteralsPr_;

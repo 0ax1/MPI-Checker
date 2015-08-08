@@ -34,14 +34,14 @@ namespace mpi {
 unsigned long MPICall::idCounter{0};
 
 namespace MPIRank {
-llvm::SmallSet<const Decl *, 4> visitedVariables;
+llvm::SmallSet<const Decl *, 4> variables;
 }
 
 namespace MPIProcessCount {
-llvm::SmallSet<const Decl *, 4> visitedVariables;
+llvm::SmallSet<const Decl *, 4> variables;
 }
 
-llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
+llvm::SmallVector<MPIRankCase, 8> MPIRankCase::cases;
 
 bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;
@@ -63,8 +63,15 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
  * @return ambiguity
  */
 bool MPIRankCase::isRankAmbiguous() const {
+
+    // TODO extract comparison for rank
+    // -> rest is not relevant
+    // if binOp lhs, rhs is rank var -> save bin op
+    // hard..
+    // multiple rank case vars in one condition... nicht wirklich
+
     // clang::ast_matchers::DeclarationMatcher funcDecl =
-        // clang::ast_matchers::functionDecl().bind("func");
+    // clang::ast_matchers::functionDecl().bind("func");
 
     // no matched condition means is else case
     if (!matchedCondition_) return true;
@@ -99,12 +106,12 @@ bool MPIRankCase::isRankAmbiguous() const {
  *
  * @return if they are equal
  */
-bool MPIRankCase::isRankUnambiguouslyEqual(
-    const MPIRankCase &rankCase) const {
+bool MPIRankCase::isRankUnambiguouslyEqual(const MPIRankCase &rankCase) const {
     if (isRankAmbiguous() || rankCase.isRankAmbiguous()) {
         return false;
     }
 
+    // TODO just compare ranks
     // both not ambiguous, compare matched condition
     return matchedCondition_->isEqual(*rankCase.matchedCondition_);
 }

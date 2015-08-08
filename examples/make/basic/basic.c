@@ -52,7 +52,6 @@ void communicate1() {
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
 
     } else if (rank == 1) {
-
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1);
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2);
 

@@ -33,34 +33,39 @@ namespace mpi {
 /**
  * Visitor class to collect rank variables.
  */
-class MPIVariableVisitor : public clang::RecursiveASTVisitor<MPIVariableVisitor> {
+class MPIVariableVisitor
+    : public clang::RecursiveASTVisitor<MPIVariableVisitor> {
 public:
     MPIVariableVisitor(clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager} {}
+
+    // TODO what if variable is in array?
 
     // collect rank vars
     bool VisitCallExpr(clang::CallExpr *callExpr) {
         if (funcClassifier_.isMPIType(util::getIdentInfo(callExpr))) {
             MPICall mpiCall{callExpr};
+
+            // rank variable
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
-                // TODO what if variable is in array
 
-                // TODO what if variable is in struct?
-                // check for field decl, then for var decl
-
-                // -> remember var decl and member expr
-                clang::VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-                // mpiCall.arguments()[1].stmt_->dumpColor();
-                // varDecl->dumpColor();
-                MPIRank::visitedVariables.insert(varDecl);
+                if (mpiCall.arguments_[1].members_.size()) {
+                    MPIRank::variables.insert(
+                        mpiCall.arguments_[1].members_[0]);
+                } else {
+                    MPIRank::variables.insert(
+                        mpiCall.arguments_[1].vars_[0]);
+                }
             }
+            // process count variable
             else if (funcClassifier_.isMPI_Comm_size(mpiCall)) {
-                // TODO what if variable is in array
-
-                // TODO what if variable is in struct?
-                // check for field decl, then for var decl
-                clang::VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
-                MPIProcessCount::visitedVariables.insert(varDecl);
+                if (mpiCall.arguments_[1].members_.size()) {
+                    MPIProcessCount::variables.insert(
+                        mpiCall.arguments_[1].members_[0]);
+                } else {
+                    MPIProcessCount::variables.insert(
+                        mpiCall.arguments_[1].vars_[0]);
+                }
             }
         }
 

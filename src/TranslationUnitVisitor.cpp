@@ -63,22 +63,22 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-        MPIRankCase::visitedRankCases.emplace_back(
+        MPIRankCase::cases.emplace_back(
             ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions,
             checkerAST_.funcClassifier());
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
         checkerAST_.checkForCollectiveCalls(
-            MPIRankCase::visitedRankCases.back());
+            MPIRankCase::cases.back());
     }
 
     // collect mpi calls in else
     if (stmt) {
-        MPIRankCase::visitedRankCases.emplace_back(
+        MPIRankCase::cases.emplace_back(
             stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier());
         checkerAST_.checkForCollectiveCalls(
-            MPIRankCase::visitedRankCases.back());
+            MPIRankCase::cases.back());
     }
 
     return true;
@@ -113,9 +113,14 @@ bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
     ConditionVisitor ConditionVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : ConditionVisitor.vars_) {
-        if (cont::isContained(MPIRank::visitedVariables, varDecl)) {
-            isInRankBranch = true;
-            break;
+        if (cont::isContained(MPIRank::variables, varDecl)) {
+            return true;
+        }
+    }
+
+    for (const ValueDecl *const valueDecl : ConditionVisitor.members_) {
+        if (cont::isContained(MPIRank::variables, valueDecl)) {
+            return true;
         }
     }
     return isInRankBranch;

@@ -50,7 +50,6 @@ clang::StringRef sourceRangeAsStringRef(const clang::SourceRange &,
  */
 std::vector<std::string> split(const std::string &, char);
 
-
 /**
  * Retrieve identifier info for a call expression.
  * Returns nullptr if there's no direct callee.

@@ -36,8 +36,8 @@ void MPICheckerAST::checkPointToPointSchema() const {
     MPIRankCase::unmarkCalls();
 
     // search send/recv pairs for interacting cases
-    for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
-        for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
+    for (MPIRankCase &rankCase1 : MPIRankCase::cases) {
+        for (MPIRankCase &rankCase2 : MPIRankCase::cases) {
             // rank conditions must be distinct or ambiguous
             if (!rankCase1.isRankUnambiguouslyEqual(rankCase2)) {
                 // rank cases are potential partner
@@ -47,7 +47,7 @@ void MPICheckerAST::checkPointToPointSchema() const {
     }
 
     // trigger report for unmarked
-    for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+    for (const MPIRankCase &rankCase : MPIRankCase::cases) {
         for (const MPICall &call : rankCase.mpiCalls()) {
             if (funcClassifier_.isSendType(call) && !call.isMarked_) {
                 bugReporter_.reportUnmatchedCall(call.callExpr(), "receive");
@@ -97,8 +97,8 @@ void MPICheckerAST::checkReachbility() const {
     // multiple send/recv phases per rank case are allowed
     for (int i = 0; i < 4; ++i) {
         // search send/recv pairs for interacting cases
-        for (MPIRankCase &rankCase1 : MPIRankCase::visitedRankCases) {
-            for (MPIRankCase &rankCase2 : MPIRankCase::visitedRankCases) {
+        for (MPIRankCase &rankCase1 : MPIRankCase::cases) {
+            for (MPIRankCase &rankCase2 : MPIRankCase::cases) {
                 // rank conditions must be distinct or ambiguous
                 if (!rankCase1.isRankUnambiguouslyEqual(rankCase2)) {
                     // rank cases are potential partner
@@ -109,7 +109,7 @@ void MPICheckerAST::checkReachbility() const {
     }
 
     // trigger report for unreached
-    for (const MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+    for (const MPIRankCase &rankCase : MPIRankCase::cases) {
         for (const MPICall &call : rankCase.mpiCalls()) {
             if (funcClassifier_.isMPIType(call) && !call.isReachable_) {
                 bugReporter_.reportNotReachableCall(call.callExpr());
@@ -183,8 +183,7 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments_[MPIPointToPoint::kDatatype]
-            .stmt_->getSourceRange(),
+        recvCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     return sendDataType == recvDataType;
@@ -594,7 +593,7 @@ std::vector<size_t> MPICheckerAST::integerIndices(
 void MPICheckerAST::checkForRedundantCalls() const {
     MPIRankCase::unmarkCalls();
 
-    for (MPIRankCase &rankCase : MPIRankCase::visitedRankCases) {
+    for (MPIRankCase &rankCase : MPIRankCase::cases) {
         for (const MPICall &callToCheck : rankCase.mpiCalls()) {
             checkForRedundantCall(callToCheck, rankCase);
         }

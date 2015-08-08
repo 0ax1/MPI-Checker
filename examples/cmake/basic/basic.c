@@ -39,6 +39,7 @@ int N = 0;
 
 typedef struct {
     int rank;
+    int rna;
 }basic_t ;
 
 int f() { return rand(); }
@@ -46,21 +47,24 @@ int f() { return rand(); }
 void communicate1() {
     MPI_Request req1, req2;
 
-    basic_t bt = {.rank = 0};
-    printf("%i\n", bt.rank);
-    printf("%i\n", bt.rank);
-    printf("%i\n", bt.rank);
+    basic_t bt = {.rank = 0, .rna = 0};
+    /* printf("%i\n", bt.rank); */
+    /* printf("%i\n", bt.rank); */
+    /* printf("%i\n", bt.rank); */
 
     MPI_Comm_rank(MPI_COMM_WORLD, &bt.rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    int abc = 0;
 
     if (bt.rank == 0) {
         MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &req1);
-        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &req2);
+        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &req2);
 
         MPI_Request r[2] = {req1, req2};
         MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
 
-    } else if (bt.rank == 1) {
+    } else if (rank == 1) {
 
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1);
         MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2);

@@ -26,11 +26,36 @@
 #include "StatementVisitor.hpp"
 #include "Container.hpp"
 #include "Utility.hpp"
+#include "MPITypes.hpp"
 
 using namespace clang;
 using namespace ento;
 
 namespace mpi {
+
+/**
+ * Helper function to encode collected variables
+ *
+ * @param var to encode as string
+ *
+ * @return encoded string
+ */
+std::string StatementVisitor::encodeVariable(
+    const clang::NamedDecl *const var) {
+    // encode rank variable
+    if (cont::isContained(MPIRank::variables, var)) {
+        llvm::outs() << "rank" << "\n";
+        return "_rank_var_encoding_";
+    }
+    // encode process count variable
+    else if (cont::isContained(MPIProcessCount::variables, var)) {
+        return "_count_var_encoding_";
+    }
+    // no special variable
+    else {
+        return var->getNameAsString();
+    }
+}
 
 /**
  * Collect variables and functions.
@@ -41,15 +66,15 @@ namespace mpi {
  * @return continue visiting
  */
 bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
-
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
 
-        // TODO handle structs, memberexpr
+        // only add if no struct, members are added in VisitMemberExpr
+        if (var->getType()->isStructureType()) return true;
 
         varsPr_.push_back(var);
         typeSequencePr_.push_back(ComponentType::kVar);
-        valueSequencePr_.push_back(var->getNameAsString());
+        valueSequencePr_.push_back(encodeVariable(var));
 
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
@@ -58,20 +83,22 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
         valueSequencePr_.push_back(fn->getNameAsString());
     }
 
-    // TODO
-    // clang::VarDecl *varDecl;
-    // varDecl->getInitAddress();
-    // clang::MemberExpr *MemberExpr;
-    // MemberExpr->
-
     return true;
 }
 
+/**
+ * Collect members from structs
+ *
+ * @param memExpr expression containing member
+ *
+ * @return continue visiting
+ */
 bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
-    // memExpr->dumpColor();
-    // TODO
-    // returns field decl
-    memExpr->getMemberDecl()->dumpColor();
+    clang::ValueDecl *vd = memExpr->getMemberDecl();
+    membersPr_.push_back(vd);
+    typeSequencePr_.push_back(ComponentType::kVar); // encode as type var
+    valueSequencePr_.push_back(encodeVariable(vd));
+
     return true;
 }
 
@@ -161,7 +188,8 @@ bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
  */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
-    if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
+    // TODO accept different rank variables as equal -> write rank as string!
+    // if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
     if (valueSequencePr_ != visitorToCompare.valueSequencePr_) return false;
 
     return true;
@@ -177,10 +205,12 @@ bool StatementVisitor::isEqualOrdered(
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
-    if (!cont::isPermutation(typeSequencePr_, visitorToCompare.typeSequencePr_)) {
+    if (!cont::isPermutation(typeSequencePr_,
+                             visitorToCompare.typeSequencePr_)) {
         return false;
     }
-    if (!cont::isPermutation(valueSequencePr_, visitorToCompare.valueSequencePr_)) {
+    if (!cont::isPermutation(valueSequencePr_,
+                             visitorToCompare.valueSequencePr_)) {
         return false;
     }
 
