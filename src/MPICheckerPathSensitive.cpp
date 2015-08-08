@@ -47,8 +47,8 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     ProgramStateRef state = ctx.getState();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    auto arg = mpiCall.arguments()[mpiCall.callExpr()->getNumArgs() - 1];
-    auto requestVarDecl = arg.vars().front();
+    auto arg = mpiCall.arguments_[mpiCall.callExpr()->getNumArgs() - 1];
+    auto requestVarDecl = arg.vars_.front();
     // get must be called before set function
     const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
 
@@ -85,21 +85,14 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     llvm::SmallVector<VarDecl *, 1> requestVector;
     // wait for single request
     if (funcClassifier_.isMPI_Wait(mpiCall)) {
-        requestVector.push_back(mpiCall.arguments()[0].vars().front());
+        requestVector.push_back(mpiCall.arguments_[0].vars_.front());
     }
     // waitall
     else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
-        // ok returns size 1...
-        // mpiCall.arguments()[1].vars().front()->dumpColor();
-        // llvm::outs() << mpiCall.arguments()[1].vars().size() << "\n";
-
-        // visitor is wrong !
-        ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
-        llvm::outs() << arrayVisitor.vars().size() << "\n";
+        ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
 
         for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
-            requestVar->dumpColor();
         }
     }
     // waitany, waitsome requests are regarded as unwaited

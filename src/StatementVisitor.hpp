@@ -36,7 +36,16 @@ namespace mpi {
  */
 class StatementVisitor : public clang::RecursiveASTVisitor<StatementVisitor> {
 public:
-    StatementVisitor(const clang::Stmt *const stmt) : stmt_{stmt} {
+    StatementVisitor(const clang::Stmt *const stmt)
+        : stmt_{stmt},
+          typeSequence_{typeSequencePr_},
+          valueSequence_{valueSequencePr_},
+          binaryOperators_{binaryOperatorsPr_},
+          vars_{varsPr_},
+          fields_{fieldsPr_},
+          functions_{functionsPr_},
+          integerLiterals_{integerLiteralsPr_},
+          floatingLiterals_{floatingLiteralsPr_} {
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
     }
 
@@ -53,6 +62,7 @@ public:
 
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
+    bool VisitMemberExpr(clang::MemberExpr *);
     bool VisitBinaryOperator(clang::BinaryOperator *);
     bool VisitIntegerLiteral(clang::IntegerLiteral *);
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
@@ -65,51 +75,34 @@ public:
     bool isLastOperatorInverse(const StatementVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
-    const llvm::SmallVectorImpl<ComponentType> &typeSequence() const {
-        return typeSequence_;
-    }
-
-    const llvm::SmallVectorImpl<clang::BinaryOperatorKind> &binaryOperators()
-        const {
-        return binaryOperators_;
-    }
-
-    const llvm::SmallVectorImpl<clang::VarDecl *> &vars() const {
-        return vars_;
-    }
-
-    const llvm::SmallVectorImpl<clang::FunctionDecl *> &functions() const {
-        return functions_;
-    }
-
-    const llvm::SmallVectorImpl<clang::IntegerLiteral *> &integerLiterals()
-        const {
-        return integerLiterals_;
-    }
-
-    const llvm::SmallVectorImpl<clang::FloatingLiteral *> &floatingLiterals()
-        const {
-        return floatingLiterals_;
-    }
-
-    const llvm::SmallVectorImpl<std::string> &valueSequence() const {
-        return valueSequence_;
-    }
-
     // complete statement
     const clang::Stmt *const stmt_;
 
+    // containers
+    const llvm::SmallVector<ComponentType, 4> &typeSequence_;
+    // sequential series of values
+    const llvm::SmallVector<std::string, 4> &valueSequence_;
+    // components
+    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators_;
+    const llvm::SmallVector<clang::VarDecl *, 1> &vars_;
+    const llvm::SmallVector<clang::FieldDecl *, 1>
+        &fields_;  // fields in structs
+    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions_;
+    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals_;
+    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals_;
+
 private:
     // sequential series of types
-    llvm::SmallVector<ComponentType, 4> typeSequence_;
+    llvm::SmallVector<ComponentType, 4> typeSequencePr_;
     // sequential series of values
-    llvm::SmallVector<std::string, 4> valueSequence_;
+    llvm::SmallVector<std::string, 4> valueSequencePr_;
     // components
-    llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperators_;
-    llvm::SmallVector<clang::VarDecl *, 1> vars_;
-    llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
-    llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
-    llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;
+    llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperatorsPr_;
+    llvm::SmallVector<clang::VarDecl *, 1> varsPr_;
+    llvm::SmallVector<clang::FieldDecl *, 1> fieldsPr_;  // fields in structs
+    llvm::SmallVector<clang::FunctionDecl *, 0> functionsPr_;
+    llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiteralsPr_;
+    llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiteralsPr_;
 };
 
 // aliases

@@ -179,12 +179,11 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
                                       const MPICall &recvCall) const {
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments()[MPIPointToPoint::kDatatype]
-            .stmt_->getSourceRange(),
+        sendCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments()[MPIPointToPoint::kDatatype]
+        recvCall.arguments_[MPIPointToPoint::kDatatype]
             .stmt_->getSourceRange(),
         analysisManager_);
 
@@ -207,16 +206,16 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!sendCall.arguments()[idx].isEqual(recvCall.arguments()[idx])) {
+        if (!sendCall.arguments_[idx].isEqual(recvCall.arguments_[idx])) {
             return false;
         }
     }
 
     // compare ranks
-    const auto &rankArgSend = sendCall.arguments()[MPIPointToPoint::kRank];
-    const auto &rankArgRecv = recvCall.arguments()[MPIPointToPoint::kRank];
+    const auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
+    const auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
 
-    if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
+    if (rankArgSend.typeSequence_.size() != rankArgRecv.typeSequence_.size())
         return false;
 
     // build sequences without last operator(skip first element)
@@ -224,13 +223,13 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     std::vector<std::string> val1, val2;
 
     bool containsSubtraction{false};
-    for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
-        seq1.push_back(rankArgSend.typeSequence()[i]);
-        val1.push_back(rankArgSend.valueSequence()[i]);
-        seq2.push_back(rankArgRecv.typeSequence()[i]);
-        val2.push_back(rankArgRecv.valueSequence()[i]);
-        if (rankArgSend.valueSequence()[i] == "-") containsSubtraction = true;
-        if (rankArgRecv.valueSequence()[i] == "-") containsSubtraction = true;
+    for (size_t i = 1; i < rankArgSend.typeSequence_.size(); ++i) {
+        seq1.push_back(rankArgSend.typeSequence_[i]);
+        val1.push_back(rankArgSend.valueSequence_[i]);
+        seq2.push_back(rankArgRecv.typeSequence_[i]);
+        val2.push_back(rankArgRecv.valueSequence_[i]);
+        if (rankArgSend.valueSequence_[i] == "-") containsSubtraction = true;
+        if (rankArgRecv.valueSequence_[i] == "-") containsSubtraction = true;
     }
 
     if (containsSubtraction) {
@@ -265,13 +264,13 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // check if their types match
     for (const auto &idxPair : indexPairs) {
         const VarDecl *bufferArg =
-            mpiCall.arguments()[idxPair.first].vars().front();
+            mpiCall.arguments_[idxPair.first].vars_.front();
 
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
 
         // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments()[idxPair.second].stmt_;
+        auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
 
@@ -519,8 +518,8 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
     // iterate indices which should not have integer arguments
     for (const size_t idx : indicesToCheck) {
         // check for invalid variable types
-        const auto &arg = mpiCall.arguments()[idx];
-        const auto &vars = arg.vars();
+        const auto &arg = mpiCall.arguments_[idx];
+        const auto &vars = arg.vars_;
         for (const auto &var : vars) {
             if (!var->getType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
@@ -529,14 +528,14 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         }
 
         // check for float literals
-        if (arg.floatingLiterals().size()) {
+        if (arg.floatingLiterals_.size()) {
             bugReporter_.reportInvalidArgumentType(
                 mpiCall.callExpr(), idx,
-                arg.floatingLiterals().front()->getSourceRange(), "Literal");
+                arg.floatingLiterals_.front()->getSourceRange(), "Literal");
         }
 
         // check for invalid return types from functions
-        const auto &functions = arg.functions();
+        const auto &functions = arg.functions_;
         for (const auto &function : functions) {
             if (!function->getReturnType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(

@@ -34,11 +34,11 @@ namespace mpi {
 unsigned long MPICall::idCounter{0};
 
 namespace MPIRank {
-llvm::SmallSet<const VarDecl *, 4> visitedVariables;
+llvm::SmallSet<const Decl *, 4> visitedVariables;
 }
 
 namespace MPIProcessCount {
-llvm::SmallSet<const VarDecl *, 4> visitedVariables;
+llvm::SmallSet<const Decl *, 4> visitedVariables;
 }
 
 llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;
@@ -85,7 +85,7 @@ bool MPIRankCase::isRankAmbiguous() const {
                 BinaryOperatorKind::BO_LE == op ||
                 BinaryOperatorKind::BO_GE == op);
     };
-    for (const auto op : matchedCondition_->binaryOperators()) {
+    for (const auto op : matchedCondition_->binaryOperators_) {
         if (isRangeComparison(op)) return true;
     }
 

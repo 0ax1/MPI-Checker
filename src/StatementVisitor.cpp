@@ -47,16 +47,31 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 
         // TODO handle structs, memberexpr
 
-        vars_.push_back(var);
-        typeSequence_.push_back(ComponentType::kVar);
-        valueSequence_.push_back(var->getNameAsString());
+        varsPr_.push_back(var);
+        typeSequencePr_.push_back(ComponentType::kVar);
+        valueSequencePr_.push_back(var->getNameAsString());
 
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-        functions_.push_back(fn);
-        typeSequence_.push_back(ComponentType::kFunc);
-        valueSequence_.push_back(fn->getNameAsString());
+        functionsPr_.push_back(fn);
+        typeSequencePr_.push_back(ComponentType::kFunc);
+        valueSequencePr_.push_back(fn->getNameAsString());
     }
+
+    // TODO
+    // clang::VarDecl *varDecl;
+    // varDecl->getInitAddress();
+    // clang::MemberExpr *MemberExpr;
+    // MemberExpr->
+
+    return true;
+}
+
+bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
+    // memExpr->dumpColor();
+    // TODO
+    // returns field decl
+    memExpr->getMemberDecl()->dumpColor();
     return true;
 }
 
@@ -68,18 +83,18 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
-    binaryOperators_.push_back(op->getOpcode());
+    binaryOperatorsPr_.push_back(op->getOpcode());
     if (op->isComparisonOp()) {
-        typeSequence_.push_back(ComponentType::kComparison);
+        typeSequencePr_.push_back(ComponentType::kComparison);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
-        typeSequence_.push_back(ComponentType::kAddOp);
+        typeSequencePr_.push_back(ComponentType::kAddOp);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {
-        typeSequence_.push_back(ComponentType::kSubOp);
+        typeSequencePr_.push_back(ComponentType::kSubOp);
     } else {
-        typeSequence_.push_back(ComponentType::kOperator);
+        typeSequencePr_.push_back(ComponentType::kOperator);
     }
 
-    valueSequence_.push_back(op->getOpcodeStr());
+    valueSequencePr_.push_back(op->getOpcodeStr());
 
     return true;
 }
@@ -92,8 +107,8 @@ bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
-    integerLiterals_.push_back(intLiteral);
-    typeSequence_.push_back(ComponentType::kInt);
+    integerLiteralsPr_.push_back(intLiteral);
+    typeSequencePr_.push_back(ComponentType::kInt);
 
     SmallVector<char, 4> intValAsString;
     intLiteral->getValue().toStringUnsigned(intValAsString);
@@ -101,7 +116,7 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     for (char c : intValAsString) {
         val.push_back(c);
     }
-    valueSequence_.push_back(val);
+    valueSequencePr_.push_back(val);
     return true;
 }
 
@@ -113,10 +128,10 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
-    floatingLiterals_.push_back(floatLiteral);
-    typeSequence_.push_back(ComponentType::kFloat);
+    floatingLiteralsPr_.push_back(floatLiteral);
+    typeSequencePr_.push_back(ComponentType::kFloat);
 
-    valueSequence_.push_back(
+    valueSequencePr_.push_back(
         std::to_string(floatLiteral->getValueAsApproximateDouble()));
     return true;
 }
@@ -146,8 +161,8 @@ bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
  */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
-    if (typeSequence_ != visitorToCompare.typeSequence_) return false;
-    if (valueSequence_ != visitorToCompare.valueSequence_) return false;
+    if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
+    if (valueSequencePr_ != visitorToCompare.valueSequencePr_) return false;
 
     return true;
 }
@@ -162,10 +177,10 @@ bool StatementVisitor::isEqualOrdered(
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
-    if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
+    if (!cont::isPermutation(typeSequencePr_, visitorToCompare.typeSequencePr_)) {
         return false;
     }
-    if (!cont::isPermutation(valueSequence_, visitorToCompare.valueSequence_)) {
+    if (!cont::isPermutation(valueSequencePr_, visitorToCompare.valueSequencePr_)) {
         return false;
     }
 
@@ -178,7 +193,7 @@ bool StatementVisitor::isEqualPermutative(
  * @return is inverse
  */
 bool StatementVisitor::containsSubtraction() const {
-    for (const auto binaryOperator : binaryOperators_) {
+    for (const auto binaryOperator : binaryOperatorsPr_) {
         if (binaryOperator == BinaryOperatorKind::BO_Sub) {
             return true;
         }
@@ -197,10 +212,10 @@ bool StatementVisitor::isLastOperatorInverse(
     const StatementVisitor &visitor) const {
     // last operator must be inverse
     return (BinaryOperatorKind::BO_Add == binaryOperators_.front() &&
-            BinaryOperatorKind::BO_Sub == visitor.binaryOperators().front()) ||
+            BinaryOperatorKind::BO_Sub == visitor.binaryOperators_.front()) ||
 
            (BinaryOperatorKind::BO_Sub == binaryOperators_.front() &&
-            BinaryOperatorKind::BO_Add == visitor.binaryOperators().front());
+            BinaryOperatorKind::BO_Add == visitor.binaryOperators_.front());
 }
 
 }  // end of namespace: mpi

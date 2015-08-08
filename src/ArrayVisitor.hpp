@@ -42,8 +42,8 @@ public:
         if (!ile) return;
         for (const clang::Stmt *stmt : *ile) {
             mpi::StatementVisitor sv{stmt};
-            if (sv.vars().size()) {
-                vars_.push_back(sv.vars().front());
+            if (sv.vars_.size()) {
+                vars_.push_back(sv.vars_.front());
             }
         }
     }

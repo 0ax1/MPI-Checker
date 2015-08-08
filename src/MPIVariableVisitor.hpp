@@ -46,8 +46,10 @@ public:
                 // TODO what if variable is in array
 
                 // TODO what if variable is in struct?
+                // check for field decl, then for var decl
+
                 // -> remember var decl and member expr
-                clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
+                clang::VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
                 // mpiCall.arguments()[1].stmt_->dumpColor();
                 // varDecl->dumpColor();
                 MPIRank::visitedVariables.insert(varDecl);
@@ -56,10 +58,8 @@ public:
                 // TODO what if variable is in array
 
                 // TODO what if variable is in struct?
-                // -> remember var decl and member expr
-                // currently all members of a decl ref are
-                // identified as ranks vars
-                clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
+                // check for field decl, then for var decl
+                clang::VarDecl *varDecl = mpiCall.arguments_[1].vars_[0];
                 MPIProcessCount::visitedVariables.insert(varDecl);
             }
         }

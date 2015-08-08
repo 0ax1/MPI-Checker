@@ -44,7 +44,8 @@ enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 
 struct MPICall {
 public:
-    MPICall(const clang::CallExpr *const callExpr) : callExpr_{callExpr} {
+    MPICall(const clang::CallExpr *const callExpr)
+        : arguments_{argumentsPr_}, callExpr_{callExpr} {
         init(callExpr);
     };
 
@@ -55,10 +56,10 @@ public:
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *callExpr() const { return callExpr_; }
-    const std::vector<ArgumentVisitor> &arguments() const { return arguments_; }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
 
+    const std::vector<ArgumentVisitor> &arguments_;
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_{false};
@@ -74,12 +75,12 @@ private:
         // build argument vector
         for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
             // emplace triggers ArgumentVisitor ctor
-            arguments_.emplace_back(callExpr->getArg(i));
+            argumentsPr_.emplace_back(callExpr->getArg(i));
         }
     }
 
     const clang::CallExpr *callExpr_;
-    std::vector<ArgumentVisitor> arguments_;
+    std::vector<ArgumentVisitor> argumentsPr_;
     const clang::IdentifierInfo *identInfo_;
     unsigned long id_{idCounter++};  // unique call identification
 
@@ -89,13 +90,15 @@ private:
 // to capture rank variables
 namespace MPIRank {
 // TODO change type
-extern llvm::SmallSet<const clang::VarDecl *, 4> visitedVariables;
+// to decl
+// member is field decl
+extern llvm::SmallSet<const clang::Decl *, 4> visitedVariables;
 }
 
 // to capture process count variables
 namespace MPIProcessCount {
 // TODO change type
-extern llvm::SmallSet<const clang::VarDecl *, 4> visitedVariables;
+extern llvm::SmallSet<const clang::Decl *, 4> visitedVariables;
 }
 
 // to capture rank cases from branches
@@ -112,7 +115,7 @@ public:
             // set it here, by function return
             matchedCondition_.reset(new ConditionVisitor{matchedCondition});
             // clang::ast_matchers::DeclarationMatcher funcDecl =
-                // clang::ast_matchers::functionDecl().bind("func");
+            // clang::ast_matchers::functionDecl().bind("func");
         }
 
         const CallExprVisitor callExprVisitor{then};  // collect call exprs
