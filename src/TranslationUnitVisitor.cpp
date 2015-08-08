@@ -110,7 +110,7 @@ bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
  * @return if rank var is used
  */
 bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
-    bool isInRankBranch{false};
+
     ConditionVisitor ConditionVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : ConditionVisitor.vars_) {
         if (cont::isContained(MPIRank::variables, varDecl)) {
@@ -123,7 +123,7 @@ bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
             return true;
         }
     }
-    return isInRankBranch;
+    return false;
 }
 
 }  // end of namespace: mpi

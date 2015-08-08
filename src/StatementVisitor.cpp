@@ -67,7 +67,6 @@ std::string StatementVisitor::encodeVariable(
 bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
-
         // only add if no struct, members are added in VisitMemberExpr
         if (var->getType()->isStructureType()) return true;
 
@@ -97,7 +96,7 @@ bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
     clang::ValueDecl *vd = memExpr->getMemberDecl();
     membersPr_.push_back(vd);
     combinedVarsPr_.push_back(vd);
-    typeSequencePr_.push_back(ComponentType::kVar); // encode as type var
+    typeSequencePr_.push_back(ComponentType::kVar);  // encode as type var
     valueSequencePr_.push_back(encodeVariable(vd));
 
     return true;
@@ -112,8 +111,10 @@ bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
  */
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperatorsPr_.push_back(op->getOpcode());
+
     if (op->isComparisonOp()) {
         typeSequencePr_.push_back(ComponentType::kComparison);
+        comparisonOperatorsPr_.push_back(op);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
         typeSequencePr_.push_back(ComponentType::kAddOp);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {
@@ -172,12 +173,18 @@ bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
  *
  * @return continue visiting
  */
-bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
+bool StatementVisitor::operator==(
+    const StatementVisitor &visitorToCompare) const {
     if (containsSubtraction() || visitorToCompare.containsSubtraction()) {
         return isEqualOrdered(visitorToCompare);
     } else {
         return isEqualPermutative(visitorToCompare);
     }
+}
+
+bool StatementVisitor::operator!=(
+    const StatementVisitor &visitorToCompare) const {
+    return !(*this == visitorToCompare);
 }
 
 /**

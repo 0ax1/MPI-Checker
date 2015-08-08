@@ -46,7 +46,7 @@ llvm::SmallVector<MPIRankCase, 8> MPIRankCase::cases;
 bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;
     for (size_t i = 0; i < arguments_.size(); ++i) {
-        if (!arguments_[i].isEqual(callToCompare.arguments_[i])) {
+        if (arguments_[i] != callToCompare.arguments_[i]) {
             return false;
         }
     }
@@ -63,37 +63,14 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
  * @return ambiguity
  */
 bool MPIRankCase::isRankAmbiguous() const {
-
-    // TODO extract comparison for rank
-    // -> rest is not relevant
-    // if binOp lhs, rhs is rank var -> save bin op
-    // hard..
-    // multiple rank case vars in one condition... nicht wirklich
-
-    // clang::ast_matchers::DeclarationMatcher funcDecl =
-    // clang::ast_matchers::functionDecl().bind("func");
-
     // no matched condition means is else case
-    if (!matchedCondition_) return true;
+    if (!completeCondition_) return true;
 
-    // TODO make ambiguity criteria more precise
-    // rank == 1 && x > 0 would be rated as ambiguous
-    // rating must be bound to rank var
-    // condition must be changed everything not being == is ambiguous
-    // write down rank if concrete (also as expression
-    // rank = processcount - 1
-    // const for last rank
-    // track, identify process count variables
-
-    // ranges used in rank conditions prohibit equality identification
-    auto isRangeComparison = [](BinaryOperatorKind op) {
-        return (BinaryOperatorKind::BO_LT == op ||
-                BinaryOperatorKind::BO_GT == op ||
-                BinaryOperatorKind::BO_LE == op ||
-                BinaryOperatorKind::BO_GE == op);
-    };
-    for (const auto op : matchedCondition_->binaryOperators_) {
-        if (isRangeComparison(op)) return true;
+    // if comparison op not ==, -> ambiguous
+    for (const auto &rankCondition : rankConditions_) {
+        for (const auto op : rankCondition.comparisonOperators_) {
+            if (op->getOpcode() != BinaryOperatorKind::BO_EQ) return true;
+        }
     }
 
     return false;
@@ -111,9 +88,7 @@ bool MPIRankCase::isRankUnambiguouslyEqual(const MPIRankCase &rankCase) const {
         return false;
     }
 
-    // TODO just compare ranks
-    // both not ambiguous, compare matched condition
-    return matchedCondition_->isEqual(*rankCase.matchedCondition_);
+    return cont::isPermutation(rankConditions_, rankCase.rankConditions_);
 }
 
 }  // end of namespace: mpi

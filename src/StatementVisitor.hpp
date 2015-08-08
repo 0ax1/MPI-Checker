@@ -41,6 +41,7 @@ public:
           typeSequence_{typeSequencePr_},
           valueSequence_{valueSequencePr_},
           binaryOperators_{binaryOperatorsPr_},
+          comparisonOperators_{comparisonOperatorsPr_},
           vars_{varsPr_},
           members_{membersPr_},
           combinedVars_{combinedVarsPr_},
@@ -55,6 +56,7 @@ public:
           typeSequence_{typeSequencePr_},
           valueSequence_{valueSequencePr_},
           binaryOperators_{binaryOperatorsPr_},
+          comparisonOperators_{comparisonOperatorsPr_},
           vars_{varsPr_},
           members_{membersPr_},
           combinedVars_{combinedVarsPr_},
@@ -62,6 +64,11 @@ public:
           integerLiterals_{integerLiteralsPr_},
           floatingLiterals_{floatingLiteralsPr_} {
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
+    }
+
+    // move assignment operator, to enable erase
+    StatementVisitor &operator=(StatementVisitor &&other) {
+        return *this;
     }
 
     enum class ComponentType {
@@ -83,7 +90,8 @@ public:
     bool VisitFloatingLiteral(clang::FloatingLiteral *);
 
     // non visitor functions
-    bool isEqual(const StatementVisitor &) const;
+    bool operator==(const StatementVisitor &) const;
+    bool operator!=(const StatementVisitor &) const;
     bool isEqualOrdered(const StatementVisitor &) const;
     bool isEqualPermutative(const StatementVisitor &) const;
     bool containsSubtraction() const;
@@ -97,6 +105,7 @@ public:
     const llvm::SmallVector<std::string, 4> &valueSequence_;
 
     const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators_;
+    const llvm::SmallVector<clang::BinaryOperator *, 1> &comparisonOperators_;
     const llvm::SmallVector<clang::VarDecl *, 1> &vars_;
     const llvm::SmallVector<clang::ValueDecl *, 1> &members_;
     const llvm::SmallVector<clang::ValueDecl *, 1> &combinedVars_;
@@ -113,7 +122,8 @@ private:
     llvm::SmallVector<std::string, 4> valueSequencePr_;
     // components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperatorsPr_;
-    llvm::SmallVector<clang::VarDecl *, 1> varsPr_; // non-member vars
+    llvm::SmallVector<clang::BinaryOperator *, 1> comparisonOperatorsPr_;
+    llvm::SmallVector<clang::VarDecl *, 1> varsPr_;       // non-member vars
     llvm::SmallVector<clang::ValueDecl *, 1> membersPr_;  // member vars
     llvm::SmallVector<clang::ValueDecl *, 1> combinedVarsPr_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functionsPr_;

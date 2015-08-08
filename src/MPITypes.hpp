@@ -26,11 +26,11 @@
 #define MPITYPES_HPP_IC7XR2MI
 
 #include "llvm/ADT/SmallSet.h"
-// #include "clang/ASTMatchers/ASTMatchers.h"
 #include "StatementVisitor.hpp"
 #include "CallExprVisitor.hpp"
 #include "MPIFunctionClassifier.hpp"
 #include "Utility.hpp"
+#include "Container.hpp"
 
 // types modeling mpi function calls and variables –––––––––––––––––––––
 
@@ -110,10 +110,23 @@ public:
                 const std::vector<ConditionVisitor> &unmatchedConditions,
                 const MPIFunctionClassifier &funcClassifier)
 
-        : unmatchedConditions_{unmatchedConditions} {
+        : mpiCalls_{mpiCallsPr_},
+          conditions_{conditionsPr_},
+          rankConditions_{rankConditionsPr_},
+          unmatchedConditions_{unmatchedConditions} {
+        // init
         if (matchedCondition) {
-            // set it here, by function return
-            matchedCondition_.reset(new ConditionVisitor{matchedCondition});
+            completeCondition_.reset(new ConditionVisitor{matchedCondition});
+
+            for (const auto &x : completeCondition_->comparisonOperators_) {
+                // dissect single conditions, encode special mpi vars
+                conditionsPr_.emplace_back(x);
+
+                if (cont::isContained(conditionsPr_.back().valueSequence_,
+                                      "_rank_var_encoding_")) {
+                    rankConditionsPr_.emplace_back(x);
+                }
+            }
         }
 
         const CallExprVisitor callExprVisitor{then};  // collect call exprs
@@ -121,14 +134,14 @@ public:
              callExprVisitor.callExprs()) {
             // add mpi calls only
             if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
-                mpiCalls_.push_back(callExpr);
+                mpiCallsPr_.push_back(callExpr);
             }
         }
     }
 
     static void unmarkCalls() {
         for (MPIRankCase &rankCase : MPIRankCase::cases) {
-            for (MPICall &call : rankCase.mpiCalls_) {
+            for (MPICall &call : rankCase.mpiCallsPr_) {
                 call.isMarked_ = false;
             }
         }
@@ -136,20 +149,24 @@ public:
 
     bool isRankAmbiguous() const;
     bool isRankUnambiguouslyEqual(const MPIRankCase &) const;
-    size_t size() const { return mpiCalls_.size(); }
-    const std::vector<MPICall> &mpiCalls() const { return mpiCalls_; }
-    const std::unique_ptr<ConditionVisitor> &matchedCondition() const {
-        return matchedCondition_;
-    }
+    const std::vector<MPICall> &mpiCalls_;
+    // dissected conditions
+    const std::vector<ConditionVisitor> &conditions_;
+    // // subset containing conditions with rank vars
+    const std::vector<ConditionVisitor> &rankConditions_;
 
     // conditions not fullfilled to enter rank case
     const std::vector<ConditionVisitor> unmatchedConditions_;
     static llvm::SmallVector<MPIRankCase, 8> cases;
 
 private:
-    std::vector<MPICall> mpiCalls_;
+    std::vector<MPICall> mpiCallsPr_;
+    // dissected conditions
+    std::vector<ConditionVisitor> conditionsPr_;
+    // subset containing conditions with rank vars
+    std::vector<ConditionVisitor> rankConditionsPr_;
     // condition fulfilled to enter rank case
-    std::unique_ptr<ConditionVisitor> matchedCondition_{nullptr};
+    std::unique_ptr<ConditionVisitor> completeCondition_{nullptr};
 };
 
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––

@@ -48,7 +48,7 @@ void MPICheckerAST::checkPointToPointSchema() const {
 
     // trigger report for unmarked
     for (const MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &call : rankCase.mpiCalls()) {
+        for (const MPICall &call : rankCase.mpiCalls_) {
             if (funcClassifier_.isSendType(call) && !call.isMarked_) {
                 bugReporter_.reportUnmatchedCall(call.callExpr(), "receive");
             } else if (funcClassifier_.isRecvType(call) && !call.isMarked_) {
@@ -70,12 +70,12 @@ void MPICheckerAST::checkPointToPointSchema() const {
 void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &firstCase,
                                          const MPIRankCase &secondCase) const {
     // find send/recv pairs
-    for (const MPICall &send : firstCase.mpiCalls()) {
+    for (const MPICall &send : firstCase.mpiCalls_) {
         // skip non sends for case 1
         if (!funcClassifier_.isSendType(send) || send.isMarked_) continue;
 
         // skip non recvs for case 2
-        for (const MPICall &recv : secondCase.mpiCalls()) {
+        for (const MPICall &recv : secondCase.mpiCalls_) {
             if (!funcClassifier_.isRecvType(recv) || recv.isMarked_) continue;
 
             // check if pair matches
@@ -110,7 +110,7 @@ void MPICheckerAST::checkReachbility() const {
 
     // trigger report for unreached
     for (const MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &call : rankCase.mpiCalls()) {
+        for (const MPICall &call : rankCase.mpiCalls_) {
             if (funcClassifier_.isMPIType(call) && !call.isReachable_) {
                 bugReporter_.reportNotReachableCall(call.callExpr());
             }
@@ -127,11 +127,11 @@ void MPICheckerAST::checkReachbility() const {
 void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
                                          const MPIRankCase &secondCase) const {
     // find send/recv pairs
-    for (const MPICall &send : firstCase.mpiCalls()) {
+    for (const MPICall &send : firstCase.mpiCalls_) {
         send.isReachable_ = true;
         if (send.isMarked_) continue;
 
-        for (const MPICall &recv : secondCase.mpiCalls()) {
+        for (const MPICall &recv : secondCase.mpiCalls_) {
             recv.isReachable_ = true;
             if (recv.isMarked_) continue;
 
@@ -160,7 +160,7 @@ void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
  * @param mpiCall
  */
 void MPICheckerAST::checkForCollectiveCalls(const MPIRankCase &rankCase) const {
-    for (const MPICall &call : rankCase.mpiCalls()) {
+    for (const MPICall &call : rankCase.mpiCalls_) {
         if (funcClassifier_.isCollectiveType(call)) {
             bugReporter_.reportCollCallInBranch(call.callExpr());
         }
@@ -205,7 +205,7 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (!sendCall.arguments_[idx].isEqual(recvCall.arguments_[idx])) {
+        if (sendCall.arguments_[idx] != recvCall.arguments_[idx]) {
             return false;
         }
     }
@@ -277,7 +277,7 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
 
-        // MPI_TYPE needs no matching
+        // MPI_BYTE needs no matching
         if (mpiDatatypeString == "MPI_BYTE") return;
 
         selectTypeMatcher(typeVisitor, mpiCall, mpiDatatypeString, idxPair);
@@ -603,7 +603,7 @@ void MPICheckerAST::checkForRedundantCalls() const {
     MPIRankCase::unmarkCalls();
 
     for (MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &callToCheck : rankCase.mpiCalls()) {
+        for (const MPICall &callToCheck : rankCase.mpiCalls_) {
             checkForRedundantCall(callToCheck, rankCase);
         }
     }
@@ -616,7 +616,7 @@ void MPICheckerAST::checkForRedundantCalls() const {
  */
 void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck,
                                           const MPIRankCase &rankCase) const {
-    for (const MPICall &comparedCall : rankCase.mpiCalls()) {
+    for (const MPICall &comparedCall : rankCase.mpiCalls_) {
         if (qualifyRedundancyCheck(callToCheck, comparedCall)) {
             if (callToCheck == comparedCall) {
                 bugReporter_.reportRedundantCall(callToCheck.callExpr(),
