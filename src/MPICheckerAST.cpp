@@ -265,6 +265,9 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         const ValueDecl *bufferArg =
             mpiCall.arguments_[idxPair.first].combinedVars_.front();
 
+        // wave through structs
+        if (bufferArg->getType()->isStructureType()) return;
+
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
 
@@ -272,6 +275,9 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
+
+        // MPI_TYPE needs no matching
+        if (mpiDatatypeString == "MPI_BYTE") return;
 
         selectTypeMatcher(typeVisitor, mpiCall, mpiDatatypeString, idxPair);
     }
@@ -305,7 +311,8 @@ MPICheckerAST::IndexPairs MPICheckerAST::bufferDataTypeIndices(
                    funcClassifier_.isAlltoallType(mpiCall)) {
             indexPairs.push_back({0, 2});
             indexPairs.push_back({3, 5});
-        } else if (funcClassifier_.isBcastType(mpiCall)) {
+        }
+        else if (funcClassifier_.isBcastType(mpiCall)) {
             indexPairs.push_back({0, 2});
         }
     }
@@ -325,6 +332,7 @@ void MPICheckerAST::selectTypeMatcher(
     const mpi::TypeVisitor &typeVisitor, const MPICall &mpiCall,
     const StringRef mpiDatatypeString,
     const std::pair<size_t, size_t> &idxPair) const {
+
     const clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType();
     bool isTypeMatching{true};
 
