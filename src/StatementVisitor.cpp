@@ -72,6 +72,7 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
         if (var->getType()->isStructureType()) return true;
 
         varsPr_.push_back(var);
+        combinedVarsPr_.push_back(var);
         typeSequencePr_.push_back(ComponentType::kVar);
         valueSequencePr_.push_back(encodeVariable(var));
 
@@ -95,6 +96,7 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
     clang::ValueDecl *vd = memExpr->getMemberDecl();
     membersPr_.push_back(vd);
+    combinedVarsPr_.push_back(vd);
     typeSequencePr_.push_back(ComponentType::kVar); // encode as type var
     valueSequencePr_.push_back(encodeVariable(vd));
 

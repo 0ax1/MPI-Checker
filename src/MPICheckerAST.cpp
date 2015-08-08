@@ -262,8 +262,8 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // for every buffer mpi-data pair in function
     // check if their types match
     for (const auto &idxPair : indexPairs) {
-        const VarDecl *bufferArg =
-            mpiCall.arguments_[idxPair.first].vars_.front();
+        const ValueDecl *bufferArg =
+            mpiCall.arguments_[idxPair.first].combinedVars_.front();
 
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};

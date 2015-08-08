@@ -43,6 +43,7 @@ public:
           binaryOperators_{binaryOperatorsPr_},
           vars_{varsPr_},
           members_{membersPr_},
+          combinedVars_{combinedVarsPr_},
           functions_{functionsPr_},
           integerLiterals_{integerLiteralsPr_},
           floatingLiterals_{floatingLiteralsPr_} {
@@ -56,6 +57,7 @@ public:
           binaryOperators_{binaryOperatorsPr_},
           vars_{varsPr_},
           members_{membersPr_},
+          combinedVars_{combinedVarsPr_},
           functions_{functionsPr_},
           integerLiterals_{integerLiteralsPr_},
           floatingLiterals_{floatingLiteralsPr_} {
@@ -96,7 +98,8 @@ public:
 
     const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators_;
     const llvm::SmallVector<clang::VarDecl *, 1> &vars_;
-    const llvm::SmallVector<clang::ValueDecl *, 1> &members_;  // member vars
+    const llvm::SmallVector<clang::ValueDecl *, 1> &members_;
+    const llvm::SmallVector<clang::ValueDecl *, 1> &combinedVars_;
     const llvm::SmallVector<clang::FunctionDecl *, 0> &functions_;
     const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals_;
     const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals_;
@@ -110,8 +113,9 @@ private:
     llvm::SmallVector<std::string, 4> valueSequencePr_;
     // components
     llvm::SmallVector<clang::BinaryOperatorKind, 1> binaryOperatorsPr_;
-    llvm::SmallVector<clang::VarDecl *, 1> varsPr_;
+    llvm::SmallVector<clang::VarDecl *, 1> varsPr_; // non-member vars
     llvm::SmallVector<clang::ValueDecl *, 1> membersPr_;  // member vars
+    llvm::SmallVector<clang::ValueDecl *, 1> combinedVarsPr_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functionsPr_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiteralsPr_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiteralsPr_;

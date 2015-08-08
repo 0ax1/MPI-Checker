@@ -22,8 +22,8 @@
  SOFTWARE.
 */
 
-#ifndef MPIVariableVisitor_HPP_WZL2H4SR
-#define MPIVariableVisitor_HPP_WZL2H4SR
+#ifndef MPIVARIABLEVISITOR_HPP_WZL2H4SR
+#define MPIVARIABLEVISITOR_HPP_WZL2H4SR
 
 #include "MPIFunctionClassifier.hpp"
 #include "Utility.hpp"
@@ -77,4 +77,4 @@ private:
 };
 
 }  // end of namespace: mpi
-#endif  // end of include guard: MPIVariableVisitor_HPP_WZL2H4SR
+#endif  // end of include guard: MPIVARIABLEVISITOR_HPP_WZL2H4SR

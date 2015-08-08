@@ -94,12 +94,12 @@ private:
 
 // to capture rank variables
 namespace MPIRank {
-extern llvm::SmallSet<const clang::Decl *, 4> variables;
+extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
 }
 
 // to capture process count variables
 namespace MPIProcessCount {
-extern llvm::SmallSet<const clang::Decl *, 4> variables;
+extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
 }
 
 // to capture rank cases from branches
@@ -171,7 +171,7 @@ struct RequestVar {
     const clang::CallExpr *const lastUser_;
 };
 }  // end of namespace: mpi
-// TODO track request arrays
+// TODO track request arrays (check bind?)
 
 // register data structure for path sensitive analysis
 REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, clang::VarDecl *, mpi::RequestVar)
