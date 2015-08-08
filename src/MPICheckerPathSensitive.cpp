@@ -89,8 +89,13 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     }
     // waitall
     else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
-        ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
+        // currently only work for init lists
+        // TODO add support for assigned requests
+        if (!mpiCall.arguments_[1].vars_.size() ||
+            !mpiCall.arguments_[1].vars_.front()->getType()->isArrayType())
+            return;
 
+        ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
         for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
         }

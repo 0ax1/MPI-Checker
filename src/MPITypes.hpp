@@ -112,11 +112,8 @@ public:
 
         : unmatchedConditions_{unmatchedConditions} {
         if (matchedCondition) {
-            // TODO rank case ambiguity
             // set it here, by function return
             matchedCondition_.reset(new ConditionVisitor{matchedCondition});
-            // clang::ast_matchers::DeclarationMatcher funcDecl =
-            // clang::ast_matchers::functionDecl().bind("func");
         }
 
         const CallExprVisitor callExprVisitor{then};  // collect call exprs
@@ -174,6 +171,7 @@ struct RequestVar {
     const clang::CallExpr *const lastUser_;
 };
 }  // end of namespace: mpi
+// TODO track request arrays
 
 // register data structure for path sensitive analysis
 REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, clang::VarDecl *, mpi::RequestVar)

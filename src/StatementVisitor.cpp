@@ -44,7 +44,6 @@ std::string StatementVisitor::encodeVariable(
     const clang::NamedDecl *const var) {
     // encode rank variable
     if (cont::isContained(MPIRank::variables, var)) {
-        llvm::outs() << "rank" << "\n";
         return "_rank_var_encoding_";
     }
     // encode process count variable
@@ -188,8 +187,7 @@ bool StatementVisitor::isEqual(const StatementVisitor &visitorToCompare) const {
  */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
-    // TODO accept different rank variables as equal -> write rank as string!
-    // if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
+    if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
     if (valueSequencePr_ != visitorToCompare.valueSequencePr_) return false;
 
     return true;

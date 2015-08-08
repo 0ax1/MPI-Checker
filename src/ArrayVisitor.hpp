@@ -36,15 +36,15 @@ namespace mpi {
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
 public:
     ArrayVisitor(clang::VarDecl *varDecl) : arrayVarDecl_{varDecl} {
-        auto ile =
-            clang::dyn_cast<clang::InitListExpr>(arrayVarDecl_->getInit());
 
-        // TODO what if no init list?
-        if (!ile) return;
-        for (const clang::Stmt *stmt : *ile) {
-            mpi::StatementVisitor sv{stmt};
-            if (sv.vars_.size()) {
-                vars_.push_back(sv.vars_.front());
+        if (arrayVarDecl_->hasInit()) {
+            auto ile =
+                clang::dyn_cast<clang::InitListExpr>(arrayVarDecl_->getInit());
+            for (const clang::Stmt *stmt : *ile) {
+                mpi::StatementVisitor sv{stmt};
+                if (sv.vars_.size()) {
+                    vars_.push_back(sv.vars_.front());
+                }
             }
         }
     }
