@@ -34,11 +34,11 @@ namespace mpi {
 unsigned long MPICall::idCounter{0};
 
 namespace MPIRank {
-llvm::SmallSet<const VarDecl *, 4> visitedRankVariables;
+llvm::SmallSet<const VarDecl *, 4> visitedVariables;
 }
 
 namespace MPIProcessCount {
-llvm::SmallSet<const VarDecl *, 4> visitedCountVariables;
+llvm::SmallSet<const VarDecl *, 4> visitedVariables;
 }
 
 llvm::SmallVector<MPIRankCase, 8> MPIRankCase::visitedRankCases;

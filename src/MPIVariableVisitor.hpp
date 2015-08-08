@@ -44,13 +44,23 @@ public:
             MPICall mpiCall{callExpr};
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
                 // TODO what if variable is in array
+
+                // TODO what if variable is in struct?
+                // -> remember var decl and member expr
                 clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
-                MPIRank::visitedRankVariables.insert(varDecl);
+                // mpiCall.arguments()[1].stmt_->dumpColor();
+                // varDecl->dumpColor();
+                MPIRank::visitedVariables.insert(varDecl);
             }
             else if (funcClassifier_.isMPI_Comm_size(mpiCall)) {
                 // TODO what if variable is in array
+
+                // TODO what if variable is in struct?
+                // -> remember var decl and member expr
+                // currently all members of a decl ref are
+                // identified as ranks vars
                 clang::VarDecl *varDecl = mpiCall.arguments()[1].vars()[0];
-                MPIProcessCount::visitedCountVariables.insert(varDecl);
+                MPIProcessCount::visitedVariables.insert(varDecl);
             }
         }
 

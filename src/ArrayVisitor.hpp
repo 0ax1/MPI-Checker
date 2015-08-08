@@ -26,6 +26,7 @@
 #define ARRAYVISITOR_HPP_LNSPXQ6N
 
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "StatementVisitor.hpp"
 
 namespace mpi {
 
@@ -35,15 +36,16 @@ namespace mpi {
 class ArrayVisitor : public clang::RecursiveASTVisitor<ArrayVisitor> {
 public:
     ArrayVisitor(clang::VarDecl *varDecl) : arrayVarDecl_{varDecl} {
-        TraverseVarDecl(arrayVarDecl_);
-    }
-    // must be public to trigger callbacks
-    bool VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
-        if (clang::VarDecl *var =
-                clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
-            vars_.push_back(var);
+        auto ile =
+            clang::dyn_cast<clang::InitListExpr>(arrayVarDecl_->getInit());
+
+        if (!ile) return;
+        for (const clang::Stmt *stmt : *ile) {
+            mpi::StatementVisitor sv{stmt};
+            if (sv.vars().size()) {
+                vars_.push_back(sv.vars().front());
+            }
         }
-        return true;
     }
 
     const clang::VarDecl *arrayVarDecl() { return arrayVarDecl_; }

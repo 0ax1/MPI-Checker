@@ -113,7 +113,7 @@ bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
     bool isInRankBranch{false};
     ConditionVisitor ConditionVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : ConditionVisitor.vars()) {
-        if (cont::isContained(MPIRank::visitedRankVariables, varDecl)) {
+        if (cont::isContained(MPIRank::visitedVariables, varDecl)) {
             isInRankBranch = true;
             break;
         }

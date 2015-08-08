@@ -89,10 +89,17 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     }
     // waitall
     else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
+        // ok returns size 1...
+        // mpiCall.arguments()[1].vars().front()->dumpColor();
+        // llvm::outs() << mpiCall.arguments()[1].vars().size() << "\n";
+
+        // visitor is wrong !
         ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
+        llvm::outs() << arrayVisitor.vars().size() << "\n";
 
         for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
+            requestVar->dumpColor();
         }
     }
     // waitany, waitsome requests are regarded as unwaited

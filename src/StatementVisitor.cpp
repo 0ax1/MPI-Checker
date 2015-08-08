@@ -41,11 +41,16 @@ namespace mpi {
  * @return continue visiting
  */
 bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
+
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
+
+        // TODO handle structs, memberexpr
+
         vars_.push_back(var);
         typeSequence_.push_back(ComponentType::kVar);
         valueSequence_.push_back(var->getNameAsString());
+
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
         functions_.push_back(fn);

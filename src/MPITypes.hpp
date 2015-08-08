@@ -88,12 +88,14 @@ private:
 
 // to capture rank variables
 namespace MPIRank {
-extern llvm::SmallSet<const clang::VarDecl *, 4> visitedRankVariables;
+// TODO change type
+extern llvm::SmallSet<const clang::VarDecl *, 4> visitedVariables;
 }
 
-// to capture rank variables
+// to capture process count variables
 namespace MPIProcessCount {
-extern llvm::SmallSet<const clang::VarDecl *, 4> visitedCountVariables;
+// TODO change type
+extern llvm::SmallSet<const clang::VarDecl *, 4> visitedVariables;
 }
 
 // to capture rank cases from branches

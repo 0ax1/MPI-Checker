@@ -60,7 +60,7 @@ public:
         // visitor.checkerAST_.checkForRedundantCalls();
 
         // clear after every translation unit
-        MPIRank::visitedRankVariables.clear();
+        MPIRank::visitedVariables.clear();
         MPIRankCase::visitedRankCases.clear();
     }
 
