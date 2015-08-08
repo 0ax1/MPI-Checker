@@ -32,9 +32,9 @@ if they appear as a permutation:
 
 ### Rank Variables
 Rank variables are identified as such if they get passed to `MPI_Comm_rank`.
-Within a translation unit, rank variables must have the same name (if multiple
-are used). Rank variables used within a struct  or initialized in another
-translation unit are not detected.
+Different rank variables can be used within translation unit. They can be
+a common variable or contained inside of a struct. Rank variables initialized in
+another translation unit are not detected.
 
 ```
 int rank;
@@ -89,5 +89,5 @@ See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
   while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
 - There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect
   depends on what is done at runtime. Because of that they are not taken into account.
-- Rank variables used within a struct or initialized in another translation unit are not detected.
+- Rank variables initialized in another translation unit cannot be detected.
 - The analysis is limited to C. Analyzing C++ code is currently not supported.
