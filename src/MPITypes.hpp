@@ -119,10 +119,6 @@ public:
         identifySpecialRanks();
     }
 
-    void setupConditions(const clang::Stmt *const);
-    void setupMPICallsFromBody(const clang::Stmt *const,
-                               const MPIFunctionClassifier &);
-    void identifySpecialRanks();
     static void unmarkCalls();
 
     bool isRankAmbiguous() const;
@@ -141,6 +137,11 @@ public:
     static std::list<MPIRankCase> cases;  // keep pointers stable
 
 private:
+    void setupConditions(const clang::Stmt *const);
+    void setupMPICallsFromBody(const clang::Stmt *const,
+                               const MPIFunctionClassifier &);
+    void identifySpecialRanks();
+
     bool isFirstRankPr_{false};
     bool isLastRankPr_{false};
 
