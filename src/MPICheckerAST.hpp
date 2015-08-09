@@ -54,10 +54,7 @@ public:
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
     using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
-    void setCurrentlyVisitedFunction(
-        const clang::FunctionDecl *const functionDecl) {
-        bugReporter_.currentFunctionDecl_ = functionDecl;
-    }
+    void setCurrentlyVisitedFunction(const clang::FunctionDecl *const);
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
 
 private:
@@ -66,9 +63,6 @@ private:
     void checkUnmatchedCalls() const;
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;
     void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &) const;
-    void checkForRedundantCall(const MPICall &callToCheck,
-                               const MPIRankCase &) const;
-    bool qualifyRedundancyCheck(const MPICall &, const MPICall &) const;
     std::vector<size_t> integerIndices(const MPICall &) const;
 
     void selectTypeMatcher(const TypeVisitor &, const MPICall &,

@@ -262,7 +262,6 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // for every buffer mpi-data pair in function
     // check if their types match
     for (const auto &idxPair : indexPairs) {
-
         // wave through uncaptured data
         if (!mpiCall.arguments_[idxPair.first].combinedVars_.size()) continue;
 
@@ -312,8 +311,7 @@ MPICheckerAST::IndexPairs MPICheckerAST::bufferDataTypeIndices(
                    funcClassifier_.isAlltoallType(mpiCall)) {
             indexPairs.push_back({0, 2});
             indexPairs.push_back({3, 5});
-        }
-        else if (funcClassifier_.isBcastType(mpiCall)) {
+        } else if (funcClassifier_.isBcastType(mpiCall)) {
             indexPairs.push_back({0, 2});
         }
     }
@@ -333,7 +331,6 @@ void MPICheckerAST::selectTypeMatcher(
     const mpi::TypeVisitor &typeVisitor, const MPICall &mpiCall,
     const StringRef mpiDatatypeString,
     const std::pair<size_t, size_t> &idxPair) const {
-
     const clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType();
     bool isTypeMatching{true};
 
@@ -592,86 +589,17 @@ std::vector<size_t> MPICheckerAST::integerIndices(
 }
 
 /**
- * Check if there are redundant mpi calls within a rank case.
+ * Set function currently visited to pass to bug reporter
+ * in case of invariant violation.
  *
- * @param callEvent
- * @param mpiFnCallSet set searched for identical calls
- *
- * @return is equal call in list
+ * @param functionDecl current function
  */
-void MPICheckerAST::checkForRedundantCalls() const {
-    MPIRankCase::unmarkCalls();
-
-    for (MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &callToCheck : rankCase.mpiCalls_) {
-            checkForRedundantCall(callToCheck, rankCase);
-        }
-    }
+void MPICheckerAST::setCurrentlyVisitedFunction(
+    const clang::FunctionDecl *const functionDecl) {
+    bugReporter_.currentFunctionDecl_ = functionDecl;
 }
 
-/**
- * Check if there is a redundant call to the call passed.
- *
- * @param callToCheck
- */
-void MPICheckerAST::checkForRedundantCall(const MPICall &callToCheck,
-                                          const MPIRankCase &rankCase) const {
-    for (const MPICall &comparedCall : rankCase.mpiCalls_) {
-        if (qualifyRedundancyCheck(callToCheck, comparedCall)) {
-            if (callToCheck == comparedCall) {
-                bugReporter_.reportRedundantCall(callToCheck.callExpr(),
-                                                 comparedCall.callExpr());
-                callToCheck.isMarked_ = true;
-                callToCheck.isMarked_ = true;
-            }
-        }
-    }
-}
 
-/**
- * Check if two calls qualify for a redundancy check.
- *
- * @param callToCheck
- * @param comparedCall
- *
- * @return
- */
-bool MPICheckerAST::qualifyRedundancyCheck(const MPICall &callToCheck,
-                                           const MPICall &comparedCall) const {
-    if (comparedCall.isMarked_) return false;  // to omit double matching
-    // do not compare with the call itself
-    if (callToCheck.id() == comparedCall.id()) return false;
-    if (!((funcClassifier_.isPointToPointType(callToCheck) &&
-           funcClassifier_.isPointToPointType(comparedCall)) ||
-          (funcClassifier_.isCollectiveType(callToCheck) &&
-           funcClassifier_.isCollectiveType(comparedCall))))
-        return false;
-
-    if (funcClassifier_.isPointToPointType(callToCheck)) {
-        // both must be send or recv types
-        return (funcClassifier_.isSendType(callToCheck) &&
-                funcClassifier_.isSendType(comparedCall)) ||
-               (funcClassifier_.isRecvType(callToCheck) &&
-                funcClassifier_.isRecvType(comparedCall));
-
-    } else if (funcClassifier_.isCollectiveType(callToCheck)) {
-        // calls must be of the same type
-        return (funcClassifier_.isScatterType(callToCheck) &&
-                funcClassifier_.isScatterType(comparedCall)) ||
-
-               (funcClassifier_.isGatherType(callToCheck) &&
-                funcClassifier_.isGatherType(comparedCall)) ||
-
-               (funcClassifier_.isAlltoallType(callToCheck) &&
-                funcClassifier_.isAlltoallType(comparedCall)) ||
-
-               (funcClassifier_.isBcastType(callToCheck) &&
-                funcClassifier_.isBcastType(comparedCall)) ||
-
-               (funcClassifier_.isReduceType(callToCheck) &&
-                funcClassifier_.isReduceType(comparedCall));
-    }
-    return false;
-}
+// TODO check if there are any rank case partners at all
 
 }  // end of namespace: mpi
