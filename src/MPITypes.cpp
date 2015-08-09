@@ -41,7 +41,7 @@ namespace MPIProcessCount {
 llvm::SmallSet<const ValueDecl *, 4> variables;
 }
 
-llvm::SmallVector<MPIRankCase, 8> MPIRankCase::cases;
+std::list<MPIRankCase> MPIRankCase::cases;
 
 bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;

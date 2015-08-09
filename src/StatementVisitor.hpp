@@ -66,11 +66,6 @@ public:
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
     }
 
-    // move assignment operator, to enable erase
-    StatementVisitor &operator=(StatementVisitor &&other) {
-        return *this;
-    }
-
     enum class ComponentType {
         kInt,
         kFloat,

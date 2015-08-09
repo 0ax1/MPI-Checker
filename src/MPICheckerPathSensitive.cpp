@@ -47,7 +47,7 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     ProgramStateRef state = ctx.getState();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    auto arg = mpiCall.arguments_[mpiCall.callExpr()->getNumArgs() - 1];
+    auto &arg = mpiCall.arguments_[mpiCall.callExpr()->getNumArgs() - 1];
     auto requestVarDecl = arg.vars_.front();
     // get must be called before set function
     const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);

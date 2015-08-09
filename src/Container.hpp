@@ -203,7 +203,7 @@ bool isPermutation(const T1 &first, const T2 &second) {
     if (first.size() != second.size()) return false;
 
     // copy because matches get erased
-    auto copy = first;
+    auto copy(first);
     for (auto &componentFromSecond : second) {
         if (!cont::isContained(copy, componentFromSecond)) {
             return false;

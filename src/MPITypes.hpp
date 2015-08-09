@@ -153,18 +153,18 @@ public:
     // dissected conditions
     const std::vector<ConditionVisitor> &conditions_;
     // // subset containing conditions with rank vars
-    const std::vector<ConditionVisitor> &rankConditions_;
+    const std::list<ConditionVisitor> &rankConditions_;
 
     // conditions not fullfilled to enter rank case
     const std::vector<ConditionVisitor> unmatchedConditions_;
-    static llvm::SmallVector<MPIRankCase, 8> cases;
+    static std::list<MPIRankCase> cases; // keep pointers stable
 
 private:
     std::vector<MPICall> mpiCallsPr_;
     // dissected conditions
     std::vector<ConditionVisitor> conditionsPr_;
     // subset containing conditions with rank vars
-    std::vector<ConditionVisitor> rankConditionsPr_;
+    std::list<ConditionVisitor> rankConditionsPr_;
     // condition fulfilled to enter rank case
     std::unique_ptr<ConditionVisitor> completeCondition_{nullptr};
 };

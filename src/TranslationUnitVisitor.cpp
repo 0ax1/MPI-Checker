@@ -63,22 +63,22 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-        MPIRankCase::cases.emplace_back(
-            ifStmt->getThen(), ifStmt->getCond(), unmatchedConditions,
-            checkerAST_.funcClassifier());
+
+        MPIRankCase::cases.emplace_back(ifStmt->getThen(), ifStmt->getCond(),
+                                        unmatchedConditions,
+                                        checkerAST_.funcClassifier());
+
         unmatchedConditions.push_back(ifStmt->getCond());
         stmt = ifStmt->getElse();
         visitedIfStmts_.push_back(ifStmt);
-        checkerAST_.checkForCollectiveCalls(
-            MPIRankCase::cases.back());
+        checkerAST_.checkForCollectiveCalls(MPIRankCase::cases.back());
     }
 
     // collect mpi calls in else
     if (stmt) {
-        MPIRankCase::cases.emplace_back(
-            stmt, nullptr, unmatchedConditions, checkerAST_.funcClassifier());
-        checkerAST_.checkForCollectiveCalls(
-            MPIRankCase::cases.back());
+        MPIRankCase::cases.emplace_back(stmt, nullptr, unmatchedConditions,
+                                        checkerAST_.funcClassifier());
+        checkerAST_.checkForCollectiveCalls(MPIRankCase::cases.back());
     }
 
     return true;
@@ -110,7 +110,6 @@ bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
  * @return if rank var is used
  */
 bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
-
     ConditionVisitor ConditionVisitor{ifStmt->getCond()};
     for (const VarDecl *const varDecl : ConditionVisitor.vars_) {
         if (cont::isContained(MPIRank::variables, varDecl)) {
