@@ -69,11 +69,11 @@ bool MPIRankCase::isRankAmbiguous() const {
     // if comparison op not ==, -> ambiguous
     for (const auto &rankCondition : rankConditions_) {
         for (const auto op : rankCondition.comparisonOperators_) {
-            if (op->getOpcode() != BinaryOperatorKind::BO_EQ) return true;
+            if (op->getOpcode() == BinaryOperatorKind::BO_EQ) return false;
         }
     }
 
-    return false;
+    return true;
 }
 
 /**
