@@ -58,7 +58,8 @@ public:
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
 
 private:
-    bool isSendRecvPair(const MPICall &, const MPICall &) const;
+    bool isSendRecvPair(const MPICall &, const MPICall &, const MPIRankCase &,
+                        const MPIRankCase &) const;
     bool areDatatypesEqual(const MPICall &, const MPICall &) const;
     void checkUnmatchedCalls() const;
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;

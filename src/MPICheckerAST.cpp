@@ -67,19 +67,19 @@ void MPICheckerAST::checkPointToPointSchema() const {
  * @param rankCase1
  * @param rankCase2
  */
-void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &firstCase,
-                                         const MPIRankCase &secondCase) const {
+void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &sendCase,
+                                         const MPIRankCase &recvCase) const {
     // find send/recv pairs
-    for (const MPICall &send : firstCase.mpiCalls_) {
+    for (const MPICall &send : sendCase.mpiCalls_) {
         // skip non sends for case 1
         if (!funcClassifier_.isSendType(send) || send.isMarked_) continue;
 
         // skip non recvs for case 2
-        for (const MPICall &recv : secondCase.mpiCalls_) {
+        for (const MPICall &recv : recvCase.mpiCalls_) {
             if (!funcClassifier_.isRecvType(recv) || recv.isMarked_) continue;
 
             // check if pair matches
-            if (isSendRecvPair(send, recv)) {
+            if (isSendRecvPair(send, recv, sendCase, recvCase)) {
                 send.isMarked_ = true;
                 recv.isMarked_ = true;
                 break;
@@ -124,19 +124,19 @@ void MPICheckerAST::checkReachbility() const {
  * @param firstCase
  * @param secondCase
  */
-void MPICheckerAST::checkReachbilityPair(const MPIRankCase &firstCase,
-                                         const MPIRankCase &secondCase) const {
+void MPICheckerAST::checkReachbilityPair(const MPIRankCase &sendCase,
+                                         const MPIRankCase &recvCase) const {
     // find send/recv pairs
-    for (const MPICall &send : firstCase.mpiCalls_) {
+    for (const MPICall &send : sendCase.mpiCalls_) {
         send.isReachable_ = true;
         if (send.isMarked_) continue;
 
-        for (const MPICall &recv : secondCase.mpiCalls_) {
+        for (const MPICall &recv : recvCase.mpiCalls_) {
             recv.isReachable_ = true;
             if (recv.isMarked_) continue;
 
             // check if pair matches
-            if (isSendRecvPair(send, recv)) {
+            if (isSendRecvPair(send, recv, sendCase, recvCase)) {
                 send.isMarked_ = true;
                 recv.isMarked_ = true;
                 break;
@@ -198,7 +198,9 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
  * @return if they are send/recv pair
  */
 bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
-                                   const MPICall &recvCall) const {
+                                   const MPICall &recvCall,
+                                   const MPIRankCase &sendCase,
+                                   const MPIRankCase &recvCase) const {
     if (!funcClassifier_.isSendType(sendCall)) return false;
     if (!funcClassifier_.isRecvType(recvCall)) return false;
     if (!areDatatypesEqual(sendCall, recvCall)) return false;
@@ -213,6 +215,27 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     // compare ranks
     const auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
     const auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+
+    // match special cases---------------------
+    // first to last match
+    if (sendCase.isFirstRank_ &&
+        rankArgSend.valueSequence_ ==
+            llvm::SmallVector<std::string, 3>{"-", "_count_var_encoding_",
+                                              "1"} &&
+        recvCase.isLastRank_ &&
+        rankArgRecv.valueSequence_ == llvm::SmallVector<std::string, 1>{"0"}) {
+        return true;
+    }
+
+    // last to first match
+    if (sendCase.isLastRank_ &&
+        rankArgSend.valueSequence_ == llvm::SmallVector<std::string, 0>{"0"} &&
+        recvCase.isFirstRank_ &&
+        rankArgRecv.valueSequence_ == llvm::SmallVector<std::string, 3>{
+                                          "-", "_count_var_encoding_", "1"}) {
+        return true;
+    }
+    //------------------------------------------
 
     if (rankArgSend.typeSequence_.size() != rankArgRecv.typeSequence_.size())
         return false;
@@ -598,7 +621,6 @@ void MPICheckerAST::setCurrentlyVisitedFunction(
     const clang::FunctionDecl *const functionDecl) {
     bugReporter_.currentFunctionDecl_ = functionDecl;
 }
-
 
 // TODO check if there are any rank case partners at all
 

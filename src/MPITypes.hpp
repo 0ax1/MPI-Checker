@@ -134,7 +134,37 @@ public:
              callExprVisitor.callExprs()) {
             // add mpi calls only
             if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
-                mpiCallsPr_.push_back(callExpr);
+                mpiCallsPr_.emplace_back(callExpr);
+            }
+        }
+        identifySpecialRanks();
+    }
+
+    void identifySpecialRanks() {
+        llvm::SmallVector<std::string, 3> rankZeroA{"==", "_rank_var_encoding_",
+                                                    "0"};
+        llvm::SmallVector<std::string, 3> rankZeroB{"==", "0",
+                                                    "_rank_var_encoding_"};
+
+        llvm::SmallVector<std::string, 5> rankLastA{
+                        "==", "_rank_var_encoding_", "-",
+                        "_count_var_encoding_", "1"};
+
+        llvm::SmallVector<std::string, 5> rankLastB{
+                        "==", "-", "_count_var_encoding_", "1",
+                        "_rank_var_encoding_"};
+
+        for (const auto &x : rankConditions_) {
+            if (x.valueSequence_ == rankZeroA ||
+                x.valueSequence_ == rankZeroB) {
+                isFirstRankPr_ = true;
+                break;
+            }
+
+            if (x.valueSequence_ == rankLastA ||
+                x.valueSequence_ == rankLastB) {
+                isLastRankPr_ = true;
+                break;
             }
         }
     }
@@ -149,6 +179,9 @@ public:
 
     bool isRankAmbiguous() const;
     bool isRankUnambiguouslyEqual(const MPIRankCase &) const;
+
+    const bool &isFirstRank_{isFirstRankPr_};
+    const bool &isLastRank_{isLastRankPr_};
     const std::vector<MPICall> &mpiCalls_;
     // dissected conditions
     const std::vector<ConditionVisitor> &conditions_;
@@ -157,9 +190,12 @@ public:
 
     // conditions not fullfilled to enter rank case
     const std::vector<ConditionVisitor> unmatchedConditions_;
-    static std::list<MPIRankCase> cases; // keep pointers stable
+    static std::list<MPIRankCase> cases;  // keep pointers stable
 
 private:
+    bool isFirstRankPr_{false};
+    bool isLastRankPr_{false};
+
     std::vector<MPICall> mpiCallsPr_;
     // dissected conditions
     std::vector<ConditionVisitor> conditionsPr_;
