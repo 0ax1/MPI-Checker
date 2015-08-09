@@ -45,20 +45,19 @@ else if (rank == 1) {...}
 ```
 
 ## Prerequisites
-Current versions of: `your default compiler`, `zsh`, `svn`, `git`, `cmake`, `ninja`, `sed` (install
-gnu-sed with brew if you're on osx)
+Current versions of: `your default compiler`, `zsh`, `svn`, `git`, `cmake`,
+`ninja`, `sed` (install gnu-sed with brew if you're on osx)
 
 ## Installation
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
 make it executable with `chmod +x` and run it to setup LLVM 3.7 with
-[Clang](http://clang.llvm.org/), [libcxx](http://libcxx.llvm.org/),
-[compiler-rt](http://compiler-rt.llvm.org/) and **MPI-Checker**.  This will
-download, config and build all components in `./llvm37`. <br><br>In "one line":
-`wget https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
-chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh` <br><br>If you don't
-want libcxx or the compiler-rt to be included you can comment them out in
-`fullSetup.sh` like this `# svn co (libcxx|compiler-rt)`.
+[Clang](http://clang.llvm.org/) and **MPI-Checker**. This will download, config
+and build all components in `./llvm37`. <br><br>In "one line": `wget
+https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
+chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh` <br><br>If you want
+libcxx or the compiler-rt to be included you can comment them in, removing
+`#` from `# svn co (libcxx|compiler-rt)` in `fullSetup.sh`.
 
 If you have the LLVM 3.7 source already, `cd` to the top of the repository,
 execute [`addMPI-Checker.sh`]

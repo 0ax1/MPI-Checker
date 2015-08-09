@@ -51,8 +51,8 @@ if [[ $? -eq 0 ]]; then
 
     # projects
     projects='repo/projects'
-    svn co $llvm/compiler-rt/$version/ $projects/compiler-rt
-    svn co $llvm/libcxx/$version/ $projects/libcxx
+    # svn co $llvm/compiler-rt/$version/ $projects/compiler-rt
+    # svn co $llvm/libcxx/$version/ $projects/libcxx
 
     echo "––––––––––MPI-Checker––––––––––––"
     cd repo/tools/clang/lib/StaticAnalyzer/Checkers
