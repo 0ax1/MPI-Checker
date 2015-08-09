@@ -114,68 +114,16 @@ public:
           conditions_{conditionsPr_},
           rankConditions_{rankConditionsPr_},
           unmatchedConditions_{unmatchedConditions} {
-        // init
-        if (matchedCondition) {
-            completeCondition_.reset(new ConditionVisitor{matchedCondition});
-
-            for (const auto &x : completeCondition_->comparisonOperators_) {
-                // dissect single conditions, encode special mpi vars
-                conditionsPr_.emplace_back(x);
-
-                if (cont::isContained(conditionsPr_.back().valueSequence_,
-                                      "_rank_var_encoding_")) {
-                    rankConditionsPr_.emplace_back(x);
-                }
-            }
-        }
-
-        const CallExprVisitor callExprVisitor{then};  // collect call exprs
-        for (const clang::CallExpr *const callExpr :
-             callExprVisitor.callExprs()) {
-            // add mpi calls only
-            if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
-                mpiCallsPr_.emplace_back(callExpr);
-            }
-        }
+        setupConditions(matchedCondition);
+        setupMPICallsFromBody(then, funcClassifier);
         identifySpecialRanks();
     }
 
-    void identifySpecialRanks() {
-        llvm::SmallVector<std::string, 3> rankZeroA{"==", "_rank_var_encoding_",
-                                                    "0"};
-        llvm::SmallVector<std::string, 3> rankZeroB{"==", "0",
-                                                    "_rank_var_encoding_"};
-
-        llvm::SmallVector<std::string, 5> rankLastA{
-                        "==", "_rank_var_encoding_", "-",
-                        "_count_var_encoding_", "1"};
-
-        llvm::SmallVector<std::string, 5> rankLastB{
-                        "==", "-", "_count_var_encoding_", "1",
-                        "_rank_var_encoding_"};
-
-        for (const auto &x : rankConditions_) {
-            if (x.valueSequence_ == rankZeroA ||
-                x.valueSequence_ == rankZeroB) {
-                isFirstRankPr_ = true;
-                break;
-            }
-
-            if (x.valueSequence_ == rankLastA ||
-                x.valueSequence_ == rankLastB) {
-                isLastRankPr_ = true;
-                break;
-            }
-        }
-    }
-
-    static void unmarkCalls() {
-        for (MPIRankCase &rankCase : MPIRankCase::cases) {
-            for (MPICall &call : rankCase.mpiCallsPr_) {
-                call.isMarked_ = false;
-            }
-        }
-    }
+    void setupConditions(const clang::Stmt *const);
+    void setupMPICallsFromBody(const clang::Stmt *const,
+                               const MPIFunctionClassifier &);
+    void identifySpecialRanks();
+    static void unmarkCalls();
 
     bool isRankAmbiguous() const;
     bool isRankUnambiguouslyEqual(const MPIRankCase &) const;

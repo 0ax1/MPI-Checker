@@ -91,4 +91,82 @@ bool MPIRankCase::isRankUnambiguouslyEqual(const MPIRankCase &rankCase) const {
     return cont::isPermutation(rankConditions_, rankCase.rankConditions_);
 }
 
+/**
+ * Disect matched condition. Captures all parts seperated in containers.
+ *
+ * @param matchedCondition condition matched to enter case
+ */
+void MPIRankCase::setupConditions(const clang::Stmt *const matchedCondition) {
+    if (matchedCondition) {
+        completeCondition_.reset(new ConditionVisitor{matchedCondition});
+
+        for (const auto &x : completeCondition_->comparisonOperators_) {
+            // dissect single conditions, encode special mpi vars
+            conditionsPr_.emplace_back(x);
+
+            if (cont::isContained(conditionsPr_.back().valueSequence_,
+                                  "_rank_var_encoding_")) {
+                rankConditionsPr_.emplace_back(x);
+            }
+        }
+    }
+}
+
+/**
+ * Captures all MPI calls contained in case body.
+ *
+ * @param then
+ * @param funcClassifier
+ */
+void MPIRankCase::setupMPICallsFromBody(
+    const clang::Stmt *const then,
+    const MPIFunctionClassifier &funcClassifier) {
+    const CallExprVisitor callExprVisitor{then};  // collect call exprs
+    for (const clang::CallExpr *const callExpr : callExprVisitor.callExprs()) {
+        // add mpi calls only
+        if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
+            mpiCallsPr_.emplace_back(callExpr);
+        }
+    }
+}
+
+/**
+ * Identify first/last ranks.
+ */
+void MPIRankCase::identifySpecialRanks() {
+    llvm::SmallVector<std::string, 3> rankZeroA{"==", "_rank_var_encoding_",
+                                                "0"};
+    llvm::SmallVector<std::string, 3> rankZeroB{"==", "0",
+                                                "_rank_var_encoding_"};
+
+    llvm::SmallVector<std::string, 5> rankLastA{
+        "==", "_rank_var_encoding_", "-", "_count_var_encoding_", "1"};
+
+    llvm::SmallVector<std::string, 5> rankLastB{
+        "==", "-", "_count_var_encoding_", "1", "_rank_var_encoding_"};
+
+    for (const auto &x : rankConditions_) {
+        if (x.valueSequence_ == rankZeroA || x.valueSequence_ == rankZeroB) {
+            isFirstRankPr_ = true;
+            break;
+        }
+
+        if (x.valueSequence_ == rankLastA || x.valueSequence_ == rankLastB) {
+            isLastRankPr_ = true;
+            break;
+        }
+    }
+}
+
+/**
+ * Static function to unmark calls.
+ */
+void MPIRankCase::unmarkCalls() {
+    for (MPIRankCase &rankCase : MPIRankCase::cases) {
+        for (MPICall &call : rankCase.mpiCallsPr_) {
+            call.isMarked_ = false;
+        }
+    }
+}
+
 }  // end of namespace: mpi

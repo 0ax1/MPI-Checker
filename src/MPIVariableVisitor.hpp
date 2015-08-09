@@ -48,7 +48,7 @@ public:
 
             // rank variable
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
-
+                // rank var is at index 1
                 if (mpiCall.arguments_[1].members_.size()) {
                     MPIRank::variables.insert(
                         mpiCall.arguments_[1].members_[0]);
@@ -59,6 +59,7 @@ public:
             }
             // process count variable
             else if (funcClassifier_.isMPI_Comm_size(mpiCall)) {
+                // count var is at index 1
                 if (mpiCall.arguments_[1].members_.size()) {
                     MPIProcessCount::variables.insert(
                         mpiCall.arguments_[1].members_[0]);
