@@ -217,22 +217,18 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     const auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
 
     // match special cases---------------------
+    llvm::SmallVector<std::string, 1> firstRank{"0"};
+    llvm::SmallVector<std::string, 3> lastRank{"-", MPIProcessCount::encoding,
+                                               "1"};
+
     // first to last match
-    if (sendCase.isFirstRank_ &&
-        rankArgSend.valueSequence_ ==
-            llvm::SmallVector<std::string, 3>{"-", "_count_var_encoding_",
-                                              "1"} &&
-        recvCase.isLastRank_ &&
-        rankArgRecv.valueSequence_ == llvm::SmallVector<std::string, 1>{"0"}) {
+    if (sendCase.isFirstRank_ && rankArgSend.valueSequence_ == lastRank &&
+        recvCase.isLastRank_ && rankArgRecv.valueSequence_ == firstRank) {
         return true;
     }
-
     // last to first match
-    if (sendCase.isLastRank_ &&
-        rankArgSend.valueSequence_ == llvm::SmallVector<std::string, 0>{"0"} &&
-        recvCase.isFirstRank_ &&
-        rankArgRecv.valueSequence_ == llvm::SmallVector<std::string, 3>{
-                                          "-", "_count_var_encoding_", "1"}) {
+    else if (sendCase.isLastRank_ && rankArgSend.valueSequence_ == firstRank &&
+             recvCase.isFirstRank_ && rankArgRecv.valueSequence_ == lastRank) {
         return true;
     }
     //------------------------------------------
