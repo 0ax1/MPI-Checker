@@ -71,18 +71,7 @@ public:
     mutable bool isReachable_{false};
 
 private:
-    /**
-     * Init function shared by ctors.
-     * @param callExpr mpi call captured
-     */
-    void init(const clang::CallExpr *const callExpr) {
-        identInfo_ = util::getIdentInfo(callExpr_);
-        // build argument vector
-        for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
-            // emplace triggers ArgumentVisitor ctor
-            argumentsPr_.emplace_back(callExpr->getArg(i));
-        }
-    }
+    void init(const clang::CallExpr *const);
 
     const clang::CallExpr *callExpr_;
     std::vector<ArgumentVisitor> argumentsPr_;

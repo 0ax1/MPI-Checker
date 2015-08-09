@@ -58,6 +58,19 @@ bool MPICall::operator!=(const MPICall &callToCompare) const {
 }
 
 /**
+ * Init function shared by ctors.
+ * @param callExpr mpi call captured
+ */
+void MPICall::init(const clang::CallExpr *const callExpr) {
+    identInfo_ = util::getIdentInfo(callExpr_);
+    // build argument vector
+    for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
+        // emplace triggers ArgumentVisitor ctor
+        argumentsPr_.emplace_back(callExpr->getArg(i));
+    }
+}
+
+/**
  * Check if rank to enter condition is ambiguous.
  *
  * @return ambiguity
