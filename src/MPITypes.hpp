@@ -42,6 +42,18 @@ namespace MPIPointToPoint {
 enum { kBuf, kCount, kDatatype, kRank, kTag, kComm, kRequest };
 }
 
+namespace MPIRank {
+// to capture rank variables
+extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
+extern const std::string encoding;
+}
+
+namespace MPIProcessCount {
+// to capture process count variables
+extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
+extern const std::string encoding;
+}
+
 struct MPICall {
 public:
     MPICall(const clang::CallExpr *const callExpr)
@@ -81,15 +93,6 @@ private:
     static unsigned long idCounter;
 };
 
-// to capture rank variables
-namespace MPIRank {
-extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
-}
-
-// to capture process count variables
-namespace MPIProcessCount {
-extern llvm::SmallSet<const clang::ValueDecl *, 4> variables;
-}
 
 // to capture rank cases from branches
 class MPIRankCase {

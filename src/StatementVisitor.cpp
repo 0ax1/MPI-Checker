@@ -44,11 +44,11 @@ std::string StatementVisitor::encodeVariable(
     const clang::NamedDecl *const var) {
     // encode rank variable
     if (cont::isContained(MPIRank::variables, var)) {
-        return "_rank_var_encoding_";
+        return MPIRank::encoding;
     }
     // encode process count variable
     else if (cont::isContained(MPIProcessCount::variables, var)) {
-        return "_count_var_encoding_";
+        return MPIProcessCount::encoding;
     }
     // no special variable
     else {

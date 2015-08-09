@@ -24,7 +24,6 @@
 
 #include "MPITypes.hpp"
 #include "Container.hpp"
-// #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang;
 using namespace ento;
@@ -35,10 +34,12 @@ unsigned long MPICall::idCounter{0};
 
 namespace MPIRank {
 llvm::SmallSet<const ValueDecl *, 4> variables;
+const std::string encoding{"_rank_var_encoding_"};
 }
 
 namespace MPIProcessCount {
 llvm::SmallSet<const ValueDecl *, 4> variables;
+const std::string encoding{"_prc_var_encoding_"};
 }
 
 std::list<MPIRankCase> MPIRankCase::cases;
@@ -118,7 +119,7 @@ void MPIRankCase::setupConditions(const clang::Stmt *const matchedCondition) {
             conditionsPr_.emplace_back(x);
 
             if (cont::isContained(conditionsPr_.back().valueSequence_,
-                                  "_rank_var_encoding_")) {
+                                  MPIRank::encoding)) {
                 rankConditionsPr_.emplace_back(x);
             }
         }
@@ -147,16 +148,14 @@ void MPIRankCase::setupMPICallsFromBody(
  * Identify first/last ranks.
  */
 void MPIRankCase::identifySpecialRanks() {
-    llvm::SmallVector<std::string, 3> rankZeroA{"==", "_rank_var_encoding_",
-                                                "0"};
-    llvm::SmallVector<std::string, 3> rankZeroB{"==", "0",
-                                                "_rank_var_encoding_"};
+    llvm::SmallVector<std::string, 3> rankZeroA{"==", MPIRank::encoding, "0"};
+    llvm::SmallVector<std::string, 3> rankZeroB{"==", "0", MPIRank::encoding};
 
-    llvm::SmallVector<std::string, 5> rankLastA{
-        "==", "_rank_var_encoding_", "-", "_count_var_encoding_", "1"};
+    llvm::SmallVector<std::string, 5> rankLastA{"==", MPIRank::encoding, "-",
+                                                MPIProcessCount::encoding, "1"};
 
     llvm::SmallVector<std::string, 5> rankLastB{
-        "==", "-", "_count_var_encoding_", "1", "_rank_var_encoding_"};
+        "==", "-", MPIProcessCount::encoding, "1", MPIRank::encoding};
 
     for (const auto &x : rankConditions_) {
         if (x.valueSequence_ == rankZeroA || x.valueSequence_ == rankZeroB) {
