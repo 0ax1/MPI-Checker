@@ -46,7 +46,7 @@ std::string MPIBugReporter::lineNumberForCallExpr(
 
     // split written string into parts
     std::vector<std::string> strs = util::split(lineNo, ':');
-    return strs.at(strs.size() - 2);
+    return util::split(lineNo, ':').at(strs.size() - 2);
 }
 
 // bug reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––

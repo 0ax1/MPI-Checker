@@ -46,13 +46,14 @@ public:
           bugReporter_{bugReporter, checkerBase, analysisManager},
           analysisManager_{analysisManager} {}
 
+    using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
+
     void checkPointToPointSchema() const;
     void checkReachbility() const;
     void checkForRedundantCalls() const;
     void checkForCollectiveCalls(const MPIRankCase &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
-    using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
     void setCurrentlyVisitedFunction(const clang::FunctionDecl *const);
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
@@ -64,7 +65,7 @@ private:
     void checkUnmatchedCalls() const;
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;
     void checkReachbilityPair(const MPIRankCase &, const MPIRankCase &) const;
-    std::vector<size_t> integerIndices(const MPICall &) const;
+    llvm::SmallVector<size_t, 1> integerIndices(const MPICall &) const;
 
     void selectTypeMatcher(const TypeVisitor &, const MPICall &,
                            const clang::StringRef,

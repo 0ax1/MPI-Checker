@@ -56,14 +56,8 @@ extern const std::string encoding;
 
 struct MPICall {
 public:
-    MPICall(const clang::CallExpr *const callExpr)
-        : arguments_{argumentsPr_}, callExpr_{callExpr} {
+    MPICall(const clang::CallExpr *const callExpr) : callExpr_{callExpr} {
         init(callExpr);
-    };
-
-    MPICall(const MPICall &mpiCall)
-        : arguments_{argumentsPr_}, callExpr_{mpiCall.callExpr_} {
-        init(callExpr_);
     };
 
     bool operator==(const MPICall &) const;
@@ -76,7 +70,9 @@ public:
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
 
-    const std::vector<ArgumentVisitor> &arguments_;
+    const std::vector<ArgumentVisitor> &arguments() const {
+        return arguments_;
+    };
     // marking can be changed freely by clients
     // semantic depends on context of usage
     mutable bool isMarked_{false};
@@ -86,13 +82,12 @@ private:
     void init(const clang::CallExpr *const);
 
     const clang::CallExpr *callExpr_;
-    std::vector<ArgumentVisitor> argumentsPr_;
+    std::vector<ArgumentVisitor> arguments_;
     const clang::IdentifierInfo *identInfo_;
     unsigned long id_{idCounter++};  // unique call identification
 
     static unsigned long idCounter;
 };
-
 
 // to capture rank cases from branches
 class MPIRankCase {
@@ -102,10 +97,7 @@ public:
                 const std::vector<ConditionVisitor> &unmatchedConditions,
                 const MPIFunctionClassifier &funcClassifier)
 
-        : mpiCalls_{mpiCallsPr_},
-          conditions_{conditionsPr_},
-          rankConditions_{rankConditionsPr_},
-          unmatchedConditions_{unmatchedConditions} {
+        : unmatchedConditions_{unmatchedConditions} {
         setupConditions(matchedCondition);
         setupMPICallsFromBody(then, funcClassifier);
         identifySpecialRanks();
@@ -116,17 +108,19 @@ public:
     bool isRankAmbiguous() const;
     bool isRankUnambiguouslyEqual(const MPIRankCase &) const;
 
-    const bool &isFirstRank_{isFirstRankPr_};
-    const bool &isLastRank_{isLastRankPr_};
-    const std::vector<MPICall> &mpiCalls_;
-    // dissected conditions
-    const std::vector<ConditionVisitor> &conditions_;
-    // // subset containing conditions with rank vars
-    const std::list<ConditionVisitor> &rankConditions_;
+    bool isFirstRank() const { return isFirstRank_; }
+    bool isLastRank() const { return isLastRank_; }
+    const std::vector<MPICall> &mpiCalls() const { return mpiCalls_; }
+    const std::vector<ConditionVisitor> &conditions() const {
+        return conditions_;
+    }
+    const std::list<ConditionVisitor> &rankConditions() const {
+        return rankConditions_;
+    }
 
     // conditions not fullfilled to enter rank case
     const std::vector<ConditionVisitor> unmatchedConditions_;
-    static std::list<MPIRankCase> cases;  // keep pointers stable
+    static llvm::SmallVector<MPIRankCase, 8> cases;
 
 private:
     void setupConditions(const clang::Stmt *const);
@@ -134,14 +128,14 @@ private:
                                const MPIFunctionClassifier &);
     void identifySpecialRanks();
 
-    bool isFirstRankPr_{false};
-    bool isLastRankPr_{false};
+    bool isFirstRank_{false};
+    bool isLastRank_{false};
 
-    std::vector<MPICall> mpiCallsPr_;
+    std::vector<MPICall> mpiCalls_;
     // dissected conditions
-    std::vector<ConditionVisitor> conditionsPr_;
+    std::vector<ConditionVisitor> conditions_;
     // subset containing conditions with rank vars
-    std::list<ConditionVisitor> rankConditionsPr_;
+    std::list<ConditionVisitor> rankConditions_;
     // condition fulfilled to enter rank case
     std::unique_ptr<ConditionVisitor> completeCondition_{nullptr};
 };

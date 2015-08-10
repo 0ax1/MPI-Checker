@@ -48,7 +48,7 @@ void MPICheckerAST::checkPointToPointSchema() const {
 
     // trigger report for unmarked
     for (const MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &call : rankCase.mpiCalls_) {
+        for (const MPICall &call : rankCase.mpiCalls()) {
             if (funcClassifier_.isSendType(call) && !call.isMarked_) {
                 bugReporter_.reportUnmatchedCall(call.callExpr(), "receive");
             } else if (funcClassifier_.isRecvType(call) && !call.isMarked_) {
@@ -70,12 +70,12 @@ void MPICheckerAST::checkPointToPointSchema() const {
 void MPICheckerAST::checkSendRecvMatches(const MPIRankCase &sendCase,
                                          const MPIRankCase &recvCase) const {
     // find send/recv pairs
-    for (const MPICall &send : sendCase.mpiCalls_) {
+    for (const MPICall &send : sendCase.mpiCalls()) {
         // skip non sends for case 1
         if (!funcClassifier_.isSendType(send) || send.isMarked_) continue;
 
         // skip non recvs for case 2
-        for (const MPICall &recv : recvCase.mpiCalls_) {
+        for (const MPICall &recv : recvCase.mpiCalls()) {
             if (!funcClassifier_.isRecvType(recv) || recv.isMarked_) continue;
 
             // check if pair matches
@@ -110,7 +110,7 @@ void MPICheckerAST::checkReachbility() const {
 
     // trigger report for unreached
     for (const MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (const MPICall &call : rankCase.mpiCalls_) {
+        for (const MPICall &call : rankCase.mpiCalls()) {
             if (funcClassifier_.isMPIType(call) && !call.isReachable_) {
                 bugReporter_.reportNotReachableCall(call.callExpr());
             }
@@ -127,11 +127,11 @@ void MPICheckerAST::checkReachbility() const {
 void MPICheckerAST::checkReachbilityPair(const MPIRankCase &sendCase,
                                          const MPIRankCase &recvCase) const {
     // find send/recv pairs
-    for (const MPICall &send : sendCase.mpiCalls_) {
+    for (const MPICall &send : sendCase.mpiCalls()) {
         send.isReachable_ = true;
         if (send.isMarked_) continue;
 
-        for (const MPICall &recv : recvCase.mpiCalls_) {
+        for (const MPICall &recv : recvCase.mpiCalls()) {
             recv.isReachable_ = true;
             if (recv.isMarked_) continue;
 
@@ -160,7 +160,7 @@ void MPICheckerAST::checkReachbilityPair(const MPIRankCase &sendCase,
  * @param mpiCall
  */
 void MPICheckerAST::checkForCollectiveCalls(const MPIRankCase &rankCase) const {
-    for (const MPICall &call : rankCase.mpiCalls_) {
+    for (const MPICall &call : rankCase.mpiCalls()) {
         if (funcClassifier_.isCollectiveType(call)) {
             bugReporter_.reportCollCallInBranch(call.callExpr());
         }
@@ -179,11 +179,11 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
                                       const MPICall &recvCall) const {
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        sendCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments_[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        recvCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
         analysisManager_);
 
     return sendDataType == recvDataType;
@@ -207,14 +207,14 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (sendCall.arguments_[idx] != recvCall.arguments_[idx]) {
+        if (sendCall.arguments()[idx] != recvCall.arguments()[idx]) {
             return false;
         }
     }
 
     // compare ranks
-    const auto &rankArgSend = sendCall.arguments_[MPIPointToPoint::kRank];
-    const auto &rankArgRecv = recvCall.arguments_[MPIPointToPoint::kRank];
+    const auto &rankArgSend = sendCall.arguments()[MPIPointToPoint::kRank];
+    const auto &rankArgRecv = recvCall.arguments()[MPIPointToPoint::kRank];
 
     // match special cases---------------------
     llvm::SmallVector<std::string, 1> firstRank{"0"};
@@ -222,18 +222,18 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
                                                "1"};
 
     // first to last match
-    if (sendCase.isFirstRank_ && rankArgSend.valueSequence_ == lastRank &&
-        recvCase.isLastRank_ && rankArgRecv.valueSequence_ == firstRank) {
+    if (sendCase.isFirstRank() && rankArgSend.valueSequence() == lastRank &&
+        recvCase.isLastRank() && rankArgRecv.valueSequence() == firstRank) {
         return true;
     }
     // last to first match
-    else if (sendCase.isLastRank_ && rankArgSend.valueSequence_ == firstRank &&
-             recvCase.isFirstRank_ && rankArgRecv.valueSequence_ == lastRank) {
+    else if (sendCase.isLastRank() && rankArgSend.valueSequence() == firstRank &&
+             recvCase.isFirstRank() && rankArgRecv.valueSequence() == lastRank) {
         return true;
     }
     //------------------------------------------
 
-    if (rankArgSend.typeSequence_.size() != rankArgRecv.typeSequence_.size())
+    if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
         return false;
 
     // build sequences without last operator(skip first element)
@@ -241,13 +241,13 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     std::vector<std::string> val1, val2;
 
     bool containsSubtraction{false};
-    for (size_t i = 1; i < rankArgSend.typeSequence_.size(); ++i) {
-        seq1.push_back(rankArgSend.typeSequence_[i]);
-        val1.push_back(rankArgSend.valueSequence_[i]);
-        seq2.push_back(rankArgRecv.typeSequence_[i]);
-        val2.push_back(rankArgRecv.valueSequence_[i]);
-        if (rankArgSend.valueSequence_[i] == "-") containsSubtraction = true;
-        if (rankArgRecv.valueSequence_[i] == "-") containsSubtraction = true;
+    for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
+        seq1.push_back(rankArgSend.typeSequence()[i]);
+        val1.push_back(rankArgSend.valueSequence()[i]);
+        seq2.push_back(rankArgRecv.typeSequence()[i]);
+        val2.push_back(rankArgRecv.valueSequence()[i]);
+        if (rankArgSend.valueSequence()[i] == "-") containsSubtraction = true;
+        if (rankArgRecv.valueSequence()[i] == "-") containsSubtraction = true;
     }
 
     if (containsSubtraction) {
@@ -282,16 +282,16 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
     // check if their types match
     for (const auto &idxPair : indexPairs) {
         // wave through uncaptured data
-        if (!mpiCall.arguments_[idxPair.first].combinedVars_.size()) continue;
+        if (!mpiCall.arguments()[idxPair.first].combinedVars().size()) continue;
 
         const ValueDecl *bufferArg =
-            mpiCall.arguments_[idxPair.first].combinedVars_.front();
+            mpiCall.arguments()[idxPair.first].combinedVars().front();
 
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
 
         // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments_[idxPair.second].stmt_;
+        auto mpiDatatype = mpiCall.arguments()[idxPair.second].stmt_;
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
 
@@ -536,14 +536,14 @@ bool MPICheckerAST::matchExactWidthType(
  * @param mpiCall to check the arguments for
  */
 void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
-    std::vector<size_t> indicesToCheck = integerIndices(mpiCall);
+    llvm::SmallVector<size_t, 1> indicesToCheck{integerIndices(mpiCall)};
     if (!indicesToCheck.size()) return;
 
     // iterate indices which should not have integer arguments
     for (const size_t idx : indicesToCheck) {
         // check for invalid variable types
-        const auto &arg = mpiCall.arguments_[idx];
-        const auto &vars = arg.vars_;
+        const auto &arg = mpiCall.arguments()[idx];
+        const auto &vars = arg.vars();
         for (const auto &var : vars) {
             if (!var->getType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
@@ -552,14 +552,14 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
         }
 
         // check for float literals
-        if (arg.floatingLiterals_.size()) {
+        if (arg.floatingLiterals().size()) {
             bugReporter_.reportInvalidArgumentType(
                 mpiCall.callExpr(), idx,
-                arg.floatingLiterals_.front()->getSourceRange(), "Literal");
+                arg.floatingLiterals().front()->getSourceRange(), "Literal");
         }
 
         // check for invalid return types from functions
-        const auto &functions = arg.functions_;
+        const auto &functions = arg.functions();
         for (const auto &function : functions) {
             if (!function->getReturnType()->isIntegerType()) {
                 bugReporter_.reportInvalidArgumentType(
@@ -577,10 +577,10 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
  *
  * @return int indices
  */
-std::vector<size_t> MPICheckerAST::integerIndices(
+llvm::SmallVector<size_t, 1> MPICheckerAST::integerIndices(
     const MPICall &mpiCall) const {
     // std vector to allow list assignment
-    std::vector<size_t> intIndices;
+    llvm::SmallVector<size_t, 1> intIndices;
 
     if (funcClassifier_.isPointToPointType(mpiCall)) {
         intIndices = {MPIPointToPoint::kCount, MPIPointToPoint::kRank,

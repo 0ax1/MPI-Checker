@@ -42,7 +42,7 @@ llvm::SmallSet<const ValueDecl *, 4> variables;
 const std::string encoding{"_prc_var_encoding_"};
 }
 
-std::list<MPIRankCase> MPIRankCase::cases;
+llvm::SmallVector<MPIRankCase, 8> MPIRankCase::cases;
 
 bool MPICall::operator==(const MPICall &callToCompare) const {
     if (arguments_.size() != callToCompare.arguments_.size()) return false;
@@ -67,7 +67,7 @@ void MPICall::init(const clang::CallExpr *const callExpr) {
     // build argument vector
     for (size_t i = 0; i < callExpr->getNumArgs(); ++i) {
         // emplace triggers ArgumentVisitor ctor
-        argumentsPr_.emplace_back(callExpr->getArg(i));
+        arguments_.emplace_back(callExpr->getArg(i));
     }
 }
 
@@ -82,7 +82,7 @@ bool MPIRankCase::isRankAmbiguous() const {
 
     // if comparison op not ==, -> ambiguous
     for (const auto &rankCondition : rankConditions_) {
-        for (const auto op : rankCondition.comparisonOperators_) {
+        for (const auto op : rankCondition.comparisonOperators()) {
             if (op->getOpcode() == BinaryOperatorKind::BO_EQ) return false;
         }
     }
@@ -114,13 +114,13 @@ void MPIRankCase::setupConditions(const clang::Stmt *const matchedCondition) {
     if (matchedCondition) {
         completeCondition_.reset(new ConditionVisitor{matchedCondition});
 
-        for (const auto &x : completeCondition_->comparisonOperators_) {
+        for (const auto &x : completeCondition_->comparisonOperators()) {
             // dissect single conditions, encode special mpi vars
-            conditionsPr_.emplace_back(x);
+            conditions_.emplace_back(x);
 
-            if (cont::isContained(conditionsPr_.back().valueSequence_,
+            if (cont::isContained(conditions_.back().valueSequence(),
                                   MPIRank::encoding)) {
-                rankConditionsPr_.emplace_back(x);
+                rankConditions_.emplace_back(x);
             }
         }
     }
@@ -139,7 +139,7 @@ void MPIRankCase::setupMPICallsFromBody(
     for (const clang::CallExpr *const callExpr : callExprVisitor.callExprs()) {
         // add mpi calls only
         if (funcClassifier.isMPIType(util::getIdentInfo(callExpr))) {
-            mpiCallsPr_.emplace_back(callExpr);
+            mpiCalls_.emplace_back(callExpr);
         }
     }
 }
@@ -158,13 +158,13 @@ void MPIRankCase::identifySpecialRanks() {
         "==", "-", MPIProcessCount::encoding, "1", MPIRank::encoding};
 
     for (const auto &x : rankConditions_) {
-        if (x.valueSequence_ == rankZeroA || x.valueSequence_ == rankZeroB) {
-            isFirstRankPr_ = true;
+        if (x.valueSequence() == rankZeroA || x.valueSequence() == rankZeroB) {
+            isFirstRank_ = true;
             break;
         }
 
-        if (x.valueSequence_ == rankLastA || x.valueSequence_ == rankLastB) {
-            isLastRankPr_ = true;
+        if (x.valueSequence() == rankLastA || x.valueSequence() == rankLastB) {
+            isLastRank_ = true;
             break;
         }
     }
@@ -175,7 +175,7 @@ void MPIRankCase::identifySpecialRanks() {
  */
 void MPIRankCase::unmarkCalls() {
     for (MPIRankCase &rankCase : MPIRankCase::cases) {
-        for (MPICall &call : rankCase.mpiCallsPr_) {
+        for (MPICall &call : rankCase.mpiCalls_) {
             call.isMarked_ = false;
         }
     }

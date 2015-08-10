@@ -47,8 +47,8 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     ProgramStateRef state = ctx.getState();
 
     MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    auto &arg = mpiCall.arguments_[mpiCall.callExpr()->getNumArgs() - 1];
-    auto requestVarDecl = arg.vars_.front();
+    auto &arg = mpiCall.arguments()[mpiCall.callExpr()->getNumArgs() - 1];
+    auto requestVarDecl = arg.vars().front();
     // get must be called before set function
     const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
 
@@ -85,17 +85,17 @@ void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
     llvm::SmallVector<VarDecl *, 1> requestVector;
     // wait for single request
     if (funcClassifier_.isMPI_Wait(mpiCall)) {
-        requestVector.push_back(mpiCall.arguments_[0].vars_.front());
+        requestVector.push_back(mpiCall.arguments()[0].vars().front());
     }
     // waitall
     else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
         // currently only work for init lists
         // TODO add support for assigned requests
-        if (!mpiCall.arguments_[1].vars_.size() ||
-            !mpiCall.arguments_[1].vars_.front()->getType()->isArrayType())
+        if (!mpiCall.arguments()[1].vars().size() ||
+            !mpiCall.arguments()[1].vars().front()->getType()->isArrayType())
             return;
 
-        ArrayVisitor arrayVisitor{mpiCall.arguments_[1].vars_.front()};
+        ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
         for (const auto &requestVar : arrayVisitor.vars()) {
             requestVector.push_back(requestVar);
         }

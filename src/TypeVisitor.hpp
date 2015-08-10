@@ -61,6 +61,7 @@ public:
     // passed qual type
     const clang::QualType qualType_;
     const clang::Type *type_;
+
     bool isTypedefType() const { return isTypedefType_; }
     const std::string typedefTypeName() const & { return typedefTypeName_; }
     const clang::BuiltinType *builtinType() const { return builtinType_; }

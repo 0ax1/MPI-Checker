@@ -41,7 +41,7 @@ namespace mpi {
  * @return encoded string
  */
 std::string StatementVisitor::encodeVariable(
-    const clang::NamedDecl *const var) {
+    const clang::NamedDecl *const var) const {
     // encode rank variable
     if (cont::isContained(MPIRank::variables, var)) {
         return MPIRank::encoding;
@@ -70,16 +70,16 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
         // only add if no struct, members are added in VisitMemberExpr
         if (var->getType()->isStructureType()) return true;
 
-        varsPr_.push_back(var);
-        combinedVarsPr_.push_back(var);
-        typeSequencePr_.push_back(ComponentType::kVar);
-        valueSequencePr_.push_back(encodeVariable(var));
+        vars_.push_back(var);
+        combinedVars_.push_back(var);
+        typeSequence_.push_back(ComponentType::kVar);
+        valueSequence_.push_back(encodeVariable(var));
 
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
-        functionsPr_.push_back(fn);
-        typeSequencePr_.push_back(ComponentType::kFunc);
-        valueSequencePr_.push_back(fn->getNameAsString());
+        functions_.push_back(fn);
+        typeSequence_.push_back(ComponentType::kFunc);
+        valueSequence_.push_back(fn->getNameAsString());
     }
 
     return true;
@@ -94,10 +94,10 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
  */
 bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
     clang::ValueDecl *vd = memExpr->getMemberDecl();
-    membersPr_.push_back(vd);
-    combinedVarsPr_.push_back(vd);
-    typeSequencePr_.push_back(ComponentType::kVar);  // encode as type var
-    valueSequencePr_.push_back(encodeVariable(vd));
+    members_.push_back(vd);
+    combinedVars_.push_back(vd);
+    typeSequence_.push_back(ComponentType::kVar);  // encode as type var
+    valueSequence_.push_back(encodeVariable(vd));
 
     return true;
 }
@@ -110,20 +110,20 @@ bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
-    binaryOperatorsPr_.push_back(op->getOpcode());
+    binaryOperators_.push_back(op->getOpcode());
 
     if (op->isComparisonOp()) {
-        typeSequencePr_.push_back(ComponentType::kComparison);
-        comparisonOperatorsPr_.push_back(op);
+        typeSequence_.push_back(ComponentType::kComparison);
+        comparisonOperators_.push_back(op);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
-        typeSequencePr_.push_back(ComponentType::kAddOp);
+        typeSequence_.push_back(ComponentType::kAddOp);
     } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {
-        typeSequencePr_.push_back(ComponentType::kSubOp);
+        typeSequence_.push_back(ComponentType::kSubOp);
     } else {
-        typeSequencePr_.push_back(ComponentType::kOperator);
+        typeSequence_.push_back(ComponentType::kOperator);
     }
 
-    valueSequencePr_.push_back(op->getOpcodeStr());
+    valueSequence_.push_back(op->getOpcodeStr());
 
     return true;
 }
@@ -136,8 +136,8 @@ bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
-    integerLiteralsPr_.push_back(intLiteral);
-    typeSequencePr_.push_back(ComponentType::kInt);
+    integerLiterals_.push_back(intLiteral);
+    typeSequence_.push_back(ComponentType::kInt);
 
     SmallVector<char, 4> intValAsString;
     intLiteral->getValue().toStringUnsigned(intValAsString);
@@ -145,7 +145,7 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     for (char c : intValAsString) {
         val.push_back(c);
     }
-    valueSequencePr_.push_back(val);
+    valueSequence_.push_back(val);
     return true;
 }
 
@@ -157,10 +157,10 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
  * @return continue visiting
  */
 bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
-    floatingLiteralsPr_.push_back(floatLiteral);
-    typeSequencePr_.push_back(ComponentType::kFloat);
+    floatingLiterals_.push_back(floatLiteral);
+    typeSequence_.push_back(ComponentType::kFloat);
 
-    valueSequencePr_.push_back(
+    valueSequence_.push_back(
         std::to_string(floatLiteral->getValueAsApproximateDouble()));
     return true;
 }
@@ -196,8 +196,8 @@ bool StatementVisitor::operator!=(
  */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
-    if (typeSequencePr_ != visitorToCompare.typeSequencePr_) return false;
-    if (valueSequencePr_ != visitorToCompare.valueSequencePr_) return false;
+    if (typeSequence_ != visitorToCompare.typeSequence_) return false;
+    if (valueSequence_ != visitorToCompare.valueSequence_) return false;
 
     return true;
 }
@@ -212,12 +212,12 @@ bool StatementVisitor::isEqualOrdered(
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
-    if (!cont::isPermutation(typeSequencePr_,
-                             visitorToCompare.typeSequencePr_)) {
+    if (!cont::isPermutation(typeSequence_,
+                             visitorToCompare.typeSequence_)) {
         return false;
     }
-    if (!cont::isPermutation(valueSequencePr_,
-                             visitorToCompare.valueSequencePr_)) {
+    if (!cont::isPermutation(valueSequence_,
+                             visitorToCompare.valueSequence_)) {
         return false;
     }
 
@@ -230,7 +230,7 @@ bool StatementVisitor::isEqualPermutative(
  * @return is inverse
  */
 bool StatementVisitor::containsSubtraction() const {
-    for (const auto binaryOperator : binaryOperatorsPr_) {
+    for (const auto binaryOperator : binaryOperators_) {
         if (binaryOperator == BinaryOperatorKind::BO_Sub) {
             return true;
         }
