@@ -58,7 +58,7 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
     if (!isRankBranch(ifStmt)) return true;  // only inspect rank branches
     if (cont::isContained(visitedIfStmts_, ifStmt)) return true;
 
-    std::vector<ConditionVisitor> unmatchedConditions;
+    llvm::SmallVector<ConditionVisitor, 2> unmatchedConditions;
 
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;

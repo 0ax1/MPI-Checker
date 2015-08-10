@@ -62,19 +62,18 @@ public:
 
     bool operator==(const MPICall &) const;
     bool operator!=(const MPICall &) const;
-
     // implicit conversion function
     operator const clang::IdentifierInfo *() const { return identInfo_; }
 
     const clang::CallExpr *callExpr() const { return callExpr_; }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
-
-    const std::vector<ArgumentVisitor> &arguments() const {
+    const llvm::SmallVector<ArgumentVisitor, 6> &arguments() const {
         return arguments_;
     };
+
     // marking can be changed freely by clients
-    // semantic depends on context of usage
+    // semantics depend on context of usage
     mutable bool isMarked_{false};
     mutable bool isReachable_{false};
 
@@ -82,7 +81,7 @@ private:
     void init(const clang::CallExpr *const);
 
     const clang::CallExpr *callExpr_;
-    std::vector<ArgumentVisitor> arguments_;
+    llvm::SmallVector<ArgumentVisitor, 6> arguments_;
     const clang::IdentifierInfo *identInfo_;
     unsigned long id_{idCounter++};  // unique call identification
 
@@ -92,10 +91,11 @@ private:
 // to capture rank cases from branches
 class MPIRankCase {
 public:
-    MPIRankCase(const clang::Stmt *const then,
-                const clang::Stmt *const matchedCondition,
-                const std::vector<ConditionVisitor> &unmatchedConditions,
-                const MPIFunctionClassifier &funcClassifier)
+    MPIRankCase(
+        const clang::Stmt *const then,
+        const clang::Stmt *const matchedCondition,
+        const llvm::SmallVector<ConditionVisitor, 2> &unmatchedConditions,
+        const MPIFunctionClassifier &funcClassifier)
 
         : unmatchedConditions_{unmatchedConditions} {
         setupConditions(matchedCondition);
@@ -110,16 +110,16 @@ public:
 
     bool isFirstRank() const { return isFirstRank_; }
     bool isLastRank() const { return isLastRank_; }
-    const std::vector<MPICall> &mpiCalls() const { return mpiCalls_; }
-    const std::vector<ConditionVisitor> &conditions() const {
+    const llvm::SmallVector<MPICall, 16> &mpiCalls() const { return mpiCalls_; }
+    const llvm::SmallVector<ConditionVisitor, 8> &conditions() const {
         return conditions_;
     }
-    const std::list<ConditionVisitor> &rankConditions() const {
+    const llvm::SmallVector<ConditionVisitor, 4> &rankConditions() const {
         return rankConditions_;
     }
 
     // conditions not fullfilled to enter rank case
-    const std::vector<ConditionVisitor> unmatchedConditions_;
+    const llvm::SmallVector<ConditionVisitor, 2> unmatchedConditions_;
     static llvm::SmallVector<MPIRankCase, 8> cases;
 
 private:
@@ -131,11 +131,11 @@ private:
     bool isFirstRank_{false};
     bool isLastRank_{false};
 
-    std::vector<MPICall> mpiCalls_;
+    llvm::SmallVector<MPICall, 16> mpiCalls_;
     // dissected conditions
-    std::vector<ConditionVisitor> conditions_;
+    llvm::SmallVector<ConditionVisitor, 8> conditions_;
     // subset containing conditions with rank vars
-    std::list<ConditionVisitor> rankConditions_;
+    llvm::SmallVector<ConditionVisitor, 4> rankConditions_;
     // condition fulfilled to enter rank case
     std::unique_ptr<ConditionVisitor> completeCondition_{nullptr};
 };

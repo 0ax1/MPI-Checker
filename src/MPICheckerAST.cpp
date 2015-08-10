@@ -179,11 +179,15 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
                                       const MPICall &recvCall) const {
     // compare mpi datatype
     llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        sendCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt()
+            ->getSourceRange(),
         analysisManager_);
 
     llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments()[MPIPointToPoint::kDatatype].stmt_->getSourceRange(),
+        recvCall.arguments()[MPIPointToPoint::kDatatype]
+            .stmt()
+            ->getSourceRange(),
         analysisManager_);
 
     return sendDataType == recvDataType;
@@ -227,8 +231,10 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         return true;
     }
     // last to first match
-    else if (sendCase.isLastRank() && rankArgSend.valueSequence() == firstRank &&
-             recvCase.isFirstRank() && rankArgRecv.valueSequence() == lastRank) {
+    else if (sendCase.isLastRank() &&
+             rankArgSend.valueSequence() == firstRank &&
+             recvCase.isFirstRank() &&
+             rankArgRecv.valueSequence() == lastRank) {
         return true;
     }
     //------------------------------------------
@@ -291,7 +297,7 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
 
         // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments()[idxPair.second].stmt_;
+        auto mpiDatatype = mpiCall.arguments()[idxPair.second].stmt();
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             mpiDatatype->getSourceRange(), analysisManager_)};
 
