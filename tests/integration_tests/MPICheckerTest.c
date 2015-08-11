@@ -385,7 +385,7 @@ void typeMatch3() {
 void typeMatch4() {
     float ***buf;
     ***buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, **buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
 } // no error
 
 void typeMatch5() {
@@ -429,6 +429,19 @@ void invalidArgTypeLiteral() {
     }
     else if (rank == 1) {
         MPI_Recv(&buf, 1, MPI_INT, rank - 1.1, 17, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Literal type used at index 3 is not valid.}}
+    }
+}
+
+void invalidArgTypeVariable() {
+    int rank = 0;
+    int buf = 0;
+    double x = 1.1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, x + rank + 1, 34, MPI_COMM_WORLD); // expected-warning{{Variable type used at index 3 is not valid.}}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1, MPI_INT, x + rank - 1, 34, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Variable type used at index 3 is not valid.}}
     }
 }
 
