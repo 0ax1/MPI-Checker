@@ -81,9 +81,13 @@ if [[ $? -eq 0 ]]; then
     abspath() {
         [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
     }
-    # symlink integration tests
-    ln -s `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c` \
-        `abspath ../../../test/Analysis/MPICheckerTest.c`
+
+    # setup integration tests
+    mv MPI-Checker/tests/integration_tests/MPICheckerTest.c \
+        ../../../test/Analysis/MPICheckerTest.c
+
+    ln -s `abspath ../../../test/Analysis/MPICheckerTest.c` \
+        `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c`
 
     # symlink unit tests
     ln -s `abspath MPI-Checker/tests/unit_tests` \
