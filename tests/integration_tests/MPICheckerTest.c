@@ -507,3 +507,13 @@ void matchedWait3() {
         }
     }
 } // no error
+
+void unmatchedWait() {
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Request req;
+        MPI_Wait(&req, MPI_STATUS_IGNORE); // expected-warning{{Request req has no matching nonblocking call.}}
+    }
+}
