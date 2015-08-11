@@ -249,7 +249,7 @@ void matchedPartner5() {
     } else {
         MPI_Recv(&buf, var2 + 1 + var, MPI_DOUBLE, 11 + var + rank - 1, 32, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
-} // no error, permutations are allowed within an argument if all operators are additions
+} // no error, permutations are allowed within an argument if all operators are additions (excluding the rank +/- 1 part)
 
 void matchedPartner6() {
     int rank = 0;
@@ -269,7 +269,7 @@ void matchedPartner6() {
         MPI_Wait(&req, MPI_STATUS_IGNORE);
         MPI_Recv(&buf, 1, MPI_DOUBLE, rank - 1, 33, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
-} // no error, different p2p types can be matched
+} // no error, different p2p types are matched
 
 void matchFirstToLast() {
     int rankA = 0;
@@ -397,12 +397,12 @@ void typeMatch5() {
 void typeMatch6() {
     struct a { int x; } buf;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error, checker does not check in case of structs
+} // no error, checker does not validate in case of structs
 
 void typeMatch7() {
     struct a { int x; } buf;
     MPI_Reduce(MPI_IN_PLACE, &buf, 4, MPI_BYTE, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error, checker accepts any type to match byte
+} // no error, checker accepts any type to match MPI_BYTE
   // and makes no assumptions about the buffer size
 
 void collectiveInBranch() {
