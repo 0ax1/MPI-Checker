@@ -83,11 +83,8 @@ if [[ $? -eq 0 ]]; then
     }
 
     # setup integration tests
-    mv MPI-Checker/tests/integration_tests/MPICheckerTest.c \
-        ../../../test/Analysis/MPICheckerTest.c
-
-    ln `abspath ../../../test/Analysis/MPICheckerTest.c` \
-        `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c`
+    ln `abspath MPI-Checker/tests/integration_tests/MPICheckerTest.c` \
+        `abspath ../../../test/Analysis/MPICheckerTest.c`
 
     # symlink unit tests
     ln -s `abspath MPI-Checker/tests/unit_tests` \
