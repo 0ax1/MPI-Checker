@@ -34,8 +34,8 @@
 #include <complex.h>
 
 /*
- * Perform black box "mid-level integration testing".
- * Calls between different functions should not be matched -> set tags.
+ * Perform regression tests.
+ * P2p calls between different functions should not be matched -> set tags.
  */
 
 void doubleWait() {
@@ -307,7 +307,7 @@ void firstToLastUnmatched1() {
     } else if (sizeB - 1 == rankB) {
         MPI_Recv(&buf, 1, MPI_DOUBLE, 0, 9, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{No matching send function found.}}
     }
-}
+} // rankA is 1, no match
 
 void firstToLastUnmatched2() {
     int rankA = 0;
@@ -326,7 +326,7 @@ void firstToLastUnmatched2() {
     } else if (sizeB - 1 == rankB) {
         MPI_Recv(&buf, 1, MPI_DOUBLE, 0, 20, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{No matching send function found.}}
     }
-}
+} // send is sizeA - 2, no match
 
 void matchLastToFirst() {
     int rankA = 0;
