@@ -530,3 +530,53 @@ void unmatchedWait() {
         MPI_Wait(&req, MPI_STATUS_IGNORE); // expected-warning{{Request req has no matching nonblocking call.}}
     }
 }
+
+void detectRankVar() {
+    int rank;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 35, MPI_COMM_WORLD); // expected-warning{{No matching receive function found. }}
+    }
+} // use no receive warning, to validate that var was detected as a rank variable
+
+void noRankVar() {
+    int rank = 0;
+    double buf = 0;
+    if (rank == 0) {
+        MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+} // no error, r.rank is no rank variable -> no mpi rank case, no coll call in branch
+
+void detectRankVarInStruct() {
+    typedef struct{ int rank; }rs;
+    rs r;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &r.rank);
+    if (r.rank == 0) {
+        MPI_Send(&buf, 1, MPI_DOUBLE, r.rank + 1, 36, MPI_COMM_WORLD); // expected-warning{{No matching receive function found. }}
+    }
+} // use no receive warning, to validate that member was detected as a rank variable
+
+void noRankVarInStruct() {
+    typedef struct{ int rank; }rs;
+    rs r;
+    double buf = 0;
+    if (r.rank == 0) {
+        MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+} // no error, r.rank is no rank variable -> no mpi rank case, no coll call in branch
+
+void noRankVarInStruct2() {
+    typedef struct{
+        int rank;
+        int norank;
+    }rs;
+
+    rs r;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &r.rank);
+    if (r.norank == 0) {
+        MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    }
+} // no rank var, norank member is no rank var
