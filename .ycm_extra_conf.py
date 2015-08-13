@@ -89,7 +89,9 @@ def GetCompilationInfoForFile( filename ):
           replacement_file )
         if compilation_info.compiler_flags_:
           return compilation_info
-    return None
+
+    fallback = os.path.abspath('./src/MPIChecker.cpp')
+    return database.GetCompilationInfoForFile(fallback)
   return database.GetCompilationInfoForFile( filename )
 
 
