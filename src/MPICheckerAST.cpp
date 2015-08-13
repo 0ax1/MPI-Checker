@@ -364,11 +364,11 @@ void MPICheckerAST::selectTypeMatcher(
         isTypeMatching = matchExactWidthType(typeVisitor, mpiDatatypeString);
     }
     // check for complex-floating types (e.g. float _Complex)
-    else if (typeVisitor.complexType()) {
+    else if (typeVisitor.qualType_->isComplexType()) {
         isTypeMatching = matchComplexType(typeVisitor, mpiDatatypeString);
     }
     // check for basic builtin types (e.g. int, char)
-    else if (!builtinTypeBuffer)
+    else if (!typeVisitor.qualType_->isBuiltinType())
         return;  // if no builtin type cancel checking
     else if (builtinTypeBuffer->isBooleanType()) {
         isTypeMatching = matchBoolType(typeVisitor, mpiDatatypeString);

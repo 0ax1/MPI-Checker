@@ -387,6 +387,11 @@ void typeMismatch8() {
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
 }
 
+void typeMismatch9() {
+    char buf = 'a';
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+}
+
 void typeMatch1() {
     double buf = 0;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
