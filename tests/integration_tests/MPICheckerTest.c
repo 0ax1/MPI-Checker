@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 -I/usr/include/ -I/usr/local/include/ -analyze -analyzer-checker=lx.MPIChecker -verify %s
 
-// add the mpi include path to the first line with -I/...
-// if mpi.h is not found
-
 // clang -cc1 uses the compiler frontend
 // without the compiler driver.
 
@@ -32,6 +29,9 @@
 
 #include <mpi.h>
 #include <complex.h>
+#include <stdint.h>
+
+
 
 /*
  * Perform regression tests.
@@ -354,17 +354,37 @@ void typeMismatch1() {
 
 void typeMismatch2() {
     int buf = 0;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
 }
 
 void typeMismatch3() {
     long double buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
 }
 
 void typeMismatch4() {
     long double complex buf = 11;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+}
+
+void typeMismatch5() {
+    int64_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+}
+
+void typeMismatch6() {
+    uint8_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+}
+
+void typeMismatch7() {
+    uint8_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT16_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+}
+
+void typeMismatch8() {
+    uint8_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
 }
 
 void typeMatch1() {
@@ -404,6 +424,16 @@ void typeMatch7() {
     MPI_Reduce(MPI_IN_PLACE, &buf, 4, MPI_BYTE, MPI_SUM, 0, MPI_COMM_WORLD);
 } // no error, checker accepts any type to match MPI_BYTE
   // and makes no assumptions about the buffer size
+
+void typeMatch8() {
+    int64_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+void typeMatch9() {
+    uint8_t buf = 11;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
+}
 
 void collectiveInBranch() {
     int rank = 0;
