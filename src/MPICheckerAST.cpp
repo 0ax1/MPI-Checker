@@ -271,8 +271,9 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         return false;
     }
     // check permutation
-    else if ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
-             (!cont::isPermutation(sendValSeq, recvValSeq))) {
+    if (!containsSubtraction &&
+            ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
+             (!cont::isPermutation(sendValSeq, recvValSeq)))) {
         return false;
     }
     // last (value|var|function) must be identical
