@@ -155,6 +155,7 @@ struct RequestVar {
         return toCompare.varDecl_ == varDecl_;
     }
 
+    // TODO change to memory location
     const clang::VarDecl *const varDecl_;
     const clang::CallExpr *const lastUser_;
 };
