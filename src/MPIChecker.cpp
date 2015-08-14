@@ -44,19 +44,19 @@ public:
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
                       AnalysisManager &analysisManager,
                       BugReporter &bugReporter) const {
-        // identify rank variables first
-        MPIVariableVisitor MPIVariableVisitor{analysisManager};
-        MPIVariableVisitor.TraverseTranslationUnitDecl(
+        // identify MPI variables first
+        MPIVariableVisitor varVisitor{analysisManager};
+        varVisitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // traverse translation unit ast
-        TranslationUnitVisitor visitor{bugReporter, *this, analysisManager};
-        visitor.TraverseTranslationUnitDecl(
+        TranslationUnitVisitor tuVisitor{bugReporter, *this, analysisManager};
+        tuVisitor.TraverseTranslationUnitDecl(
             const_cast<TranslationUnitDecl *>(tuDecl));
 
         // check after tu traversal
-        visitor.checkerAST_.checkPointToPointSchema();
-        visitor.checkerAST_.checkReachbility();
+        tuVisitor.checkerAST_.checkPointToPointSchema();
+        tuVisitor.checkerAST_.checkReachbility();
 
         // clear after every translation unit
         MPIRank::variables.clear();
