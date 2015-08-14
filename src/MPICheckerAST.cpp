@@ -238,36 +238,45 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         return true;
     }
     //------------------------------------------
-
-    if (rankArgSend.typeSequence().size() != rankArgRecv.typeSequence().size())
+    if (rankArgSend.typeSequence().size() !=
+            rankArgRecv.typeSequence().size() ||
+        rankArgSend.valueSequence().size() !=
+            rankArgRecv.valueSequence().size())
         return false;
 
     // build sequences without last operator(skip first element)
-    std::vector<ArgumentVisitor::ComponentType> seq1, seq2;
-    std::vector<std::string> val1, val2;
+    const llvm::SmallVector<ArgumentVisitor::ComponentType, 4> sendTypeSeq(
+        rankArgSend.typeSequence().begin() + 1,
+        rankArgSend.typeSequence().end()),
+        recvTypeSeq{rankArgRecv.typeSequence().begin() + 1,
+                    rankArgRecv.typeSequence().end()};
+
+    const llvm::SmallVector<std::string, 4> sendValSeq{
+        rankArgSend.valueSequence().begin() + 1,
+        rankArgSend.valueSequence().end()},
+        recvValSeq{rankArgRecv.valueSequence().begin() + 1,
+                   rankArgRecv.valueSequence().end()};
 
     bool containsSubtraction{false};
-    for (size_t i = 1; i < rankArgSend.typeSequence().size(); ++i) {
-        seq1.push_back(rankArgSend.typeSequence()[i]);
-        val1.push_back(rankArgSend.valueSequence()[i]);
-        seq2.push_back(rankArgRecv.typeSequence()[i]);
-        val2.push_back(rankArgRecv.valueSequence()[i]);
-        if (rankArgSend.valueSequence()[i] == "-") containsSubtraction = true;
-        if (rankArgRecv.valueSequence()[i] == "-") containsSubtraction = true;
-    }
-
-    if (containsSubtraction) {
-        // check ordered
-        if (seq1 != seq2 || val1 != val2) return false;
-    } else {
-        // check permutation
-        if ((!cont::isPermutation(seq1, seq2)) ||
-            (!cont::isPermutation(val1, val2))) {
-            return false;
+    for (size_t i = 0; i < sendValSeq.size(); ++i) {
+        if (sendValSeq[i] == "-" || recvValSeq[i] == "-") {
+            containsSubtraction = true;
+            break;
         }
     }
+
+    // check ordered
+    if (containsSubtraction &&
+        (sendTypeSeq != recvTypeSeq || sendValSeq != recvValSeq)) {
+        return false;
+    }
+    // check permutation
+    else if ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
+             (!cont::isPermutation(sendValSeq, recvValSeq))) {
+        return false;
+    }
     // last (value|var|function) must be identical
-    if (val1.back() != val2.back()) return false;
+    if (sendValSeq.back() != recvValSeq.back()) return false;
 
     // last operator must be inverse
     if (!rankArgSend.isLastOperatorInverse(rankArgRecv)) return false;
