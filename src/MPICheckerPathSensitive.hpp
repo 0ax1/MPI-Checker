@@ -49,6 +49,8 @@ public:
     void clearRequestVars(clang::ento::CheckerContext &) const;
 
 private:
+    const clang::ento::MemRegion *requestMemRegion(
+        const clang::ento::CallEvent &) const;
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
 };

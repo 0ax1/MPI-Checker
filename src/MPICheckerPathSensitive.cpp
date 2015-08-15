@@ -64,6 +64,17 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     ctx.addTransition(state);
 }
 
+const MemRegion *MPICheckerPathSensitive::requestMemRegion(
+    const clang::ento::CallEvent &callEvent) const {
+    if (funcClassifier_.isMPI_Wait(callEvent.getCalleeIdentifier())) {
+        return callEvent.getArgSVal(0).getAsRegion();
+    } else if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
+        return callEvent.getArgSVal(1).getAsRegion();
+    } else {
+        return (const MemRegion *)nullptr;
+    }
+}
+
 /**
  * Checks if a request is used by wait multiple times without intermediate
  * nonblocking call.
@@ -75,34 +86,60 @@ void MPICheckerPathSensitive::checkWaitUsage(
     const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
     if (!funcClassifier_.isWaitType(callEvent.getCalleeIdentifier())) return;
 
+    const MemRegion *memRegion = requestMemRegion(callEvent);
+    if (!memRegion) return;
+
     ProgramStateRef state = ctx.getState();
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
-
     const ExplodedNode *const node = ctx.addTransition();
-    const MemRegion *memRegion = callEvent.getArgSVal(1).getAsRegion();
 
-    // TODO figure out how to iterate memregion
-    // SVal idx = ctx.getSValBuilder().makeArrayIndex(1);
-    // MemRegionManager &regionManager = ctx.getStateManager().getRegionManager();
-    // auto elementRegion = regionManager.getElementRegion(
-        // callEvent.getArgExpr(1)->getType(), idx.castAs<NonLoc>(), memRegion,
-        // ctx.getASTContext());
+    // requests are associcated with a VarRegion
+    const VarRegion *varRegion =
+        dyn_cast<VarRegion>(memRegion->getBaseRegion());
+    MemRegionManager *regionManager = varRegion->getMemRegionManager();
+    llvm::SmallVector<const MemRegion *, 2> requestRegions;
 
-    const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
+    if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
+        auto size = ctx.getStoreManager().getSizeInElements(
+            state, memRegion->getBaseRegion(),
+            callEvent.getArgExpr(1)->getType()->getPointeeType());
 
-    if (requestVar) {
-        // check for double wait
-        if (funcClassifier_.isWaitType(
-                requestVar->lastUser_->getCalleeIdentifier())) {
-            bugReporter_.reportDoubleWait(callEvent, *requestVar, node);
+        const llvm::APSInt &arrSize =
+            size.getAs<nonloc::ConcreteInt>()->getValue();
+
+        for (size_t i = 0; i < arrSize; ++i) {
+            NonLoc idx = ctx.getSValBuilder().makeArrayIndex(i);
+
+            const ElementRegion *elementRegion =
+                regionManager->getElementRegion(
+                    callEvent.getArgExpr(1)->getType()->getPointeeType(), idx,
+                    varRegion, ctx.getASTContext());
+
+            requestRegions.push_back(elementRegion->getAs<MemRegion>());
+        }
+    } else {
+        requestRegions.push_back(memRegion);
+    }
+
+    // check all requestRegions used in wait function
+    for (const auto requestRegion : requestRegions) {
+        const RequestVar *requestVar = state->get<RequestVarMap>(requestRegion);
+        state = state->set<RequestVarMap>(requestRegion,
+                                          {requestRegion, callEventRef});
+
+        if (requestVar) {
+            // check for double wait
+            if (funcClassifier_.isWaitType(
+                    requestVar->lastUser_->getCalleeIdentifier())) {
+                bugReporter_.reportDoubleWait(callEvent, *requestVar, node);
+            }
+        }
+        // no matching nonblocking call
+        else {
+            bugReporter_.reportUnmatchedWait(callEvent, node);
         }
     }
-    // no matching nonblocking call
-    else {
-        bugReporter_.reportUnmatchedWait(callEvent, node);
-    }
 
-    state = state->set<RequestVarMap>(memRegion, {memRegion, callEventRef});
     ctx.addTransition(state);
 }
 

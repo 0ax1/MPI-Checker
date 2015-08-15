@@ -144,8 +144,21 @@ private:
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
 struct RequestVar {
     RequestVar(const clang::ento::MemRegion *const memRegion,
-               const clang::ento::CallEventRef<> callEvent)
-        : memRegion_{memRegion}, lastUser_{callEvent} { }
+               const clang::ento::CallEventRef<> callEvent, size_t index = 0)
+        : memRegion_{memRegion}, lastUser_{callEvent} {
+        const clang::ento::VarRegion *varRegion =
+            clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
+
+        variableName_ = varRegion->getDecl()->getNameAsString();
+        isElementInArray_ = varRegion->getValueType()->isArrayType();
+
+        auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
+        if (elementRegion) {
+            indexInArray_ = elementRegion->getIndex()
+                                .getAs<clang::ento::nonloc::ConcreteInt>()
+                                ->getValue();
+        }
+    }
 
     void Profile(llvm::FoldingSetNodeID &id) const {
         id.AddPointer(memRegion_);
@@ -158,6 +171,10 @@ struct RequestVar {
 
     const clang::ento::MemRegion *const memRegion_;
     const clang::ento::CallEventRef<> lastUser_;
+
+    std::string variableName_;
+    bool isElementInArray_;
+    llvm::APSInt indexInArray_;
 };
 }  // end of namespace: mpi
 // TODO track request arrays (check bind?)
