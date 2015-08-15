@@ -26,6 +26,7 @@
 #define MPICHECKERPATHSENSITIVE_HPP_BKYOQUPL
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "MPIFunctionClassifier.hpp"
 #include "MPITypes.hpp"
 #include "MPIBugReporter.hpp"
@@ -40,9 +41,9 @@ public:
         : funcClassifier_{analysisManager},
           bugReporter_{bugReporter, *checkerBase, analysisManager} {}
 
-    void checkDoubleNonblocking(const clang::CallExpr *,
+    void checkDoubleNonblocking(const clang::ento::CallEvent &,
                                 clang::ento::CheckerContext &) const;
-    void checkWaitUsage(const clang::CallExpr *,
+    void checkWaitUsage(const clang::ento::CallEvent &,
                         clang::ento::CheckerContext &) const;
     void checkMissingWaits(clang::ento::CheckerContext &);
     void clearRequestVars(clang::ento::CheckerContext &) const;

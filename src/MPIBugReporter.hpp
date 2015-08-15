@@ -68,21 +68,20 @@ public:
     void reportMissingWait(const RequestVar &,
                            const clang::ento::ExplodedNode *const) const;
 
-    void reportUnmatchedWait(const clang::CallExpr *const,
-                             const clang::VarDecl *const,
+    void reportUnmatchedWait(const clang::ento::CallEvent &,
                              const clang::ento::ExplodedNode *const) const;
 
-    void reportDoubleWait(const clang::CallExpr *, const RequestVar &,
+    void reportDoubleWait(const clang::ento::CallEvent &, const RequestVar &,
                           const clang::ento::ExplodedNode *const) const;
 
-    void reportDoubleNonblocking(const clang::CallExpr *const,
-                                 const RequestVar &,
+    void reportDoubleNonblocking(const clang::ento::CallEvent &,
+                                 const mpi::RequestVar &,
                                  const clang::ento::ExplodedNode *const) const;
 
     const clang::Decl *currentFunctionDecl_{nullptr};
 
 private:
-    std::string lineNumberForCallExpr(const clang::CallExpr *const) const;
+    std::string lineNumber(const clang::ento::CallEventRef<>) const;
 
     // path sensitive bug types
     std::unique_ptr<clang::ento::BugType> unmatchedWaitBugType_;

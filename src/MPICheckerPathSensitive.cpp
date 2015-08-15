@@ -39,30 +39,29 @@ using namespace ento;
  * @param ctx
  */
 void MPICheckerPathSensitive::checkDoubleNonblocking(
-    const CallExpr *callExpr, CheckerContext &ctx) const {
-    if (!funcClassifier_.isNonBlockingType(util::getIdentInfo(callExpr))) {
+    const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
+    if (!funcClassifier_.isNonBlockingType(callEvent.getCalleeIdentifier())) {
         return;
     }
 
     ProgramStateRef state = ctx.getState();
+    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
+    const MemRegion *memRegion =
+        callEvent.getArgSVal(callEvent.getNumArgs() - 1).getAsRegion();
 
-    MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    auto &arg = mpiCall.arguments()[mpiCall.callExpr()->getNumArgs() - 1];
-    auto requestVarDecl = arg.vars().front();
-    // get must be called before set function
-    const RequestVar *requestVar = state->get<RequestVarMap>(requestVarDecl);
+    const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
+    const ExplodedNode *const node = ctx.addTransition(nullptr);
 
-    state = state->set<RequestVarMap>(
-        requestVarDecl,
-        mpi::RequestVar{requestVarDecl, const_cast<CallExpr *>(callExpr)});
-    const ExplodedNode *const node = ctx.addTransition(state);
-
-    if (requestVar && requestVar->lastUser_) {
+    if (requestVar) {
         if (funcClassifier_.isNonBlockingType(
-                util::getIdentInfo(requestVar->lastUser_))) {
-            bugReporter_.reportDoubleNonblocking(callExpr, *requestVar, node);
+                requestVar->lastUser_->getCalleeIdentifier())) {
+            bugReporter_.reportDoubleNonblocking(callEvent, *requestVar, node);
         }
     }
+
+    state = state->set<RequestVarMap>(memRegion,
+                                      mpi::RequestVar{memRegion, callEventRef});
+    ctx.addTransition(state);
 }
 
 /**
@@ -72,60 +71,38 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
  * @param callExpr
  * @param ctx
  */
-void MPICheckerPathSensitive::checkWaitUsage(const CallExpr *callExpr,
-                                             CheckerContext &ctx) const {
-    if (!funcClassifier_.isWaitType(util::getIdentInfo(callExpr))) {
-        return;
-    }
+void MPICheckerPathSensitive::checkWaitUsage(
+    const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
+    if (!funcClassifier_.isWaitType(callEvent.getCalleeIdentifier())) return;
 
     ProgramStateRef state = ctx.getState();
-
-    // collect request vars
-    MPICall mpiCall{const_cast<CallExpr *>(callExpr)};
-    llvm::SmallVector<VarDecl *, 1> requestVector;
-    // wait for single request
-    if (funcClassifier_.isMPI_Wait(mpiCall)) {
-        requestVector.push_back(mpiCall.arguments()[0].vars().front());
-    }
-    // waitall
-    else if (funcClassifier_.isMPI_Waitall(mpiCall)) {
-        // currently only work for init lists
-        // TODO add support for assigned requests
-        if (!mpiCall.arguments()[1].vars().size() ||
-            !mpiCall.arguments()[1].vars().front()->getType()->isArrayType())
-            return;
-
-        ArrayVisitor arrayVisitor{mpiCall.arguments()[1].vars().front()};
-        for (const auto &requestVar : arrayVisitor.vars()) {
-            requestVector.push_back(requestVar);
-        }
-    }
-    // waitany, waitsome requests are regarded as unwaited
-    else {
-        return;
-    }
+    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
 
     const ExplodedNode *const node = ctx.addTransition();
+    const MemRegion *memRegion = callEvent.getArgSVal(1).getAsRegion();
 
-    for (VarDecl *requestVarDecl : requestVector) {
-        const RequestVar *requestVar =
-            state->get<RequestVarMap>(requestVarDecl);
-        state = state->set<RequestVarMap>(
-            requestVarDecl, {requestVarDecl, const_cast<CallExpr *>(callExpr)});
+    // TODO figure out how to iterate memregion
+    // SVal idx = ctx.getSValBuilder().makeArrayIndex(1);
+    // MemRegionManager &regionManager = ctx.getStateManager().getRegionManager();
+    // auto elementRegion = regionManager.getElementRegion(
+        // callEvent.getArgExpr(1)->getType(), idx.castAs<NonLoc>(), memRegion,
+        // ctx.getASTContext());
 
-        if (requestVar && requestVar->lastUser_) {
-            // check for double wait
-            if (funcClassifier_.isWaitType(
-                    util::getIdentInfo(requestVar->lastUser_))) {
-                bugReporter_.reportDoubleWait(callExpr, *requestVar, node);
-            }
-        }
-        // no matching nonblocking call
-        else {
-            bugReporter_.reportUnmatchedWait(callExpr, requestVarDecl, node);
+    const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
+
+    if (requestVar) {
+        // check for double wait
+        if (funcClassifier_.isWaitType(
+                requestVar->lastUser_->getCalleeIdentifier())) {
+            bugReporter_.reportDoubleWait(callEvent, *requestVar, node);
         }
     }
+    // no matching nonblocking call
+    else {
+        bugReporter_.reportUnmatchedWait(callEvent, node);
+    }
 
+    state = state->set<RequestVarMap>(memRegion, {memRegion, callEventRef});
     ctx.addTransition(state);
 }
 
@@ -142,7 +119,7 @@ void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     for (auto &requestVar : requestVars) {
         if (requestVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
-                util::getIdentInfo(requestVar.second.lastUser_))) {
+                requestVar.second.lastUser_->getCalleeIdentifier())) {
             bugReporter_.reportMissingWait(requestVar.second, node);
         }
     }

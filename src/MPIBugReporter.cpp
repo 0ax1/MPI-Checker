@@ -22,6 +22,7 @@
  SOFTWARE.
 */
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "MPIBugReporter.hpp"
 #include "Utility.hpp"
 
@@ -34,14 +35,14 @@ const std::string MPIError{"MPI Error"};
 const std::string MPIWarning{"MPI Warning"};
 
 /**
- * Get line number for call expression
+ * Get line number for call event ref
  * @param call
  * @return line number as string
  */
-std::string MPIBugReporter::lineNumberForCallExpr(
-    const CallExpr *const call) const {
+std::string MPIBugReporter::lineNumber(
+    const CallEventRef<> callEventRef) const {
     std::string lineNo =
-        call->getCallee()->getSourceRange().getBegin().printToString(
+        callEventRef->getSourceRange().getBegin().printToString(
             bugReporter_.getSourceManager());
 
     // split written string into parts
@@ -165,42 +166,6 @@ void MPIBugReporter::reportInvalidArgumentType(
                                  errorText, location, sourceRanges);
 }
 
-/**
- * Report calls with quasi identical arguments.
- *
- * @param matchedCall
- * @param duplicateCall
- * @param indices identical arguments
- */
-void MPIBugReporter::reportRedundantCall(
-    const CallExpr *const matchedCall,
-    const CallExpr *const duplicateCall) const {
-    auto analysisDeclCtx =
-        analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
-
-    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
-        duplicateCall, bugReporter_.getSourceManager(), analysisDeclCtx);
-
-    std::string lineNo = lineNumberForCallExpr(matchedCall);
-
-    // build source ranges vector
-    SmallVector<SourceRange, 2> sourceRanges;
-    sourceRanges.push_back(matchedCall->getCallee()->getSourceRange());
-    sourceRanges.push_back(duplicateCall->getCallee()->getSourceRange());
-
-    std::string redundantCallName{
-        matchedCall->getDirectCallee()->getNameAsString()};
-
-    std::string bugName{"duplicate calls"};
-    std::string errorText{"Identical communication arguments used in " +
-                          redundantCallName + " in line " + lineNo +
-                          ".\nConsider to summarize these calls. "};
-
-    bugReporter_.EmitBasicReport(analysisDeclCtx->getDecl(), &checkerBase_,
-                                 bugName, MPIWarning, errorText, location,
-                                 sourceRanges);
-}
-
 // path sensitive reports –––––––––––––––––––––––––––––––––––––––––––––––––
 /**
  * Report duplicate request use by nonblocking calls.
@@ -210,19 +175,21 @@ void MPIBugReporter::reportRedundantCall(
  * @param node
  */
 void MPIBugReporter::reportDoubleNonblocking(
-    const CallExpr *const observedCall, const RequestVar &requestVar,
+    const CallEvent &observedCall, const RequestVar &requestVar,
     const ExplodedNode *const node) const {
-    std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
+    std::string lineNo{lineNumber(requestVar.lastUser_)};
+
     std::string lastUser =
-        requestVar.lastUser_->getDirectCallee()->getNameAsString();
-    std::string errorText{"Request " + requestVar.varDecl_->getNameAsString() +
-                          " is already in use by nonblocking call " + lastUser +
-                          " in line " + lineNo + ". "};
+        requestVar.lastUser_->getCalleeIdentifier()->getName();
+
+    std::string errorText{
+        "Request "
+        "is already in use by nonblocking call " +
+        lastUser + " in line " + lineNo + ". "};
 
     auto bugReport = llvm::make_unique<BugReport>(*doubleNonblockingBugType_,
                                                   errorText, node);
-    bugReport->addRange(observedCall->getSourceRange());
-    bugReport->addRange(requestVar.varDecl_->getSourceRange());
+    bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(std::move(bugReport));
 }
@@ -234,20 +201,20 @@ void MPIBugReporter::reportDoubleNonblocking(
  * @param requestVar
  * @param node
  */
-void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
+void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
                                       const RequestVar &requestVar,
                                       const ExplodedNode *const node) const {
-    std::string lineNo{lineNumberForCallExpr(requestVar.lastUser_)};
+    std::string lineNo{lineNumber(requestVar.lastUser_)};
     std::string lastUser =
-        requestVar.lastUser_->getDirectCallee()->getNameAsString();
-    std::string errorText{"Request " + requestVar.varDecl_->getNameAsString() +
-                          " is already waited upon by " + lastUser +
-                          " in line " + lineNo + ". "};
+        requestVar.lastUser_->getCalleeIdentifier()->getName();
+    std::string errorText{
+        "Request "
+        "is already waited upon by " +
+        lastUser + " in line " + lineNo + ". "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*doubleWaitBugType_, errorText, node);
-    bugReport->addRange(observedCall->getSourceRange());
-    bugReport->addRange(requestVar.varDecl_->getSourceRange());
+    bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     bugReporter_.emitReport(std::move(bugReport));
 }
@@ -260,17 +227,17 @@ void MPIBugReporter::reportDoubleWait(const CallExpr *const observedCall,
  */
 void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                                        const ExplodedNode *const node) const {
-    std::string errorText{"Nonblocking call using request " +
-                          requestVar.varDecl_->getNameAsString() +
-                          " has no matching wait. "};
+    std::string errorText{
+        "Nonblocking call using request "
+        "has no matching wait. "};
 
-    PathDiagnosticLocation p{requestVar.lastUser_->getLocStart(),
-                             analysisManager_.getSourceManager()};
+    PathDiagnosticLocation p{
+        requestVar.lastUser_->getOriginExpr()->getLocStart(),
+        analysisManager_.getSourceManager()};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, p);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
-    bugReport->addRange(requestVar.varDecl_->getSourceRange());
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -281,16 +248,15 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
  * @param requestVar
  * @param node
  */
-void MPIBugReporter::reportUnmatchedWait(const CallExpr *callExpr,
-                                         const VarDecl *requestVar,
+void MPIBugReporter::reportUnmatchedWait(const CallEvent &callEvent,
                                          const ExplodedNode *const node) const {
-    std::string errorText{"Request " + requestVar->getNameAsString() +
-                          " has no matching nonblocking call. "};
+    std::string errorText{
+        "Request used"
+        " has no matching nonblocking call. "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*unmatchedWaitBugType_, errorText, node);
-    bugReport->addRange(callExpr->getSourceRange());
-    bugReport->addRange(requestVar->getSourceRange());
+    bugReport->addRange(callEvent.getSourceRange());
     bugReporter_.emitReport(std::move(bugReport));
 }
 

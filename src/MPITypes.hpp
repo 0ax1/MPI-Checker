@@ -25,6 +25,7 @@
 #ifndef MPITYPES_HPP_IC7XR2MI
 #define MPITYPES_HPP_IC7XR2MI
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/SmallSet.h"
 #include "StatementVisitor.hpp"
 #include "CallExprVisitor.hpp"
@@ -142,27 +143,27 @@ private:
 
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
 struct RequestVar {
-    RequestVar(const clang::VarDecl *const varDecl,
-               const clang::CallExpr *const callExpr)
-        : varDecl_{varDecl}, lastUser_{callExpr} {}
+    RequestVar(const clang::ento::MemRegion *const memRegion,
+               const clang::ento::CallEventRef<> callEvent)
+        : memRegion_{memRegion}, lastUser_{callEvent} { }
 
     void Profile(llvm::FoldingSetNodeID &id) const {
-        id.AddPointer(varDecl_);
-        id.AddPointer(lastUser_);
+        id.AddPointer(memRegion_);
+        id.AddPointer(lastUser_->getOriginExpr());
     }
 
     bool operator==(const RequestVar &toCompare) const {
-        return toCompare.varDecl_ == varDecl_;
+        return toCompare.memRegion_ == memRegion_;
     }
 
-    // TODO change to memory location
-    const clang::VarDecl *const varDecl_;
-    const clang::CallExpr *const lastUser_;
+    const clang::ento::MemRegion *const memRegion_;
+    const clang::ento::CallEventRef<> lastUser_;
 };
 }  // end of namespace: mpi
 // TODO track request arrays (check bind?)
 
 // register data structure for path sensitive analysis
-REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, clang::VarDecl *, mpi::RequestVar)
+REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, const clang::ento::MemRegion *,
+                               mpi::RequestVar)
 
 #endif  // end of include guard: MPITYPES_HPP_IC7XR2MI

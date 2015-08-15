@@ -22,6 +22,7 @@
  SOFTWARE.
 */
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "TranslationUnitVisitor.hpp"
 #include "MPICheckerPathSensitive.hpp"
 #include "MPIVariableVisitor.hpp"
@@ -36,9 +37,8 @@ namespace mpi {
  * Class name determines checker name to specify on the command line.
  * It is created once for every translation unit.
  */
-class MPIChecker
-    : public Checker<check::ASTDecl<TranslationUnitDecl>,
-                     check::PreStmt<CallExpr>, check::EndFunction> {
+class MPIChecker : public Checker<check::ASTDecl<TranslationUnitDecl>,
+                                  check::PreCall, check::EndFunction> {
 public:
     // ast callback–––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void checkASTDecl(const TranslationUnitDecl *tuDecl,
@@ -65,10 +65,25 @@ public:
     }
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
-    void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
+    // void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
+    // dynamicInit(ctx);
+    // checkerSens_->checkWaitUsage(callExpr, ctx);
+    // checkerSens_->checkDoubleNonblocking(callExpr, ctx);
+    // }
+
+    void checkPreCall(const CallEvent &callEvent, CheckerContext &ctx) const {
         dynamicInit(ctx);
-        checkerSens_->checkWaitUsage(callExpr, ctx);
-        checkerSens_->checkDoubleNonblocking(callExpr, ctx);
+        checkerSens_->checkWaitUsage(callEvent, ctx);
+        checkerSens_->checkDoubleNonblocking(callEvent, ctx);
+
+        // if (callEvent.getNumArgs() == 2) {
+        // llvm::outs() << "log this" << "\n";
+        // // callEvent.geta
+        // SVal arg = callEvent.getArgSVal(0);
+        // callEvent.getArgSVal(0).getAsRegion();
+        // // arg.
+        // // callEvent.getDecl()->dumpColor()
+        // }
     }
 
     void checkEndFunction(CheckerContext &ctx) const {

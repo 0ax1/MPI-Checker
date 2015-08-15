@@ -45,30 +45,39 @@ typedef struct {
 int f() { return rand(); }
 
 void communicate1() {
-    MPI_Request req1, req2;
+    /* MPI_Request req1, req2; */
+    MPI_Request arr[2];
 
     basic_t bt = {.rank = 0, .rna = 0};
 
     MPI_Comm_rank(MPI_COMM_WORLD, &bt.rank);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (bt.rank == 0) {
-        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &req1);
-        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &req2);
+    if (bt.rank > 0) {
+        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &arr[1]);
+        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &arr[0]);
+        /* MPI_Wait(&arr[1], MPI_STATUS_IGNORE); */
 
-        MPI_Request r[2] = {req1, req2};
-        MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
+        MPI_Waitall(2, arr, MPI_STATUSES_IGNORE);
 
-    } else if (22 != 33 && rank == 1) {
+        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &arr[1]); */
+        /* MPI_Wait(&arr[1], MPI_STATUS_IGNORE); */
+        /* MPI_Wait(&arr[1], MPI_STATUS_IGNORE); */
 
-        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1);
-        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2);
+        /* MPI_Request r[2] = {req1, req2}; */
+        /* MPI_Waitall(2, r, MPI_STATUSES_IGNORE); */
 
-        MPI_Request r[2] = {req1, req2};
-        MPI_Waitall(2, r, MPI_STATUSES_IGNORE);
-
-        MPI_Wait(&req1, MPI_STATUS_IGNORE);
     }
+    /* else if (22 != 33 && rank == 1) { */
+
+        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1); */
+        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2); */
+
+        /* MPI_Request r[2] = {req1, req2}; */
+        /* MPI_Waitall(2, r, MPI_STATUSES_IGNORE); */
+
+        /* MPI_Wait(&req1, MPI_STATUS_IGNORE); */
+    /* } */
 }
 
 int main(int argc, char *argv[]) {
