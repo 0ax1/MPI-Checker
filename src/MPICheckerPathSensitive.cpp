@@ -23,7 +23,6 @@
 */
 
 #include "MPICheckerPathSensitive.hpp"
-#include "ArrayVisitor.hpp"
 #include "Utility.hpp"
 
 namespace mpi {
