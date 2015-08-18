@@ -65,25 +65,10 @@ public:
     }
 
     // path sensitive callbacks––––––––––––––––––––––––––––––––––––––––––––
-    // void checkPreStmt(const CallExpr *callExpr, CheckerContext &ctx) const {
-    // dynamicInit(ctx);
-    // checkerSens_->checkWaitUsage(callExpr, ctx);
-    // checkerSens_->checkDoubleNonblocking(callExpr, ctx);
-    // }
-
     void checkPreCall(const CallEvent &callEvent, CheckerContext &ctx) const {
         dynamicInit(ctx);
         checkerSens_->checkWaitUsage(callEvent, ctx);
         checkerSens_->checkDoubleNonblocking(callEvent, ctx);
-
-        // if (callEvent.getNumArgs() == 2) {
-        // llvm::outs() << "log this" << "\n";
-        // // callEvent.geta
-        // SVal arg = callEvent.getArgSVal(0);
-        // callEvent.getArgSVal(0).getAsRegion();
-        // // arg.
-        // // callEvent.getDecl()->dumpColor()
-        // }
     }
 
     void checkEndFunction(CheckerContext &ctx) const {
