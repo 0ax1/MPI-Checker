@@ -69,34 +69,25 @@ clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
 std::string variableName(const clang::ento::MemRegion *memRegion) {
     const clang::ento::VarRegion *varRegion =
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
+    std::string varName = varRegion->getDecl()->getNameAsString();
+    bool isElementInArray = varRegion->getValueType()->isArrayType();
 
-    if (varRegion) {
-        std::string varName = varRegion->getDecl()->getNameAsString();
-
-        bool isElementInArray = varRegion->getValueType()->isArrayType();
+    if (isElementInArray) {
         auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
-
         llvm::APSInt indexInArray;
+        indexInArray = elementRegion->getIndex()
+                           .getAs<clang::ento::nonloc::ConcreteInt>()
+                           ->getValue();
 
-        if (elementRegion) {
-            indexInArray = elementRegion->getIndex()
-                               .getAs<clang::ento::nonloc::ConcreteInt>()
-                               ->getValue();
+        llvm::SmallVector<char, 2> intValAsString;
+        indexInArray.toString(intValAsString);
+        std::string idx;
+        for (char c : intValAsString) {
+            idx.push_back(c);
         }
-
-        if (isElementInArray) {
-            llvm::SmallVector<char, 2> intValAsString;
-            indexInArray.toString(intValAsString);
-            std::string idx;
-            for (char c : intValAsString) {
-                idx.push_back(c);
-            }
-            return varName + "[" + idx + "]";
-        } else {
-            return varName;
-        }
+        return varName + "[" + idx + "]";
     } else {
-        return "";
+        return varName;
     }
 }
 
