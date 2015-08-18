@@ -146,18 +146,7 @@ struct RequestVar {
     RequestVar(const clang::ento::MemRegion *const memRegion,
                const clang::ento::CallEventRef<> callEvent, size_t index = 0)
         : memRegion_{memRegion}, lastUser_{callEvent} {
-        const clang::ento::VarRegion *varRegion =
-            clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
-
-        variableName_ = varRegion->getDecl()->getNameAsString();
-        isElementInArray_ = varRegion->getValueType()->isArrayType();
-
-        auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
-        if (elementRegion) {
-            indexInArray_ = elementRegion->getIndex()
-                                .getAs<clang::ento::nonloc::ConcreteInt>()
-                                ->getValue();
-        }
+        variableName_ = util::variableName(memRegion);
     }
 
     void Profile(llvm::FoldingSetNodeID &id) const {
@@ -172,12 +161,13 @@ struct RequestVar {
     const clang::ento::MemRegion *const memRegion_;
     const clang::ento::CallEventRef<> lastUser_;
 
+    std::string variableName() const { return variableName_; }
+
+private:
     std::string variableName_;
-    bool isElementInArray_;
-    llvm::APSInt indexInArray_;
 };
 }  // end of namespace: mpi
-// TODO track request arrays (check bind?)
+// TODO track request assignments
 
 // register data structure for path sensitive analysis
 REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, const clang::ento::MemRegion *,

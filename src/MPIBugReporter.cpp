@@ -182,15 +182,15 @@ void MPIBugReporter::reportDoubleNonblocking(
     std::string lastUser =
         requestVar.lastUser_->getCalleeIdentifier()->getName();
 
-    std::string errorText{
-        "Request "
-        "is already in use by nonblocking call " +
-        lastUser + " in line " + lineNo + ". "};
+    std::string errorText{"Request " + requestVar.variableName() +
+                          " is already in use by nonblocking call " + lastUser +
+                          " in line " + lineNo + ". "};
 
     auto bugReport = llvm::make_unique<BugReport>(*doubleNonblockingBugType_,
                                                   errorText, node);
     bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
+    bugReport->addRange(util::sourceRange(requestVar.memRegion_));
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -207,15 +207,15 @@ void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
     std::string lineNo{lineNumber(requestVar.lastUser_)};
     std::string lastUser =
         requestVar.lastUser_->getCalleeIdentifier()->getName();
-    std::string errorText{
-        "Request "
-        "is already waited upon by " +
-        lastUser + " in line " + lineNo + ". "};
+    std::string errorText{"Request " + requestVar.variableName() +
+                          " is already waited upon by " + lastUser +
+                          " in line " + lineNo + ". "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*doubleWaitBugType_, errorText, node);
     bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
+    bugReport->addRange(util::sourceRange(requestVar.memRegion_));
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -227,9 +227,9 @@ void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
  */
 void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                                        const ExplodedNode *const node) const {
-    std::string errorText{
-        "Nonblocking call using request "
-        "has no matching wait. "};
+    std::string errorText{"Nonblocking call using request " +
+                          requestVar.variableName() +
+                          " has no matching wait. "};
 
     PathDiagnosticLocation p{
         requestVar.lastUser_->getOriginExpr()->getLocStart(),
@@ -238,6 +238,7 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
     auto bugReport =
         llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, p);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
+    bugReport->addRange(util::sourceRange(requestVar.memRegion_));
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -248,15 +249,16 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
  * @param requestVar
  * @param node
  */
-void MPIBugReporter::reportUnmatchedWait(const CallEvent &callEvent,
-                                         const ExplodedNode *const node) const {
-    std::string errorText{
-        "Request used"
-        " has no matching nonblocking call. "};
+void MPIBugReporter::reportUnmatchedWait(
+    const CallEvent &callEvent, const clang::ento::MemRegion *requestRegion,
+    const ExplodedNode *const node) const {
+    std::string errorText{"Request " + util::variableName(requestRegion) +
+                          " has no matching nonblocking call. "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*unmatchedWaitBugType_, errorText, node);
     bugReport->addRange(callEvent.getSourceRange());
+    bugReport->addRange(util::sourceRange(requestRegion));
     bugReporter_.emitReport(std::move(bugReport));
 }
 

@@ -42,15 +42,15 @@ void doubleWait() {
     int rank = 0;
     double buf = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rank == 0) {
-    } else {
-        MPI_Request sendReq1,  recvReq1;
 
-        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD, &recvReq1);
+    if (rank > 0) {
+        MPI_Request req[2];
 
-        MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // TODO rebuild with waitall
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
+        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
+        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD, &req[1]);
+
+        MPI_Wait(&req[0], MPI_STATUS_IGNORE);
+        MPI_Waitall(2, req,  MPI_STATUS_IGNORE); // expected-warning{{Request req[0] is already waited upon by MPI_Wait in line 52.}}
     }
 }
 
@@ -65,7 +65,7 @@ void doubleWait2() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 2, MPI_COMM_WORLD, &recvReq1);
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request is already waited upon by MPI_Wait in line 67.}}
+        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Wait in line 67.}}
     }
 }
 
@@ -77,7 +77,7 @@ void missingWait() {
     } else {
         MPI_Request sendReq1,  recvReq1;
 
-        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 3, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Nonblocking call using request has no matching wait. }}
+        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 3, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Nonblocking call using request sendReq1 has no matching wait. }}
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 3, MPI_COMM_WORLD, &recvReq1);
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
     }
@@ -92,7 +92,7 @@ void doubleNonblocking() {
         MPI_Request sendReq1;
 
         MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 4, MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 4, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request is already in use by nonblocking call MPI_Isend in line 94. }}
+        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 4, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 94. }}
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
     }
 }
@@ -104,7 +104,7 @@ void doubleNonblocking2() {
 
     MPI_Request req;
     MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req);
-    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req); // expected-warning{{Request is already in use by nonblocking call MPI_Ireduce in line 106. }}
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req); // expected-warning{{Request req is already in use by nonblocking call MPI_Ireduce in line 106. }}
     MPI_Wait(&req, MPI_STATUS_IGNORE);
 }
 
@@ -113,7 +113,7 @@ void missingNonBlocking() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 1) {
         MPI_Request sendReq1;
-        MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // expected-warning{{Request used has no matching nonblocking call.}}
+        MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // expected-warning{{Request sendReq1 has no matching nonblocking call.}}
     }
 }
 

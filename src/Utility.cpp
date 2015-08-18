@@ -58,6 +58,48 @@ clang::StringRef sourceRangeAsStringRef(
                                        clang::LangOptions());
 }
 
+
+clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
+    const clang::ento::VarRegion *varRegion =
+        clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
+
+    return varRegion->getDecl()->getSourceRange();
+}
+
+std::string variableName(const clang::ento::MemRegion *memRegion) {
+    const clang::ento::VarRegion *varRegion =
+        clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
+
+    if (varRegion) {
+        std::string varName = varRegion->getDecl()->getNameAsString();
+
+        bool isElementInArray = varRegion->getValueType()->isArrayType();
+        auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
+
+        llvm::APSInt indexInArray;
+
+        if (elementRegion) {
+            indexInArray = elementRegion->getIndex()
+                               .getAs<clang::ento::nonloc::ConcreteInt>()
+                               ->getValue();
+        }
+
+        if (isElementInArray) {
+            llvm::SmallVector<char, 2> intValAsString;
+            indexInArray.toString(intValAsString);
+            std::string idx;
+            for (char c : intValAsString) {
+                idx.push_back(c);
+            }
+            return varName + "[" + idx + "]";
+        } else {
+            return varName;
+        }
+    } else {
+        return "";
+    }
+}
+
 const clang::IdentifierInfo *getIdentInfo(const clang::CallExpr *callExpr) {
     if (callExpr->getDirectCallee()) {
         return callExpr->getDirectCallee()->getIdentifier();

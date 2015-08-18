@@ -136,7 +136,7 @@ void MPICheckerPathSensitive::checkWaitUsage(
         }
         // no matching nonblocking call
         else {
-            bugReporter_.reportUnmatchedWait(callEvent, node);
+            bugReporter_.reportUnmatchedWait(callEvent, requestRegion, node);
         }
     }
 

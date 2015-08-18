@@ -60,6 +60,9 @@ std::vector<std::string> split(const std::string &, char);
  */
 const clang::IdentifierInfo *getIdentInfo(const clang::CallExpr *);
 
+std::string variableName(const clang::ento::MemRegion *);
+clang::SourceRange sourceRange(const clang::ento::MemRegion *);
+
 }  // end of namespace: util
 
 #endif  // end of include guard: UTILITY_HPP_SVQZWTL8

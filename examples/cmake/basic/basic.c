@@ -32,6 +32,7 @@
 
 double fnn() { return 22.22; }
 int f2n() { return 22; }
+int f() { return rand(); }
 
 int rank;
 int buf;
@@ -39,50 +40,41 @@ int N = 0;
 
 typedef struct {
     int rank;
-    int rna;
-}basic_t ;
-
-int f() { return rand(); }
+    int other;
+} structWithRank;
 
 void communicate1() {
-    /* MPI_Request req1, req2; */
-    MPI_Request arr[3];
+    structWithRank swr = {.rank = 0, .other = 0};
+    MPI_Comm_rank(MPI_COMM_WORLD, &swr.rank);
+    MPI_Request req[2];
 
-    basic_t bt = {.rank = 0, .rna = 0};
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &bt.rank);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    if (bt.rank > 0) {
-        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD, &arr[0]);
-        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &arr[1]);
-        /* MPI_Wait(&arr[1], MPI_STATUS_IGNORE); */
-
-        MPI_Waitall(2, arr, MPI_STATUSES_IGNORE);
-
-        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &arr[1]); */
-        /* MPI_Wait(&arr[0], MPI_STATUS_IGNORE); */
-        /* MPI_Wait(&arr[1], MPI_STATUS_IGNORE); */
-
-        /* MPI_Request r[2] = {req1, req2}; */
-        /* MPI_Waitall(2, r, MPI_STATUSES_IGNORE); */
+    if (swr.rank > 0) {
+        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
+        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 1, MPI_COMM_WORLD, &req[1]);
 
     }
-    /* else if (22 != 33 && rank == 1) { */
 
-        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req1); */
-        /* MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, &req2); */
+    if (swr.rank > 0) {
+        MPI_Wait(&req[0], MPI_STATUS_IGNORE);
+        MPI_Waitall(2, req, MPI_STATUS_IGNORE);
+    }
+}
 
-        /* MPI_Request r[2] = {req1, req2}; */
-        /* MPI_Waitall(2, r, MPI_STATUSES_IGNORE); */
+void communicate2() {
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-        /* MPI_Wait(&req1, MPI_STATUS_IGNORE); */
-    /* } */
+    if (rank > 0) {
+        MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD);
+    } else {
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 2, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+    }
 }
 
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     communicate1();
+    communicate2();
 
     MPI_Finalize();
     return 0;

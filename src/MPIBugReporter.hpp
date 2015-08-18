@@ -69,6 +69,7 @@ public:
                            const clang::ento::ExplodedNode *const) const;
 
     void reportUnmatchedWait(const clang::ento::CallEvent &,
+                             const clang::ento::MemRegion *,
                              const clang::ento::ExplodedNode *const) const;
 
     void reportDoubleWait(const clang::ento::CallEvent &, const RequestVar &,
