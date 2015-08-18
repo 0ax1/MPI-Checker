@@ -58,7 +58,6 @@ clang::StringRef sourceRangeAsStringRef(
                                        clang::LangOptions());
 }
 
-
 clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
     const clang::ento::VarRegion *varRegion =
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
@@ -81,10 +80,7 @@ std::string variableName(const clang::ento::MemRegion *memRegion) {
 
         llvm::SmallVector<char, 2> intValAsString;
         indexInArray.toString(intValAsString);
-        std::string idx;
-        for (char c : intValAsString) {
-            idx.push_back(c);
-        }
+        std::string idx{intValAsString.begin(), intValAsString.end()};
         return varName + "[" + idx + "]";
     } else {
         return varName;

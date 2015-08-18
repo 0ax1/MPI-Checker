@@ -141,11 +141,7 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
 
     SmallVector<char, 4> intValAsString;
     intLiteral->getValue().toStringUnsigned(intValAsString);
-    std::string val;
-    for (char c : intValAsString) {
-        val.push_back(c);
-    }
-    valueSequence_.push_back(val);
+    valueSequence_.push_back({intValAsString.begin(), intValAsString.end()});
     return true;
 }
 
@@ -212,12 +208,10 @@ bool StatementVisitor::isEqualOrdered(
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
-    if (!cont::isPermutation(typeSequence_,
-                             visitorToCompare.typeSequence_)) {
+    if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
         return false;
     }
-    if (!cont::isPermutation(valueSequence_,
-                             visitorToCompare.valueSequence_)) {
+    if (!cont::isPermutation(valueSequence_, visitorToCompare.valueSequence_)) {
         return false;
     }
 
