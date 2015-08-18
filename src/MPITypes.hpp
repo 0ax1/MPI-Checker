@@ -144,7 +144,7 @@ private:
 // for path sensitive analysis–––––––––––––––––––––––––––––––––––––––––––––––
 struct RequestVar {
     RequestVar(const clang::ento::MemRegion *const memRegion,
-               const clang::ento::CallEventRef<> callEvent, size_t index = 0)
+               const clang::ento::CallEventRef<> callEvent)
         : memRegion_{memRegion}, lastUser_{callEvent} {
         variableName_ = util::variableName(memRegion);
     }
@@ -167,7 +167,6 @@ private:
     std::string variableName_;
 };
 }  // end of namespace: mpi
-// TODO track request assignments
 
 // register data structure for path sensitive analysis
 REGISTER_MAP_WITH_PROGRAMSTATE(RequestVarMap, const clang::ento::MemRegion *,
