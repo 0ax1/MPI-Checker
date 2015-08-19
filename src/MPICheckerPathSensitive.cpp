@@ -116,7 +116,7 @@ void MPICheckerPathSensitive::checkWaitUsage(
 
             requestRegions.push_back(elementRegion->getAs<MemRegion>());
         }
-    } else {
+    } else if (funcClassifier_.isMPI_Wait(callEvent.getCalleeIdentifier())) {
         requestRegions.push_back(memRegion);
     }
 

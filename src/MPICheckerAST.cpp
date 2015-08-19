@@ -595,7 +595,6 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
  */
 llvm::SmallVector<size_t, 1> MPICheckerAST::integerIndices(
     const MPICall &mpiCall) const {
-    // std vector to allow list assignment
     llvm::SmallVector<size_t, 1> intIndices;
 
     if (funcClassifier_.isPointToPointType(mpiCall)) {
