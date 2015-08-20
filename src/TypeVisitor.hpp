@@ -31,7 +31,7 @@ namespace mpi {
 
 /**
  * Class to find out type information for a given qualified type.
- * Detects if a QualType is a typedef, builtin type.
+ * Detects if a QualType is a typedef, complex, builtin type.
  * For matches the type information is stored.
  */
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
@@ -52,16 +52,23 @@ public:
         return true;
     }
 
+    bool VisitComplexType(clang::ComplexType *) {
+        isComplexType_ = true;
+        return true;
+    }
+
     // passed qual type
     const clang::QualType qualType_;
     const clang::Type *const type_;
 
     bool isTypedefType() const { return isTypedefType_; }
+    bool isComplexType() const { return isComplexType_; }
     const std::string typedefTypeName() const & { return typedefTypeName_; }
     const clang::BuiltinType *builtinType() const { return builtinType_; }
 
 private:
     bool isTypedefType_{false};
+    bool isComplexType_{false};
     std::string typedefTypeName_;
 
     clang::BuiltinType *builtinType_{nullptr};

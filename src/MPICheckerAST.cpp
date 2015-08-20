@@ -272,8 +272,8 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
     // check permutation
     if (!containsSubtraction &&
-            ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
-             (!cont::isPermutation(sendValSeq, recvValSeq)))) {
+        ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
+         (!cont::isPermutation(sendValSeq, recvValSeq)))) {
         return false;
     }
     // last (value|var|function) must be identical
@@ -366,7 +366,7 @@ void MPICheckerAST::selectTypeMatcher(
     const mpi::TypeVisitor &typeVisitor, const MPICall &mpiCall,
     const StringRef mpiDatatypeString,
     const std::pair<size_t, size_t> &idxPair) const {
-    const clang::BuiltinType *builtinTypeBuffer = typeVisitor.builtinType();
+    const clang::BuiltinType *builtinType = typeVisitor.builtinType();
     bool isTypeMatching{true};
 
     // check for exact width types (e.g. int16_t, uint32_t)
@@ -374,21 +374,21 @@ void MPICheckerAST::selectTypeMatcher(
         isTypeMatching = matchExactWidthType(typeVisitor, mpiDatatypeString);
     }
     // check for complex-floating types (e.g. float _Complex)
-    else if (typeVisitor.qualType_->isComplexType()) {
+    else if (typeVisitor.isComplexType()) {
         isTypeMatching = matchComplexType(typeVisitor, mpiDatatypeString);
     }
     // check for basic builtin types (e.g. int, char)
-    else if (!typeVisitor.qualType_->isBuiltinType())
+    else if (!builtinType) {
         return;  // if no builtin type cancel checking
-    else if (builtinTypeBuffer->isBooleanType()) {
+    } else if (builtinType->isBooleanType()) {
         isTypeMatching = matchBoolType(typeVisitor, mpiDatatypeString);
-    } else if (builtinTypeBuffer->isAnyCharacterType()) {
+    } else if (builtinType->isAnyCharacterType()) {
         isTypeMatching = matchCharType(typeVisitor, mpiDatatypeString);
-    } else if (builtinTypeBuffer->isSignedInteger()) {
+    } else if (builtinType->isSignedInteger()) {
         isTypeMatching = matchSignedType(typeVisitor, mpiDatatypeString);
-    } else if (builtinTypeBuffer->isUnsignedIntegerType()) {
+    } else if (builtinType->isUnsignedIntegerType()) {
         isTypeMatching = matchUnsignedType(typeVisitor, mpiDatatypeString);
-    } else if (builtinTypeBuffer->isFloatingType()) {
+    } else if (builtinType->isFloatingType()) {
         isTypeMatching = matchFloatType(typeVisitor, mpiDatatypeString);
     }
 
