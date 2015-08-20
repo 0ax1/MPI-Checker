@@ -64,9 +64,9 @@ void communicate1() {
 void communicate2() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (rank > 0) {
+    if (rank == 0) {
         MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD);
-    } else {
+    } else if (rank == 1) {
         MPI_Recv(&buf, 1, MPI_INT, rank - 1, 2, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
     }
