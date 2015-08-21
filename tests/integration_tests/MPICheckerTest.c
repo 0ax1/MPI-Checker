@@ -343,98 +343,146 @@ void matchLastToFirst() {
     }
 } // no error
 
-void typeMismatch1() {
+// same tag is used for all type matching functions
+void typeMatching1() {
     double buf = 0;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    double *bufP = &buf;
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    } else {
+        MPI_Recv(bufP, 1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
+    } else {
+        MPI_Recv(bufP, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
 }
 
-void typeMismatch2() {
+void typeMatching2() {
     int buf = 0;
+    int * bufP = &buf;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 }
 
-void typeMismatch3() {
+void typeMatching3() {
     long double buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    const long double * const bufP = &buf;
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(bufP, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    } else {
+        MPI_Recv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+
+    if (rank == 0) {
+        MPI_Send(bufP, 1, MPI_LONG_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
+    } else {
+        MPI_Recv(&buf, 1, MPI_LONG_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
 }
 
-void typeMismatch4() {
-    long double complex buf = 11;
+void typeMatching4() {
+    long double _Complex buf = 11;
+    long double _Complex *bufP = &buf;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-}
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
 
-void typeMismatch5() {
-    int64_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-}
-
-void typeMismatch6() {
-    uint8_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-}
-
-void typeMismatch7() {
-    uint8_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT16_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-}
-
-void typeMismatch8() {
-    uint8_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-}
-
-void typeMismatch9() {
-    char buf = 'a';
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-}
-
-void typeMatch1() {
-    double buf = 0;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error
-
-void typeMatch2() {
-    char buf = '1';
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error
-
-void typeMatch3() {
-    long double complex buf = 11;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_C_LONG_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_C_LONG_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
+}
 
-void typeMatch4() {
+void typeMatching5() {
+    int64_t buf = 11;
+    const int64_t *const bufP = &buf;
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(bufP, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    } else {
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+}
+
+void typeMatching6() {
+    uint8_t buf = 11;
+    uint8_t *bufP = &buf;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+void typeMatching7() {
+    uint8_t buf = 11;
+    const uint8_t *const bufP = &buf;
+
+    int rank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) {
+        MPI_Send(bufP, 1, MPI_UINT16_T, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    } else {
+        MPI_Recv(&buf, 1, MPI_UINT16_T, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    }
+
+    if (rank == 0) {
+        MPI_Send(bufP, 1, MPI_UINT8_T, rank + 1, 0, MPI_COMM_WORLD);
+    } else {
+        MPI_Recv(&buf, 1, MPI_UINT8_T, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+}
+
+void typeMatching8() {
+    uint8_t buf = 11;
+    uint8_t *bufP = &buf;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+void typeMatching9() {
+    char buf = 'a';
+    char *bufP = &buf;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(MPI_IN_PLACE, &bufP, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+void typeMatching10() {
+    struct a { int x; } buf;
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+} // no error, checker does not verify structs
+
+void typeMatching11() {
     float ***buf;
-    ***buf = 11;
     MPI_Reduce(MPI_IN_PLACE, **buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
 } // no error
 
-void typeMatch5() {
+void typeMatching12() {
     typedef int Int;
     Int buf = 1;
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
 } // no error, checker makes no assumptions about typedefs
 
-void typeMatch6() {
-    struct a { int x; } buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error, checker does not validate in case of structs
-
-void typeMatch7() {
-    struct a { int x; } buf;
+void typeMatching13() {
+    long buf = 0;
     MPI_Reduce(MPI_IN_PLACE, &buf, 4, MPI_BYTE, MPI_SUM, 0, MPI_COMM_WORLD);
-} // no error, checker accepts any type to match MPI_BYTE
-  // and makes no assumptions about the buffer size
-
-void typeMatch8() {
-    int64_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT64_T, MPI_SUM, 0, MPI_COMM_WORLD);
-}
-
-void typeMatch9() {
-    uint8_t buf = 11;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
-}
+} // no error, checker does not verify MPI_BYTE
 
 void collectiveInBranch() {
     int rank = 0;
@@ -544,7 +592,6 @@ void matchedWait3() {
         if (rank > 1000) {
             MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
             MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
-            /* MPI_Waitall(2, r, MPI_STATUSES_IGNORE); */
         } else {
             MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
             MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
