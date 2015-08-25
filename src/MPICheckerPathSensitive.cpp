@@ -156,6 +156,11 @@ void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     ExplodedNode *node = ctx.addTransition();
     // at the end of a function immediate calls should be matched with wait
     for (auto &requestVar : requestVars) {
+        if (clang::dyn_cast<clang::ento::SymbolicRegion>(
+                requestVar.second.memRegion_->getBaseRegion())) {
+            // no way to reason about symbolic region
+            continue;
+        }
         if (requestVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
                 requestVar.second.lastUser_->getCalleeIdentifier())) {
