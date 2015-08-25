@@ -48,6 +48,9 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     const MemRegion *memRegion =
         callEvent.getArgSVal(callEvent.getNumArgs() - 1).getAsRegion();
 
+    // no way to reason about symbolic region
+    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
+
     const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
     const ExplodedNode *const node = ctx.addTransition(nullptr);
 
@@ -84,18 +87,19 @@ const MemRegion *MPICheckerPathSensitive::requestMemRegion(
 void MPICheckerPathSensitive::checkWaitUsage(
     const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
     if (!funcClassifier_.isWaitType(callEvent.getCalleeIdentifier())) return;
-
     const MemRegion *memRegion = requestMemRegion(callEvent);
     if (!memRegion) return;
+
+    // requests are associcated with a MemRegion
+    const MemRegion *baseRegion = memRegion->getBaseRegion();
+
+    // no way to reason about symbolic region
+    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
 
     ProgramStateRef state = ctx.getState();
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
     const ExplodedNode *const node = ctx.addTransition();
-
-    // requests are associcated with a VarRegion
-    const VarRegion *varRegion =
-        dyn_cast<VarRegion>(memRegion->getBaseRegion());
-    MemRegionManager *regionManager = varRegion->getMemRegionManager();
+    MemRegionManager *regionManager = baseRegion->getMemRegionManager();
     llvm::SmallVector<const MemRegion *, 2> requestRegions;
 
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
@@ -112,7 +116,7 @@ void MPICheckerPathSensitive::checkWaitUsage(
             const ElementRegion *elementRegion =
                 regionManager->getElementRegion(
                     callEvent.getArgExpr(1)->getType()->getPointeeType(), idx,
-                    varRegion, ctx.getASTContext());
+                    baseRegion, ctx.getASTContext());
 
             requestRegions.push_back(elementRegion->getAs<MemRegion>());
         }
@@ -125,7 +129,6 @@ void MPICheckerPathSensitive::checkWaitUsage(
         const RequestVar *requestVar = state->get<RequestVarMap>(requestRegion);
         state = state->set<RequestVarMap>(requestRegion,
                                           {requestRegion, callEventRef});
-
         if (requestVar) {
             // check for double wait
             if (funcClassifier_.isWaitType(

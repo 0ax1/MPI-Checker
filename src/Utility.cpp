@@ -62,14 +62,51 @@ clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
     const clang::ento::VarRegion *varRegion =
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
 
-    return varRegion->getDecl()->getSourceRange();
+    const clang::ento::FieldRegion *fieldRegion =
+        clang::dyn_cast<clang::ento::FieldRegion>(memRegion->getBaseRegion());
+
+    if (varRegion) {
+        return varRegion->getDecl()->getSourceRange();
+    } else if (fieldRegion) {
+        return fieldRegion->getDecl()->getSourceRange();
+    } else {
+        const clang::ento::SymbolicRegion *symRegion =
+            clang::dyn_cast<clang::ento::SymbolicRegion>(
+                memRegion->getBaseRegion());
+        assert(symRegion && "no symbolic region");
+        // non valid source range (can be checked by client)
+        return clang::SourceRange{};
+    }
 }
 
 std::string variableName(const clang::ento::MemRegion *memRegion) {
     const clang::ento::VarRegion *varRegion =
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
-    std::string varName = varRegion->getDecl()->getNameAsString();
-    bool isElementInArray = varRegion->getValueType()->isArrayType();
+
+    const clang::ento::FieldRegion *fieldRegion =
+        clang::dyn_cast<clang::ento::FieldRegion>(memRegion->getBaseRegion());
+
+    std::string varName;
+    bool isElementInArray;
+
+    // variable
+    if (varRegion) {
+        varName = varRegion->getDecl()->getNameAsString();
+        isElementInArray = varRegion->getValueType()->isArrayType();
+    }
+    // members, fields
+    else if (fieldRegion) {
+        varName = fieldRegion->getDecl()->getNameAsString();
+        isElementInArray = fieldRegion->getValueType()->isArrayType();
+    }
+    // symbolic region (points to an unknown memory block)
+    else {
+        const clang::ento::SymbolicRegion *symRegion =
+            clang::dyn_cast<clang::ento::SymbolicRegion>(
+                memRegion->getBaseRegion());
+        assert(symRegion && "no symbolic region");
+        return memRegion->getString();
+    }
 
     if (isElementInArray) {
         auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
