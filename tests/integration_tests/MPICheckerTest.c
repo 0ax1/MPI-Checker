@@ -77,11 +77,11 @@ void missingWait() {
     } else {
         MPI_Request sendReq1,  recvReq1;
 
-        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 3, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Nonblocking call using request sendReq1 has no matching wait. }}
+        MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 3, MPI_COMM_WORLD, &sendReq1);
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 3, MPI_COMM_WORLD, &recvReq1);
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
     }
-}
+} // expected-warning{{MPI_Isend in line 80, using request sendReq1, has no matching wait in the scope of this function.}}
 
 void doubleNonblocking() {
     int rank = 0;

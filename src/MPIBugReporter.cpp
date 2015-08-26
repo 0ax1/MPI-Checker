@@ -191,7 +191,7 @@ void MPIBugReporter::reportDoubleNonblocking(
     bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     SourceRange r = util::sourceRange(requestVar.memRegion_);
-    if (r.isValid())  bugReport->addRange(r);
+    if (r.isValid()) bugReport->addRange(r);
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -217,7 +217,7 @@ void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
     bugReport->addRange(observedCall.getSourceRange());
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     SourceRange r = util::sourceRange(requestVar.memRegion_);
-    if (r.isValid())  bugReport->addRange(r);
+    if (r.isValid()) bugReport->addRange(r);
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -229,19 +229,20 @@ void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
  */
 void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
                                        const ExplodedNode *const node) const {
-    std::string errorText{"Nonblocking call using request " +
-                          requestVar.variableName() +
-                          " has no matching wait. "};
+    std::string lineNo{lineNumber(requestVar.lastUser_)};
+    std::string lastUser =
+        requestVar.lastUser_->getCalleeIdentifier()->getName();
 
-    PathDiagnosticLocation p{
-        requestVar.lastUser_->getOriginExpr()->getLocStart(),
-        analysisManager_.getSourceManager()};
+    std::string errorText{
+        lastUser + " in line " + lineNo +
+        ", using request " + requestVar.variableName() +
+        ", has no matching wait in the scope of this function. "};
 
     auto bugReport =
-        llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, p);
+        llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, node);
     bugReport->addRange(requestVar.lastUser_->getSourceRange());
     SourceRange r = util::sourceRange(requestVar.memRegion_);
-    if (r.isValid())  bugReport->addRange(r);
+    if (r.isValid()) bugReport->addRange(r);
     bugReporter_.emitReport(std::move(bugReport));
 }
 
@@ -262,7 +263,7 @@ void MPIBugReporter::reportUnmatchedWait(
         llvm::make_unique<BugReport>(*unmatchedWaitBugType_, errorText, node);
     bugReport->addRange(callEvent.getSourceRange());
     SourceRange r = util::sourceRange(requestRegion);
-    if (r.isValid())  bugReport->addRange(r);
+    if (r.isValid()) bugReport->addRange(r);
     bugReporter_.emitReport(std::move(bugReport));
 }
 
