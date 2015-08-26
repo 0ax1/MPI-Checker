@@ -99,14 +99,26 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
     llvm::SmallVector<const MemRegion *, 2> &requestRegions,
     const MemRegion *memRegion, const clang::ento::CallEvent &callEvent,
     CheckerContext &ctx) const {
-    // requests are associcated with a MemRegion
-    const MemRegion *baseRegion = memRegion->getBaseRegion();
-    ProgramStateRef state = ctx.getState();
 
-    MemRegionManager *regionManager = baseRegion->getMemRegionManager();
+    const MemRegion *superRegion{nullptr};
+    if (const ElementRegion *er =
+            clang::dyn_cast<clang::ento::ElementRegion>(memRegion)) {
+        superRegion = er->getSuperRegion();
+    }
+
+    ProgramStateRef state = ctx.getState();
+    MemRegionManager *regionManager = memRegion->getMemRegionManager();
+
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
+
+        // single request passed to waitall
+        if (!superRegion) {
+            requestRegions.push_back(memRegion);
+            return;
+        }
+
         auto size = ctx.getStoreManager().getSizeInElements(
-            state, baseRegion,
+            state, superRegion,
             callEvent.getArgExpr(1)->getType()->getPointeeType());
 
         const llvm::APSInt &arrSize =
@@ -118,7 +130,7 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
             const ElementRegion *elementRegion =
                 regionManager->getElementRegion(
                     callEvent.getArgExpr(1)->getType()->getPointeeType(), idx,
-                    baseRegion, ctx.getASTContext());
+                    superRegion, ctx.getASTContext());
 
             requestRegions.push_back(elementRegion->getAs<MemRegion>());
         }

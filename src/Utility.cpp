@@ -63,12 +63,12 @@ clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
 
     const clang::ento::FieldRegion *fieldRegion =
-        clang::dyn_cast<clang::ento::FieldRegion>(memRegion->getBaseRegion());
+        clang::dyn_cast<clang::ento::FieldRegion>(memRegion);
 
-    if (varRegion) {
-        return varRegion->getDecl()->getSourceRange();
-    } else if (fieldRegion) {
+    if (fieldRegion) {
         return fieldRegion->getDecl()->getSourceRange();
+    } else if (varRegion) {
+        return varRegion->getDecl()->getSourceRange();
     } else {
         const clang::ento::SymbolicRegion *symRegion =
             clang::dyn_cast<clang::ento::SymbolicRegion>(
@@ -84,20 +84,21 @@ std::string variableName(const clang::ento::MemRegion *memRegion) {
         clang::dyn_cast<clang::ento::VarRegion>(memRegion->getBaseRegion());
 
     const clang::ento::FieldRegion *fieldRegion =
-        clang::dyn_cast<clang::ento::FieldRegion>(memRegion->getBaseRegion());
+        clang::dyn_cast<clang::ento::FieldRegion>(memRegion);
 
     std::string varName;
     bool isElementInArray;
 
     // variable
-    if (varRegion) {
-        varName = varRegion->getDecl()->getNameAsString();
-        isElementInArray = varRegion->getValueType()->isArrayType();
+    if (fieldRegion) {
+        varName = varRegion->getDecl()->getNameAsString() + "." +
+                  fieldRegion->getDecl()->getNameAsString();
+        isElementInArray = fieldRegion->getValueType()->isArrayType();
     }
     // members, fields
-    else if (fieldRegion) {
-        varName = fieldRegion->getDecl()->getNameAsString();
-        isElementInArray = fieldRegion->getValueType()->isArrayType();
+    else if (varRegion) {
+        varName = varRegion->getDecl()->getNameAsString();
+        isElementInArray = varRegion->getValueType()->isArrayType();
     }
     // symbolic region (points to an unknown memory block)
     else {

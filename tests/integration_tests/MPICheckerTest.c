@@ -117,6 +117,100 @@ void missingNonBlocking() {
     }
 }
 
+void doubleNonblocking3() {
+    typedef struct {
+        MPI_Request req;
+    } ReqStruct;
+
+    ReqStruct rs;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req); // expected-warning{{Request rs.req is already in use by nonblocking call MPI_Ireduce in line 130. }}
+    MPI_Wait(&rs.req, MPI_STATUS_IGNORE);
+}
+
+void doubleWait3() {
+    typedef struct {
+        MPI_Request req;
+    } ReqStruct;
+
+    ReqStruct rs;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req);
+    MPI_Wait(&rs.req, MPI_STATUS_IGNORE);
+    MPI_Wait(&rs.req, MPI_STATUS_IGNORE); // expected-warning{{Request rs.req is already waited upon by MPI_Wait in line 146.}}
+}
+
+void nodoubleWaitUsage() {
+    typedef struct {
+        MPI_Request req;
+        MPI_Request req2;
+    } ReqStruct;
+
+    ReqStruct rs;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req2);
+    MPI_Wait(&rs.req, MPI_STATUS_IGNORE);
+    MPI_Wait(&rs.req2, MPI_STATUS_IGNORE);
+}
+
+void nodoubleWaitUsage2() {
+    typedef struct {
+        MPI_Request req[2];
+        MPI_Request req2;
+    } ReqStruct;
+
+    ReqStruct rs;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req[0]);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req[1]);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req2);
+    MPI_Wait(&rs.req[0], MPI_STATUS_IGNORE);
+    MPI_Wait(&rs.req[1], MPI_STATUS_IGNORE);
+    MPI_Wait(&rs.req2, MPI_STATUS_IGNORE);
+}
+
+void correctRequestUsage1() {
+    typedef struct {
+        MPI_Request req[2];
+        MPI_Request req2;
+    } ReqStruct;
+
+    ReqStruct rs;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req[0]);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req[1]);
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req2);
+    MPI_Waitall(2, rs.req, MPI_STATUSES_IGNORE);
+    MPI_Wait(&rs.req2, MPI_STATUS_IGNORE);
+}
+
+void correctRequestUsage2() {
+    MPI_Request r;
+    int rank = 0;
+    double buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &r);
+    MPI_Waitall(1, &r, MPI_STATUSES_IGNORE);
+}
+
 void missingReceive() {
     int rank = 0;
     double buf = 0;
