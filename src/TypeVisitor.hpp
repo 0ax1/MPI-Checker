@@ -62,6 +62,11 @@ public:
         return true;
     }
 
+    bool VisitArrayType(clang::ArrayType *) {
+        ++pointerCount_;
+        return true;
+    }
+
     // passed qual type
     const clang::QualType qualType_;
 

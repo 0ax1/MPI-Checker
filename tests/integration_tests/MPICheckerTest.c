@@ -593,6 +593,16 @@ void typeMatching16() {
     MPI_Reduce(MPI_IN_PLACE, *buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
 } // buffer type not correctly dereferenced
 
+void typeMatching17() {
+    float buf[2];
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+void typeMatching18() {
+    float *buf[2];
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+} // pointer to array -> float **
+
 void collectiveInBranch() {
     int rank = 0;
     int x = 22;
