@@ -296,20 +296,22 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
 
     // for every buffer mpi-data pair in function
     // check if their types match
+    const CallExpr *const callExpr = mpiCall.callExpr();
     for (const auto &idxPair : indexPairs) {
-        // wave through uncaptured data
-        if (!mpiCall.arguments()[idxPair.first].combinedVars().size()) continue;
-
-        const ValueDecl *bufferArg =
-            mpiCall.arguments()[idxPair.first].combinedVars().front();
+        auto bufferType =
+            callExpr->getArg(idxPair.first)->IgnoreCasts()->getType();
 
         // collect buffer type information
-        const mpi::TypeVisitor typeVisitor{bufferArg->getType()};
+        const mpi::TypeVisitor typeVisitor{bufferType};
+
+        if (typeVisitor.pointerCount() != 1) {
+            bugReporter_.reportTypeMismatch(mpiCall.callExpr(), idxPair);
+        }
 
         // get mpi datatype as string
-        auto mpiDatatype = mpiCall.arguments()[idxPair.second].stmt();
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
-            mpiDatatype->getSourceRange(), analysisManager_)};
+            callExpr->getArg(idxPair.second)->getSourceRange(),
+            analysisManager_)};
 
         // MPI_BYTE needs no matching
         if (mpiDatatypeString == "MPI_BYTE") return;

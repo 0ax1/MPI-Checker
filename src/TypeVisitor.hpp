@@ -37,7 +37,7 @@ namespace mpi {
 class TypeVisitor : public clang::RecursiveASTVisitor<TypeVisitor> {
 public:
     TypeVisitor(clang::QualType qualType)
-        : qualType_{qualType}, type_{qualType.getTypePtr()} {
+        : qualType_{qualType} {
         TraverseType(qualType);
     }
 
@@ -57,19 +57,25 @@ public:
         return true;
     }
 
+    bool VisitPointerType(clang::PointerType *) {
+        ++pointerCount_;
+        return true;
+    }
+
     // passed qual type
     const clang::QualType qualType_;
-    const clang::Type *const type_;
 
     bool isTypedefType() const { return isTypedefType_; }
     bool isComplexType() const { return isComplexType_; }
     const std::string typedefTypeName() const & { return typedefTypeName_; }
     const clang::BuiltinType *builtinType() const { return builtinType_; }
+    size_t pointerCount() const { return pointerCount_; }
 
 private:
     bool isTypedefType_{false};
     bool isComplexType_{false};
     std::string typedefTypeName_;
+    size_t pointerCount_{0};
 
     clang::BuiltinType *builtinType_{nullptr};
 };
