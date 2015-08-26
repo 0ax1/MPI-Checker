@@ -49,8 +49,14 @@ public:
     void clearRequestVars(clang::ento::CheckerContext &) const;
 
 private:
-    const clang::ento::MemRegion *requestMemRegion(
+    const clang::ento::MemRegion *memRegionUsedInWait(
         const clang::ento::CallEvent &) const;
+
+    void collectUsedMemRegions(
+        llvm::SmallVector<const clang::ento::MemRegion *, 2> &,
+        const clang::ento::MemRegion *, const clang::ento::CallEvent &,
+        clang::ento::CheckerContext &) const;
+
     MPIFunctionClassifier funcClassifier_;
     MPIBugReporter bugReporter_;
 };

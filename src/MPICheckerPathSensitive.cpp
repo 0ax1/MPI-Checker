@@ -43,13 +43,13 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
         return;
     }
 
-    ProgramStateRef state = ctx.getState();
-    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
     const MemRegion *memRegion =
         callEvent.getArgSVal(callEvent.getNumArgs() - 1).getAsRegion();
-
     // no way to reason about symbolic region
     if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
+
+    ProgramStateRef state = ctx.getState();
+    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
 
     const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
     const ExplodedNode *const node = ctx.addTransition(nullptr);
@@ -66,7 +66,14 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     ctx.addTransition(state);
 }
 
-const MemRegion *MPICheckerPathSensitive::requestMemRegion(
+/**
+ * Returns the memory region used in a wait function.
+ *
+ * @param callEvent wait function
+ *
+ * @return memory region
+ */
+const MemRegion *MPICheckerPathSensitive::memRegionUsedInWait(
     const clang::ento::CallEvent &callEvent) const {
     if (funcClassifier_.isMPI_Wait(callEvent.getCalleeIdentifier())) {
         return callEvent.getArgSVal(0).getAsRegion();
@@ -78,33 +85,28 @@ const MemRegion *MPICheckerPathSensitive::requestMemRegion(
 }
 
 /**
- * Checks if a request is used by wait multiple times without intermediate
- * nonblocking call.
+ * Collects all memory regions used in a wait function.
+ * If the wait function uses a single request, this is a single region.
+ * For wait functions using multiple requests, multiple regions representing
+ * elements in the array are collected
  *
- * @param callExpr
- * @param ctx
+ * @param requestRegions vector the regions get pushed into
+ * @param memRegion top most region to iterate
+ * @param callEvent function using the region/s
+ * @param ctx checker context
  */
-void MPICheckerPathSensitive::checkWaitUsage(
-    const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
-    if (!funcClassifier_.isWaitType(callEvent.getCalleeIdentifier())) return;
-    const MemRegion *memRegion = requestMemRegion(callEvent);
-    if (!memRegion) return;
-
+void MPICheckerPathSensitive::collectUsedMemRegions(
+    llvm::SmallVector<const MemRegion *, 2> &requestRegions,
+    const MemRegion *memRegion, const clang::ento::CallEvent &callEvent,
+    CheckerContext &ctx) const {
     // requests are associcated with a MemRegion
     const MemRegion *baseRegion = memRegion->getBaseRegion();
-
-    // no way to reason about symbolic region
-    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
-
     ProgramStateRef state = ctx.getState();
-    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
-    const ExplodedNode *const node = ctx.addTransition();
-    MemRegionManager *regionManager = baseRegion->getMemRegionManager();
-    llvm::SmallVector<const MemRegion *, 2> requestRegions;
 
+    MemRegionManager *regionManager = baseRegion->getMemRegionManager();
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
         auto size = ctx.getStoreManager().getSizeInElements(
-            state, memRegion->getBaseRegion(),
+            state, baseRegion,
             callEvent.getArgExpr(1)->getType()->getPointeeType());
 
         const llvm::APSInt &arrSize =
@@ -123,6 +125,29 @@ void MPICheckerPathSensitive::checkWaitUsage(
     } else if (funcClassifier_.isMPI_Wait(callEvent.getCalleeIdentifier())) {
         requestRegions.push_back(memRegion);
     }
+}
+
+/**
+ * Checks if a request is used by wait multiple times without intermediate
+ * nonblocking call.
+ *
+ * @param callExpr
+ * @param ctx
+ */
+void MPICheckerPathSensitive::checkWaitUsage(
+    const clang::ento::CallEvent &callEvent, CheckerContext &ctx) const {
+    if (!funcClassifier_.isWaitType(callEvent.getCalleeIdentifier())) return;
+    const MemRegion *memRegion = memRegionUsedInWait(callEvent);
+    if (!memRegion) return;
+
+    // no way to reason about symbolic region
+    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
+
+    ProgramStateRef state = ctx.getState();
+    CallEventRef<> callEventRef = callEvent.cloneWithState(state);
+    const ExplodedNode *const node = ctx.addTransition();
+    llvm::SmallVector<const MemRegion *, 2> requestRegions;
+    collectUsedMemRegions(requestRegions, memRegion, callEvent, ctx);
 
     // check all requestRegions used in wait function
     for (const auto requestRegion : requestRegions) {
