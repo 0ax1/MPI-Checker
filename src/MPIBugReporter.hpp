@@ -54,9 +54,8 @@ public:
     // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void reportTypeMismatch(const clang::CallExpr *const,
                             const std::pair<size_t, size_t> &) const;
-    void reportInvalidArgumentType(const clang::CallExpr *const, const size_t,
-                                   const clang::SourceRange,
-                                   const std::string &) const;
+    void reportInvalidArgumentType(const clang::CallExpr *const,
+                                   const size_t) const;
     void reportRedundantCall(const clang::CallExpr *const,
                              const clang::CallExpr *const) const;
 

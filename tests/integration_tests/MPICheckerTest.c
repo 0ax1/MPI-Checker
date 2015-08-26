@@ -593,43 +593,41 @@ void collectiveInBranch() {
     }
 }
 
-void invalidArgTypeLiteral() {
+void invalidArgType1() {
     int rank = 0;
     int buf = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        MPI_Send(&buf, 1, MPI_INT, rank + 1.1, 17, MPI_COMM_WORLD); // expected-warning{{Literal type used at index 3 is not valid.}}
+        MPI_Send(&buf, 1, MPI_INT, rank + 1.1, 17, MPI_COMM_WORLD); // expected-warning{{The type, argument at index 3 evaluates to, is not an integer type.}}
     }
     else if (rank == 1) {
-        MPI_Recv(&buf, 1, MPI_INT, rank - 1.1, 17, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Literal type used at index 3 is not valid.}}
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1.1, 17, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{The type, argument at index 3 evaluates to, is not an integer type.}}
     }
 }
 
-void invalidArgTypeVariable() {
+void invalidArgType2() {
     int rank = 0;
     int buf = 0;
-    double x = 1.1;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        MPI_Send(&buf, 1, MPI_INT, x + rank + 1, 34, MPI_COMM_WORLD); // expected-warning{{Variable type used at index 3 is not valid.}}
+        MPI_Send(&buf, 1 + 1.1, MPI_INT, rank + 1, 18, MPI_COMM_WORLD); // expected-warning{{The type, argument at index 1 evaluates to, is not an integer type.}}
     }
     else if (rank == 1) {
-        MPI_Recv(&buf, 1, MPI_INT, x + rank - 1, 34, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Variable type used at index 3 is not valid.}}
+        MPI_Recv(&buf, 1 + 1.1, MPI_INT, rank - 1, 18, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{The type, argument at index 1 evaluates to, is not an integer type.}}
     }
 }
 
-double doubleVal() {
-    return 1.1;
-}
-void invalidReturnType() {
+void validArgType1() {
     int rank = 0;
     int buf = 0;
+    const int *const val = &buf;
+
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        MPI_Send(&buf, 1, MPI_INT, rank + doubleVal(), 18, MPI_COMM_WORLD); // expected-warning{{Return value type used at index 3 is not valid.}}
+        MPI_Send(&buf, *val, MPI_INT, rank + 1, 18, MPI_COMM_WORLD);
     }
     else if (rank == 1) {
-        MPI_Recv(&buf, 1, MPI_INT, rank - doubleVal(), 18, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Return value type used at index 3 is not valid.}}
+        MPI_Recv(&buf, *val, MPI_INT, rank - 1, 18, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
 }
 

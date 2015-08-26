@@ -556,32 +556,10 @@ void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
     if (!indicesToCheck.size()) return;
 
     // iterate indices which should not have integer arguments
+    const CallExpr *const callExpr = mpiCall.callExpr();
     for (const size_t idx : indicesToCheck) {
-        // check for invalid variable types
-        const auto &arg = mpiCall.arguments()[idx];
-        const auto &vars = arg.vars();
-        for (const auto &var : vars) {
-            if (!var->getType()->isIntegerType()) {
-                bugReporter_.reportInvalidArgumentType(
-                    mpiCall.callExpr(), idx, var->getSourceRange(), "Variable");
-            }
-        }
-
-        // check for float literals
-        if (arg.floatingLiterals().size()) {
-            bugReporter_.reportInvalidArgumentType(
-                mpiCall.callExpr(), idx,
-                arg.floatingLiterals().front()->getSourceRange(), "Literal");
-        }
-
-        // check for invalid return types from functions
-        const auto &functions = arg.functions();
-        for (const auto &function : functions) {
-            if (!function->getReturnType()->isIntegerType()) {
-                bugReporter_.reportInvalidArgumentType(
-                    mpiCall.callExpr(), idx, function->getSourceRange(),
-                    "Return value");
-            }
+        if (!callExpr->getArg(idx)->IgnoreCasts()->getType()->isIntegerType()) {
+            bugReporter_.reportInvalidArgumentType(mpiCall.callExpr(), idx);
         }
     }
 }

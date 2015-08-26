@@ -144,10 +144,8 @@ void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
  * @param idx
  * @param type
  */
-void MPIBugReporter::reportInvalidArgumentType(
-    const CallExpr *const callExpr, const size_t idx,
-    const SourceRange invalidSourceRange,
-    const std::string &typeAsString) const {
+void MPIBugReporter::reportInvalidArgumentType(const CallExpr *const callExpr,
+                                               const size_t idx) const {
     auto d = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), d);
@@ -155,12 +153,11 @@ void MPIBugReporter::reportInvalidArgumentType(
     std::string indexAsString{std::to_string(idx)};
     SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
     std::string bugName{"invalid argument type"};
-    std::string errorText{typeAsString + " type used at index " +
-                          indexAsString + " is not valid. "};
+    std::string errorText{"The type, argument at index " + indexAsString +
+                          " evaluates to, is not an integer type. "};
 
     SmallVector<SourceRange, 3> sourceRanges;
     sourceRanges.push_back(callExprRange);
-    sourceRanges.push_back(invalidSourceRange);
     sourceRanges.push_back(callExpr->getArg(idx)->getSourceRange());
     bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugName, MPIError,
                                  errorText, location, sourceRanges);
@@ -234,8 +231,8 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
         requestVar.lastUser_->getCalleeIdentifier()->getName();
 
     std::string errorText{
-        lastUser + " in line " + lineNo +
-        ", using request " + requestVar.variableName() +
+        lastUser + " in line " + lineNo + ", using request " +
+        requestVar.variableName() +
         ", has no matching wait in the scope of this function. "};
 
     auto bugReport =
