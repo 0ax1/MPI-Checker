@@ -77,7 +77,6 @@ void MPICall::init(const clang::CallExpr *const callExpr) {
  * @return ambiguity
  */
 bool MPIRankCase::isRankAmbiguous() const {
-    // TODO determine constraint based
     // no matched condition means is else case
     if (!completeCondition_) return true;
 
@@ -102,8 +101,6 @@ bool MPIRankCase::isRankUnambiguouslyEqual(const MPIRankCase &rankCase) const {
     if (isRankAmbiguous() || rankCase.isRankAmbiguous()) {
         return false;
     }
-    // TODO compare to what value rank variables
-    // are symbolically constrained to
 
     return cont::isPermutation(rankConditions_, rankCase.rankConditions_);
 }

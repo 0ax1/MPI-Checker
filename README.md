@@ -6,7 +6,7 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 
 ## Integrated checks
 #### AST-Checks
-- `unmatched point to point call`: Point to point schema validation.
+- `unmatched point-to-point call`: Point-to-point calls without a matching partner.
 - `unreachable call`: Unreachable calls caused by deadlocks from blocking calls.
 - `type mismatch`: Buffer type and specified MPI type do not match.
 - `invalid argument type`: Non integer type used where only integer types are allowed.
@@ -18,12 +18,12 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `missing wait`: Nonblocking call without matching wait.
 - `unmatched wait`: Waiting for a request that was never used by a nonblocking call.
 
-### Point to Point Schema Validation
-If only additions for an argument are used operands are accepted as a match if they appear as a permutation.
-Else if subtractions are used operands have to be in the same order.
-To match point to point calls the checker has to make some assumptions how
-arguments are specified. To match variables across cases and functions the same variable name has to be used.
-For the rank argument the checker expects the last operator to be "inverse"
+### Point-to-Point Schema Validation
+If only additions for an argument are used, operands are accepted as a match if they appear as a permutation.
+Else if subtractions are used, operands have to be in the same order.
+To match point to point calls, the checker has to make some assumptions how
+arguments are specified. To match variables across cases and functions, the same variable name has to be used.
+For the rank argument, the checker expects the last operator to be "inverse"
 and the last operand to be equal.
 If none except the last operator are additions also rank operands (excluding the last) are matched
 if they appear as a permutation:
@@ -33,8 +33,9 @@ if they appear as a permutation:
 ### Rank Variables
 Rank variables are identified as such if they get passed to `MPI_Comm_rank`.
 Different rank variables can be used within translation unit. They can be
-a common variable or contained inside of a struct. Rank variables initialized in
-another translation unit are not detected.
+a common integer variable or used as a member in a struct.
+Rank variables are not detected if initialized in another translation unit, than
+the one they are used in.
 
 ```
 int rank;
@@ -81,12 +82,12 @@ Have a look at the [examples folder](https://github.com/0ax1/MPI-Checker/tree/ma
 See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
 
 ## Limitations
-- Point to point communication must be enclosed within the scope of a translation unit.
+- MPI related logic must be enclosed within the scope of a translation unit.
   This stems from the general limitation of Clang's Static Analyzer to analyze one translation unit in isolation.
 - Unreachable calls can only be detected if caused by blocking MPI calls. The reason for this is that
-  point to point schema validation can only be achieved by non path sensitive (ast) analysis
+  point-to-point schema validation is currently achieved by non path sensitive (ast) analysis
   while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
-- There can't be any assumptions made at compile time about `MPI_Waitany` and `MPI_Waitsome` since their effect
-  depends on what is done at runtime. Because of that they are not taken into account.
-- Rank variables initialized in another translation unit cannot be detected.
+- There can't be any assumptions made at compile time about `MPI_Waitany` and
+  `MPI_Waitsome`, since their effect depends on what is done at runtime. Because
+  of that, they are not taken into account.
 - The analysis is limited to C. Analyzing C++ code is currently not supported.

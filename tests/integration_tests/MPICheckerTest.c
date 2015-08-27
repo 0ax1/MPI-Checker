@@ -642,6 +642,32 @@ void invalidArgType2() {
     }
 }
 
+void invalidArgType3() {
+    int rank = 0;
+    int buf = 0;
+    double x = 1.1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1 + x, MPI_INT, rank + 1, 18, MPI_COMM_WORLD); // expected-warning{{The type, argument at index 1 evaluates to, is not an integer type.}}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1 + x, MPI_INT, rank - 1, 18, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{The type, argument at index 1 evaluates to, is not an integer type.}}
+    }
+}
+
+double d() { return 1.1; }
+void invalidArgType4() {
+    int rank = 0;
+    int buf = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (rank == 0) {
+        MPI_Send(&buf, 1, MPI_INT, rank + d(), 18, MPI_COMM_WORLD); // expected-warning{{The type, argument at index 3 evaluates to, is not an integer type.}}
+    }
+    else if (rank == 1) {
+        MPI_Recv(&buf, 1, MPI_INT, rank - d(), 18, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{The type, argument at index 3 evaluates to, is not an integer type.}}
+    }
+}
+
 void validArgType1() {
     int rank = 0;
     int buf = 0;

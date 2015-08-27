@@ -39,8 +39,6 @@ public:
     MPIVariableVisitor(clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager} {}
 
-    // TODO what if variable is in array?
-
     // collect rank vars
     bool VisitCallExpr(clang::CallExpr *callExpr) {
         if (funcClassifier_.isMPIType(util::getIdentInfo(callExpr))) {
