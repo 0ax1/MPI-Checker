@@ -63,6 +63,10 @@ public:
         const {
         return comparisonOperators_;
     }
+
+    const clang::VarDecl *var(size_t idx) const { return vars_[idx]; }
+    const clang::ValueDecl *member(size_t idx) const { return members_[idx]; }
+
     const llvm::SmallVector<clang::VarDecl *, 1> &vars() const { return vars_; }
     const llvm::SmallVector<clang::ValueDecl *, 1> &members() const {
         return members_;

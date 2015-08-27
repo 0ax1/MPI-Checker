@@ -69,9 +69,7 @@ public:
     const clang::CallExpr *callExpr() const { return callExpr_; }
     const clang::IdentifierInfo *identInfo() const { return identInfo_; }
     unsigned long id() const { return id_; };  // unique call identification
-    const llvm::SmallVector<ArgumentVisitor, 6> &arguments() const {
-        return arguments_;
-    };
+    const ArgumentVisitor &arg(size_t idx) const { return arguments_[idx]; }
 
     // marking can be changed freely by clients
     // semantics depend on context of usage

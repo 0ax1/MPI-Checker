@@ -25,7 +25,9 @@
 #ifndef MPIVARIABLEVISITOR_HPP_WZL2H4SR
 #define MPIVARIABLEVISITOR_HPP_WZL2H4SR
 
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "MPIFunctionClassifier.hpp"
+#include "MPITypes.hpp"
 #include "Utility.hpp"
 
 namespace mpi {
@@ -47,23 +49,19 @@ public:
             // rank variable
             if (funcClassifier_.isMPI_Comm_rank(mpiCall)) {
                 // rank var is at index 1
-                if (mpiCall.arguments()[1].members().size()) {
-                    MPIRank::variables.insert(
-                        mpiCall.arguments()[1].members()[0]);
+                if (mpiCall.arg(1).members().size()) {
+                    MPIRank::variables.insert(mpiCall.arg(1).member(0));
                 } else {
-                    MPIRank::variables.insert(
-                        mpiCall.arguments()[1].vars()[0]);
+                    MPIRank::variables.insert(mpiCall.arg(1).var(0));
                 }
             }
             // process count variable
             else if (funcClassifier_.isMPI_Comm_size(mpiCall)) {
                 // count var is at index 1
-                if (mpiCall.arguments()[1].members().size()) {
-                    MPIProcessCount::variables.insert(
-                        mpiCall.arguments()[1].members()[0]);
+                if (mpiCall.arg(1).members().size()) {
+                    MPIProcessCount::variables.insert(mpiCall.arg(1).member(0));
                 } else {
-                    MPIProcessCount::variables.insert(
-                        mpiCall.arguments()[1].vars()[0]);
+                    MPIProcessCount::variables.insert(mpiCall.arg(1).var(0));
                 }
             }
         }

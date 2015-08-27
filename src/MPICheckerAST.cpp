@@ -211,14 +211,14 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
 
     // compare count, tag
     for (const size_t idx : {MPIPointToPoint::kCount, MPIPointToPoint::kTag}) {
-        if (sendCall.arguments()[idx] != recvCall.arguments()[idx]) {
+        if (sendCall.arg(idx) != recvCall.arg(idx)) {
             return false;
         }
     }
 
     // compare ranks
-    const auto &rankArgSend = sendCall.arguments()[MPIPointToPoint::kRank];
-    const auto &rankArgRecv = recvCall.arguments()[MPIPointToPoint::kRank];
+    const auto &rankArgSend = sendCall.arg(MPIPointToPoint::kRank);
+    const auto &rankArgRecv = recvCall.arg(MPIPointToPoint::kRank);
 
     // match special cases---------------------
     llvm::SmallVector<std::string, 1> firstRank{"0"};
