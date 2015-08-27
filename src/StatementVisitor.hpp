@@ -40,17 +40,6 @@ public:
         TraverseStmt(const_cast<clang::Stmt *>(stmt_));
     }
 
-    enum class ComponentType {
-        kInt,
-        kFloat,
-        kVar,
-        kFunc,
-        kComparison,
-        kAddOp,
-        kSubOp,
-        kOperator
-    };
-
     // must be public to trigger callbacks
     bool VisitDeclRefExpr(clang::DeclRefExpr *);
     bool VisitMemberExpr(clang::MemberExpr *);
@@ -67,15 +56,8 @@ public:
     bool isLastOperatorInverse(const StatementVisitor &) const;
 
     // getters –––––––––––––––––––––––––––––––––––––––––––––
-    const llvm::SmallVector<ComponentType, 4> &typeSequence() const {
-        return typeSequence_;
-    }
     const llvm::SmallVector<std::string, 4> &valueSequence() const {
         return valueSequence_;
-    }
-    const llvm::SmallVector<clang::BinaryOperatorKind, 1> &binaryOperators()
-        const {
-        return binaryOperators_;
     }
     const llvm::SmallVector<clang::BinaryOperator *, 1> &comparisonOperators()
         const {
@@ -85,29 +67,10 @@ public:
     const llvm::SmallVector<clang::ValueDecl *, 1> &members() const {
         return members_;
     }
-    const llvm::SmallVector<clang::ValueDecl *, 1> &combinedVars() const {
-        return combinedVars_;
-    }
-    const llvm::SmallVector<clang::FunctionDecl *, 0> &functions() const {
-        return functions_;
-    }
-    const llvm::SmallVector<clang::IntegerLiteral *, 1> &integerLiterals()
-        const {
-        return integerLiterals_;
-    }
-    const llvm::SmallVector<clang::FloatingLiteral *, 0> &floatingLiterals()
-        const {
-        return floatingLiterals_;
-    }
-    const clang::Stmt *stmt() const {
-        return stmt_;
-    }
 
 private:
     std::string encodeVariable(const clang::NamedDecl *const) const;
 
-    // sequential series of types
-    llvm::SmallVector<ComponentType, 4> typeSequence_;
     // sequential series of values
     llvm::SmallVector<std::string, 4> valueSequence_;
     // components
@@ -115,7 +78,6 @@ private:
     llvm::SmallVector<clang::BinaryOperator *, 1> comparisonOperators_;
     llvm::SmallVector<clang::VarDecl *, 1> vars_;       // non-member vars
     llvm::SmallVector<clang::ValueDecl *, 1> members_;  // member vars
-    llvm::SmallVector<clang::ValueDecl *, 1> combinedVars_;
     llvm::SmallVector<clang::FunctionDecl *, 0> functions_;
     llvm::SmallVector<clang::IntegerLiteral *, 1> integerLiterals_;
     llvm::SmallVector<clang::FloatingLiteral *, 0> floatingLiterals_;

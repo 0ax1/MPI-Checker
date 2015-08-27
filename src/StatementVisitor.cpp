@@ -67,21 +67,15 @@ std::string StatementVisitor::encodeVariable(
 bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
     if (clang::VarDecl *var =
             clang::dyn_cast<clang::VarDecl>(declRef->getDecl())) {
-        // only add if no struct, members are added in VisitMemberExpr
-        if (var->getType()->isStructureType()) return true;
 
         vars_.push_back(var);
-        combinedVars_.push_back(var);
-        typeSequence_.push_back(ComponentType::kVar);
         valueSequence_.push_back(encodeVariable(var));
 
     } else if (clang::FunctionDecl *fn =
                    clang::dyn_cast<clang::FunctionDecl>(declRef->getDecl())) {
         functions_.push_back(fn);
-        typeSequence_.push_back(ComponentType::kFunc);
         valueSequence_.push_back(fn->getNameAsString());
     }
-
     return true;
 }
 
@@ -95,8 +89,6 @@ bool StatementVisitor::VisitDeclRefExpr(clang::DeclRefExpr *declRef) {
 bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
     clang::ValueDecl *vd = memExpr->getMemberDecl();
     members_.push_back(vd);
-    combinedVars_.push_back(vd);
-    typeSequence_.push_back(ComponentType::kVar);  // encode as type var
     valueSequence_.push_back(encodeVariable(vd));
 
     return true;
@@ -111,18 +103,9 @@ bool StatementVisitor::VisitMemberExpr(clang::MemberExpr *memExpr) {
  */
 bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
     binaryOperators_.push_back(op->getOpcode());
-
-    if (op->isComparisonOp()) {
-        typeSequence_.push_back(ComponentType::kComparison);
-        comparisonOperators_.push_back(op);
-    } else if (op->getOpcode() == BinaryOperatorKind::BO_Add) {
-        typeSequence_.push_back(ComponentType::kAddOp);
-    } else if (op->getOpcode() == BinaryOperatorKind::BO_Sub) {
-        typeSequence_.push_back(ComponentType::kSubOp);
-    } else {
-        typeSequence_.push_back(ComponentType::kOperator);
-    }
-
+     if (op->isComparisonOp()) {
+         comparisonOperators_.push_back(op);
+     }
     valueSequence_.push_back(op->getOpcodeStr());
 
     return true;
@@ -137,8 +120,6 @@ bool StatementVisitor::VisitBinaryOperator(clang::BinaryOperator *op) {
  */
 bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
     integerLiterals_.push_back(intLiteral);
-    typeSequence_.push_back(ComponentType::kInt);
-
     SmallVector<char, 4> intValAsString;
     intLiteral->getValue().toStringUnsigned(intValAsString);
     valueSequence_.push_back({intValAsString.begin(), intValAsString.end()});
@@ -154,8 +135,6 @@ bool StatementVisitor::VisitIntegerLiteral(IntegerLiteral *intLiteral) {
  */
 bool StatementVisitor::VisitFloatingLiteral(FloatingLiteral *floatLiteral) {
     floatingLiterals_.push_back(floatLiteral);
-    typeSequence_.push_back(ComponentType::kFloat);
-
     valueSequence_.push_back(
         std::to_string(floatLiteral->getValueAsApproximateDouble()));
     return true;
@@ -192,7 +171,6 @@ bool StatementVisitor::operator!=(
  */
 bool StatementVisitor::isEqualOrdered(
     const StatementVisitor &visitorToCompare) const {
-    if (typeSequence_ != visitorToCompare.typeSequence_) return false;
     if (valueSequence_ != visitorToCompare.valueSequence_) return false;
 
     return true;
@@ -208,9 +186,6 @@ bool StatementVisitor::isEqualOrdered(
 bool StatementVisitor::isEqualPermutative(
     const StatementVisitor &visitorToCompare) const {
     // type sequence must be permutation
-    if (!cont::isPermutation(typeSequence_, visitorToCompare.typeSequence_)) {
-        return false;
-    }
     if (!cont::isPermutation(valueSequence_, visitorToCompare.valueSequence_)) {
         return false;
     }

@@ -178,17 +178,17 @@ void MPICheckerAST::checkForCollectiveCalls(const MPIRankCase &rankCase) const {
 bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
                                       const MPICall &recvCall) const {
     // compare mpi datatype
-    llvm::StringRef sendDataType = util::sourceRangeAsStringRef(
-        sendCall.arguments()[MPIPointToPoint::kDatatype]
-            .stmt()
-            ->getSourceRange(),
-        analysisManager_);
+    llvm::StringRef sendDataType =
+        util::sourceRangeAsStringRef(sendCall.callExpr()
+                                         ->getArg(MPIPointToPoint::kDatatype)
+                                         ->getSourceRange(),
+                                     analysisManager_);
 
-    llvm::StringRef recvDataType = util::sourceRangeAsStringRef(
-        recvCall.arguments()[MPIPointToPoint::kDatatype]
-            .stmt()
-            ->getSourceRange(),
-        analysisManager_);
+    llvm::StringRef recvDataType =
+        util::sourceRangeAsStringRef(recvCall.callExpr()
+                                         ->getArg(MPIPointToPoint::kDatatype)
+                                         ->getSourceRange(),
+                                     analysisManager_);
 
     return sendDataType == recvDataType;
 }
@@ -238,19 +238,11 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         return true;
     }
     //------------------------------------------
-    if (rankArgSend.typeSequence().size() !=
-            rankArgRecv.typeSequence().size() ||
-        rankArgSend.valueSequence().size() !=
-            rankArgRecv.valueSequence().size())
+    if (rankArgSend.valueSequence().size() !=
+        rankArgRecv.valueSequence().size())
         return false;
 
     // build sequences without last operator(skip first element)
-    const llvm::SmallVector<ArgumentVisitor::ComponentType, 4> sendTypeSeq(
-        rankArgSend.typeSequence().begin() + 1,
-        rankArgSend.typeSequence().end()),
-        recvTypeSeq{rankArgRecv.typeSequence().begin() + 1,
-                    rankArgRecv.typeSequence().end()};
-
     const llvm::SmallVector<std::string, 4> sendValSeq{
         rankArgSend.valueSequence().begin() + 1,
         rankArgSend.valueSequence().end()},
@@ -266,14 +258,12 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
     }
 
     // check ordered
-    if (containsSubtraction &&
-        (sendTypeSeq != recvTypeSeq || sendValSeq != recvValSeq)) {
+    if (containsSubtraction && (sendValSeq != recvValSeq)) {
         return false;
     }
     // check permutation
     if (!containsSubtraction &&
-        ((!cont::isPermutation(sendTypeSeq, recvTypeSeq)) ||
-         (!cont::isPermutation(sendValSeq, recvValSeq)))) {
+        (!cont::isPermutation(sendValSeq, recvValSeq))) {
         return false;
     }
     // last (value|var|function) must be identical
