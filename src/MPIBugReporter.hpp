@@ -56,9 +56,6 @@ public:
                             const std::pair<size_t, size_t> &) const;
     void reportInvalidArgumentType(const clang::CallExpr *const,
                                    const size_t) const;
-    void reportRedundantCall(const clang::CallExpr *const,
-                             const clang::CallExpr *const) const;
-
     void reportCollCallInBranch(const clang::CallExpr *const) const;
     void reportUnmatchedCall(const clang::CallExpr *const, std::string) const;
     void reportNotReachableCall(const clang::CallExpr *const) const;

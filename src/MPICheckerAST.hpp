@@ -50,7 +50,6 @@ public:
 
     void checkPointToPointSchema() const;
     void checkReachbility() const;
-    void checkForRedundantCalls() const;
     void checkForCollectiveCalls(const MPIRankCase &) const;
     void checkForInvalidArgs(const MPICall &) const;
     void checkBufferTypeMatch(const MPICall &mpiCall) const;
@@ -61,6 +60,10 @@ public:
 private:
     bool isSendRecvPair(const MPICall &, const MPICall &, const MPIRankCase &,
                         const MPIRankCase &) const;
+    bool rankArgsMatch(const MPICall &, const MPICall &, const MPIRankCase &,
+                         const MPIRankCase &) const;
+    bool isFirstLastPair(const MPICall &, const MPICall &, const MPIRankCase &,
+                         const MPIRankCase &) const;
     bool areDatatypesEqual(const MPICall &, const MPICall &) const;
     void checkUnmatchedCalls() const;
     void checkSendRecvMatches(const MPIRankCase &, const MPIRankCase &) const;

@@ -194,6 +194,88 @@ bool MPICheckerAST::areDatatypesEqual(const MPICall &sendCall,
 }
 
 /**
+ * Check if communication between first, last rank.
+ *
+ * @return is matching
+ */
+bool MPICheckerAST::isFirstLastPair(const MPICall &sendCall,
+                                    const MPICall &recvCall,
+                                    const MPIRankCase &sendCase,
+                                    const MPIRankCase &recvCase) const {
+    const auto &rankArgSend = sendCall.arg(MPIPointToPoint::kRank);
+    const auto &rankArgRecv = recvCall.arg(MPIPointToPoint::kRank);
+
+    llvm::SmallVector<std::string, 1> firstRank{"0"};
+    llvm::SmallVector<std::string, 3> lastRank{"-", MPIProcessCount::encoding,
+                                               "1"};
+
+    // first to last match
+    if (sendCase.isFirstRank() && rankArgSend.valueSequence() == lastRank &&
+        recvCase.isLastRank() && rankArgRecv.valueSequence() == firstRank) {
+        return true;
+    }
+    // last to first match
+    else if (sendCase.isLastRank() &&
+             rankArgSend.valueSequence() == firstRank &&
+             recvCase.isFirstRank() &&
+             rankArgRecv.valueSequence() == lastRank) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/**
+ * Check if rank arguments of send, recv pair match.
+ *
+ * @return is matching
+ */
+bool MPICheckerAST::rankArgsMatch(const MPICall &sendCall,
+                                  const MPICall &recvCall,
+                                  const MPIRankCase &sendCase,
+                                  const MPIRankCase &recvCase) const {
+    // match special case
+    if (isFirstLastPair(sendCall, recvCall, sendCase, recvCase)) return true;
+
+    // compare ranks
+    const auto &rankArgSend = sendCall.arg(MPIPointToPoint::kRank);
+    const auto &rankArgRecv = recvCall.arg(MPIPointToPoint::kRank);
+
+    if (rankArgSend.valueSequence().size() !=
+        rankArgRecv.valueSequence().size())
+        return false;
+
+    // build sequences without last operator(skip first element)
+    const llvm::SmallVector<std::string, 4> sendValSeq{
+        rankArgSend.valueSequence().begin() + 1,
+        rankArgSend.valueSequence().end()},
+        recvValSeq{rankArgRecv.valueSequence().begin() + 1,
+                   rankArgRecv.valueSequence().end()};
+
+    bool containsSubtraction{false};
+    for (size_t i = 0; i < sendValSeq.size(); ++i) {
+        if (sendValSeq[i] == "-" || recvValSeq[i] == "-") {
+            containsSubtraction = true;
+            break;
+        }
+    }
+
+    // check ordered
+    if (containsSubtraction && (sendValSeq != recvValSeq)) return false;
+    // check permutation
+    if (!containsSubtraction &&
+        (!cont::isPermutation(sendValSeq, recvValSeq))) {
+        return false;
+    }
+    // last (value|var|function) must be identical
+    if (sendValSeq.back() != recvValSeq.back()) return false;
+    // last operator must be inverse
+    if (!rankArgSend.isLastOperatorInverse(rankArgRecv)) return false;
+
+    return true;
+}
+
+/**
  * Checks if two (point to point) calls are a send/recv pair.
  *
  * @param sendCall
@@ -216,63 +298,7 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
         }
     }
 
-    // compare ranks
-    const auto &rankArgSend = sendCall.arg(MPIPointToPoint::kRank);
-    const auto &rankArgRecv = recvCall.arg(MPIPointToPoint::kRank);
-
-    // match special cases---------------------
-    llvm::SmallVector<std::string, 1> firstRank{"0"};
-    llvm::SmallVector<std::string, 3> lastRank{"-", MPIProcessCount::encoding,
-                                               "1"};
-
-    // first to last match
-    if (sendCase.isFirstRank() && rankArgSend.valueSequence() == lastRank &&
-        recvCase.isLastRank() && rankArgRecv.valueSequence() == firstRank) {
-        return true;
-    }
-    // last to first match
-    else if (sendCase.isLastRank() &&
-             rankArgSend.valueSequence() == firstRank &&
-             recvCase.isFirstRank() &&
-             rankArgRecv.valueSequence() == lastRank) {
-        return true;
-    }
-    //------------------------------------------
-    if (rankArgSend.valueSequence().size() !=
-        rankArgRecv.valueSequence().size())
-        return false;
-
-    // build sequences without last operator(skip first element)
-    const llvm::SmallVector<std::string, 4> sendValSeq{
-        rankArgSend.valueSequence().begin() + 1,
-        rankArgSend.valueSequence().end()},
-        recvValSeq{rankArgRecv.valueSequence().begin() + 1,
-                   rankArgRecv.valueSequence().end()};
-
-    bool containsSubtraction{false};
-    for (size_t i = 0; i < sendValSeq.size(); ++i) {
-        if (sendValSeq[i] == "-" || recvValSeq[i] == "-") {
-            containsSubtraction = true;
-            break;
-        }
-    }
-
-    // check ordered
-    if (containsSubtraction && (sendValSeq != recvValSeq)) {
-        return false;
-    }
-    // check permutation
-    if (!containsSubtraction &&
-        (!cont::isPermutation(sendValSeq, recvValSeq))) {
-        return false;
-    }
-    // last (value|var|function) must be identical
-    if (sendValSeq.back() != recvValSeq.back()) return false;
-
-    // last operator must be inverse
-    if (!rankArgSend.isLastOperatorInverse(rankArgRecv)) return false;
-
-    return true;
+    return rankArgsMatch(sendCall, recvCall, sendCase, recvCase);
 }
 
 /**
