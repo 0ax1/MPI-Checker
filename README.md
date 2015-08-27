@@ -85,8 +85,9 @@ See the [tests folder](https://github.com/0ax1/MPI-Checker/tree/master/tests).
 - MPI related logic must be enclosed within the scope of a translation unit.
   This stems from the general limitation of Clang's Static Analyzer to analyze one translation unit in isolation.
 - Unreachable calls can only be detected if caused by blocking MPI calls. The reason for this is that
-  point-to-point schema validation is currently achieved by non path sensitive (ast) analysis
-  while request var usage must be checked path sensitive. So deadlocks caused by waits can not be detected.
+  point-to-point schema validation is currently achieved by non path-sensitive (ast) analysis
+  while request var usage must be checked with path-sensitive analysis.
+  So deadlocks caused by waits can not be detected.
 - There can't be any assumptions made at compile time about `MPI_Waitany` and
   `MPI_Waitsome`, since their effect depends on what is done at runtime. Because
   of that, they are not taken into account.
