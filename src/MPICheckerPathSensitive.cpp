@@ -52,7 +52,7 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
 
     const RequestVar *requestVar = state->get<RequestVarMap>(memRegion);
-    const ExplodedNode *const node = ctx.addTransition(nullptr);
+    const ExplodedNode *const node = ctx.addTransition();
 
     if (requestVar) {
         if (funcClassifier_.isNonBlockingType(

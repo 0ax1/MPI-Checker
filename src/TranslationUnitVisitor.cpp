@@ -110,14 +110,14 @@ bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
  * @return if rank var is used
  */
 bool TranslationUnitVisitor::isRankBranch(clang::IfStmt *ifStmt) {
-    ConditionVisitor ConditionVisitor{ifStmt->getCond()};
-    for (const VarDecl *const varDecl : ConditionVisitor.vars()) {
+    ConditionVisitor conditionVisitor{ifStmt->getCond()};
+    for (const VarDecl *const varDecl : conditionVisitor.vars()) {
         if (cont::isContained(MPIRank::variables, varDecl)) {
             return true;
         }
     }
 
-    for (const ValueDecl *const valueDecl : ConditionVisitor.members()) {
+    for (const ValueDecl *const valueDecl : conditionVisitor.members()) {
         if (cont::isContained(MPIRank::variables, valueDecl)) {
             return true;
         }
