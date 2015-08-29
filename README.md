@@ -9,6 +9,7 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 - `unmatched point-to-point call`: Point-to-point calls without a matching partner.
 - `unreachable call`: Unreachable calls caused by deadlocks from blocking calls.
 - `type mismatch`: Buffer type and specified MPI type do not match.
+- `incorrect buffer referencing`: B-type is incorrectly referenced when passed to an MPI function.
 - `invalid argument type`: Non integer type used where only integer types are allowed.
 - `collective call in rank branch`: Collective call inside a rank branch.
 
