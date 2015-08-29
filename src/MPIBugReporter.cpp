@@ -107,7 +107,7 @@ void MPIBugReporter::reportTypeMismatch(
 }
 
 /**
- * Reports if a buffer is not passed as a single pointer type.
+ * Reports if a buffer is not passed as a single pointer.
  */
 void MPIBugReporter::reportIncorrectBufferReferencing(
     const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair,
@@ -119,8 +119,8 @@ void MPIBugReporter::reportIncorrectBufferReferencing(
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
     std::string bugType{"incorrect buffer referencing"};
     std::string errorText{
-        "Buffer is not correctly dereferenced. It is passed as a '" +
-        std::string(pointerCount, '*') + "' pointer. "};
+        "Buffer is not correctly dereferenced. It is passed as a " +
+        std::string(pointerCount, '*') + " pointer. "};
 
     llvm::SmallVector<SourceRange, 2> sourceRanges;
     sourceRanges.push_back(callRange);
