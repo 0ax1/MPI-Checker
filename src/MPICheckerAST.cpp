@@ -360,8 +360,9 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
 
         // check if buffer is correctly referenced
         if (typeVisitor.pointerCount() != 1) {
-            bugReporter_.reportIncorrectBufferReferencing(mpiCall.callExpr(),
-                                                          idxPair, bufferType);
+            bugReporter_.reportIncorrectBufferReferencing(
+                mpiCall.callExpr(), idxPair, bufferType,
+                typeVisitor.pointerCount());
         }
 
         // MPI_BYTE needs no matching

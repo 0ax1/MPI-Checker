@@ -93,9 +93,9 @@ void MPIBugReporter::reportTypeMismatch(
 
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
     std::string bugType{"type mismatch"};
-    std::string errorText{
-        "Buffer type '" + std::string{bufferType.getAsString()} +
-        +"' and specified MPI type '" + mpiType + "' do not match. "};
+    std::string errorText{"Buffer type '" + bufferType.getAsString() +
+                          +"' and specified MPI type '" + mpiType +
+                          "' do not match. "};
 
     llvm::SmallVector<SourceRange, 3> sourceRanges;
     sourceRanges.push_back(callRange);
@@ -111,14 +111,16 @@ void MPIBugReporter::reportTypeMismatch(
  */
 void MPIBugReporter::reportIncorrectBufferReferencing(
     const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair,
-    clang::QualType bufferType) const {
+    clang::QualType bufferType, size_t pointerCount) const {
     auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
     std::string bugType{"incorrect buffer referencing"};
-    std::string errorText{"Buffer is not correctly (de)referenced. "};
+    std::string errorText{
+        "Buffer is not correctly dereferenced. It is passed as a '" +
+        std::string(pointerCount, '*') + "' pointer. "};
 
     llvm::SmallVector<SourceRange, 2> sourceRanges;
     sourceRanges.push_back(callRange);

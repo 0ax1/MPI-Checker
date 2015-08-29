@@ -580,17 +580,17 @@ void typeMatching13() {
 
 void typeMatching14() {
     float ***buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+    MPI_Reduce(MPI_IN_PLACE, buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly dereferenced. It is passed as a '***' pointer.}}
 } // buffer type not dereferenced
 
 void typeMatching15() {
     float *buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly dereferenced. It is passed as a '**' pointer.}}
 } // buffer type is float **
 
 void typeMatching16() {
     float ***buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, *buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+    MPI_Reduce(MPI_IN_PLACE, *buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly dereferenced. It is passed as a '**' pointer.}}
 } // buffer type not correctly dereferenced
 
 void typeMatching17() {
@@ -600,12 +600,12 @@ void typeMatching17() {
 
 void typeMatching18() {
     float *buf[2];
-    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly dereferenced. It is passed as a '**' pointer.}}
 }
 
 void typeMatching19() {
     float *buf[2];
-    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly dereferenced. It is passed as a '**' pointer.}}
 }
 
 void typeMatching20() {
@@ -621,11 +621,11 @@ void collectiveInBranch() {
 
     if (11 != 22 && rank >= 0) {
         float global_sum;
-        MPI_Reduce(MPI_IN_PLACE, &global_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Collective calls must be executed by all processes. Move this call out of the rank branch. }}
+        MPI_Reduce(MPI_IN_PLACE, &global_sum, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Collective calls must be executed by all processes. Move this call out of the rank branch.}}
     }
 
     if (rank > 1 || x != 7) {
-        MPI_Barrier(MPI_COMM_WORLD); // expected-warning{{Collective calls must be executed by all processes. Move this call out of the rank branch. }}
+        MPI_Barrier(MPI_COMM_WORLD); // expected-warning{{Collective calls must be executed by all processes. Move this call out of the rank branch.}}
     }
 }
 
