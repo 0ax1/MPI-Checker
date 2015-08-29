@@ -29,6 +29,39 @@ using namespace ento;
 
 namespace mpi {
 
+void MPICheckerAST::initMPITypeContainer() {
+    mpiTypes_ = {"MPI_BYTE",
+                 "MPI_C_BOOL",
+                 "MPI_CHAR",
+                 "MPI_SIGNED_CHAR",
+                 "MPI_UNSIGNED_CHAR",
+                 "MPI_WCHAR",
+                 "MPI_INT",
+                 "MPI_LONG",
+                 "MPI_SHORT",
+                 "MPI_LONG_LONG",
+                 "MPI_LONG_LONG_INT",
+                 "MPI_UNSIGNED",
+                 "MPI_UNSIGNED_SHORT",
+                 "MPI_UNSIGNED_LONG",
+                 "MPI_UNSIGNED_LONG_LONG",
+                 "MPI_FLOAT",
+                 "MPI_DOUBLE",
+                 "MPI_LONG_DOUBLE",
+                 "MPI_C_COMPLEX",
+                 "MPI_C_FLOAT_COMPLEX",
+                 "MPI_C_DOUBLE_COMPLEX",
+                 "MPI_C_LONG_DOUBLE_COMPLEX",
+                 "MPI_INT8_T",
+                 "MPI_INT16_T",
+                 "MPI_INT32_T",
+                 "MPI_INT64_T",
+                 "MPI_UINT8_T",
+                 "MPI_UINT16_T",
+                 "MPI_UINT32_T",
+                 "MPI_UINT64_T"};
+}
+
 /**
  * Checks if point to point functions resolve to a valid schema.
  */
@@ -320,17 +353,22 @@ void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferType};
 
-        if (typeVisitor.pointerCount() != 1) {
-            bugReporter_.reportTypeMismatch(mpiCall.callExpr(), idxPair);
-        }
-
         // get mpi datatype as string
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
             callExpr->getArg(idxPair.second)->getSourceRange(),
             analysisManager_)};
 
+        // check if buffer is correctly referenced
+        if (typeVisitor.pointerCount() != 1) {
+            bugReporter_.reportIncorrectBufferReferencing(mpiCall.callExpr(),
+                                                          idxPair, bufferType);
+        }
+
         // MPI_BYTE needs no matching
         if (mpiDatatypeString == "MPI_BYTE") return;
+
+        // if MPI type not known
+        if (!cont::isContained(mpiTypes_, mpiDatatypeString)) return;
 
         selectTypeMatcher(typeVisitor, mpiCall, mpiDatatypeString, idxPair);
     }
@@ -411,7 +449,9 @@ void MPICheckerAST::selectTypeMatcher(
     }
 
     if (!isTypeMatching)
-        bugReporter_.reportTypeMismatch(mpiCall.callExpr(), idxPair);
+        bugReporter_.reportTypeMismatch(mpiCall.callExpr(), idxPair,
+                                        typeVisitor.qualType_,
+                                        mpiDatatypeString);
 }
 
 bool MPICheckerAST::matchBoolType(const mpi::TypeVisitor &visitor,

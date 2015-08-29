@@ -44,7 +44,9 @@ public:
                   clang::ento::AnalysisManager &analysisManager)
         : funcClassifier_{analysisManager},
           bugReporter_{bugReporter, checkerBase, analysisManager},
-          analysisManager_{analysisManager} {}
+          analysisManager_{analysisManager} {
+              initMPITypeContainer();
+          }
 
     using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
 
@@ -58,6 +60,7 @@ public:
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
 
 private:
+    void initMPITypeContainer();
     bool isSendRecvPair(const MPICall &, const MPICall &, const MPIRankCase &,
                         const MPIRankCase &) const;
     bool rankArgsMatch(const MPICall &, const MPICall &, const MPIRankCase &,
@@ -82,6 +85,7 @@ private:
     bool matchExactWidthType(const TypeVisitor &, const llvm::StringRef) const;
 
     MPIFunctionClassifier funcClassifier_;
+    llvm::SmallVector<std::string, 32> mpiTypes_;
     MPIBugReporter bugReporter_;
     clang::ento::AnalysisManager &analysisManager_;
 };

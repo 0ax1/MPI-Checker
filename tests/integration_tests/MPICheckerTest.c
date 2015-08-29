@@ -50,7 +50,7 @@ void doubleWait() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD, &req[1]);
 
         MPI_Wait(&req[0], MPI_STATUS_IGNORE);
-        MPI_Waitall(2, req,  MPI_STATUS_IGNORE); // expected-warning{{Request req[0] is already waited upon by MPI_Wait in line 52.}}
+        MPI_Waitall(2, req,  MPI_STATUS_IGNORE); // expected-warning{{Request 'req[0]' is already waited upon by 'MPI_Wait' in line 52.}}
     }
 }
 
@@ -65,7 +65,7 @@ void doubleWait2() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 2, MPI_COMM_WORLD, &recvReq1);
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
-        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request recvReq1 is already waited upon by MPI_Wait in line 67.}}
+        MPI_Wait(&recvReq1, MPI_STATUS_IGNORE); // expected-warning{{Request 'recvReq1' is already waited upon by 'MPI_Wait' in line 67.}}
     }
 }
 
@@ -81,7 +81,7 @@ void missingWait() {
         MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 3, MPI_COMM_WORLD, &recvReq1);
         MPI_Wait(&recvReq1, MPI_STATUS_IGNORE);
     }
-} // expected-warning{{MPI_Isend in line 80, using request sendReq1, has no matching wait in the scope of this function.}}
+} // expected-warning{{'MPI_Isend' in line 80, using request 'sendReq1', has no matching wait in the scope of this function.}}
 
 void doubleNonblocking() {
     int rank = 0;
@@ -92,7 +92,7 @@ void doubleNonblocking() {
         MPI_Request sendReq1;
 
         MPI_Isend(&buf, 1, MPI_DOUBLE, rank + 1, 4, MPI_COMM_WORLD, &sendReq1);
-        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 4, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request sendReq1 is already in use by nonblocking call MPI_Isend in line 94. }}
+        MPI_Irecv(&buf, 1, MPI_DOUBLE, rank - 1, 4, MPI_COMM_WORLD, &sendReq1); // expected-warning{{Request 'sendReq1' is already in use by nonblocking call 'MPI_Isend' in line 94.}}
         MPI_Wait(&sendReq1, MPI_STATUS_IGNORE);
     }
 }
@@ -104,7 +104,7 @@ void doubleNonblocking2() {
 
     MPI_Request req;
     MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req);
-    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req); // expected-warning{{Request req is already in use by nonblocking call MPI_Ireduce in line 106. }}
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 5, MPI_COMM_WORLD, &req); // expected-warning{{Request 'req' is already in use by nonblocking call 'MPI_Ireduce' in line 106.}}
     MPI_Wait(&req, MPI_STATUS_IGNORE);
 }
 
@@ -113,7 +113,7 @@ void missingNonBlocking() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 1) {
         MPI_Request sendReq1;
-        MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // expected-warning{{Request sendReq1 has no matching nonblocking call.}}
+        MPI_Wait(&sendReq1, MPI_STATUS_IGNORE); // expected-warning{{Request 'sendReq1' has no matching nonblocking call.}}
     }
 }
 
@@ -128,7 +128,7 @@ void doubleNonblocking3() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req);
-    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req); // expected-warning{{Request rs.req is already in use by nonblocking call MPI_Ireduce in line 130. }}
+    MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req); // expected-warning{{Request 'rs.req' is already in use by nonblocking call 'MPI_Ireduce' in line 130.}}
     MPI_Wait(&rs.req, MPI_STATUS_IGNORE);
 }
 
@@ -144,7 +144,7 @@ void doubleWait3() {
 
     MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD, &rs.req);
     MPI_Wait(&rs.req, MPI_STATUS_IGNORE);
-    MPI_Wait(&rs.req, MPI_STATUS_IGNORE); // expected-warning{{Request rs.req is already waited upon by MPI_Wait in line 146.}}
+    MPI_Wait(&rs.req, MPI_STATUS_IGNORE); // expected-warning{{Request 'rs.req' is already waited upon by 'MPI_Wait' in line 146.}}
 }
 
 void nodoubleWaitUsage() {
@@ -445,9 +445,9 @@ void typeMatching1() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == 0) {
-        MPI_Send(&buf, 1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Send(&buf, 1, MPI_FLOAT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'double' and specified MPI type 'MPI_FLOAT' do not match.}}
     } else {
-        MPI_Recv(bufP, 1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Recv(bufP, 1, MPI_FLOAT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type 'double' and specified MPI type 'MPI_FLOAT' do not match.}}
     }
 
     if (rank == 0) {
@@ -460,8 +460,8 @@ void typeMatching1() {
 void typeMatching2() {
     int buf = 0;
     int * bufP = &buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'int' and specified MPI type 'MPI_CHAR' do not match.}}
+    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'int' and specified MPI type 'MPI_CHAR' do not match.}}
 
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -473,9 +473,9 @@ void typeMatching3() {
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        MPI_Send(bufP, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Send(bufP, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'long double' and specified MPI type 'MPI_DOUBLE' do not match.}}
     } else {
-        MPI_Recv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Recv(&buf, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type 'long double' and specified MPI type 'MPI_DOUBLE' do not match.}}
     }
 
     if (rank == 0) {
@@ -488,8 +488,8 @@ void typeMatching3() {
 void typeMatching4() {
     long double _Complex buf = 11;
     long double _Complex *bufP = &buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type '_Complex long double' and specified MPI type 'MPI_DOUBLE' do not match.}}
+    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type '_Complex long double' and specified MPI type 'MPI_DOUBLE' do not match.}}
 
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_C_LONG_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_C_LONG_DOUBLE_COMPLEX, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -501,17 +501,17 @@ void typeMatching5() {
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rank == 0) {
-        MPI_Send(bufP, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Send(bufP, 1, MPI_INT, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'int64_t' and specified MPI type 'MPI_INT' do not match.}}
     } else {
-        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Recv(&buf, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type 'int64_t' and specified MPI type 'MPI_INT' do not match.}}
     }
 }
 
 void typeMatching6() {
     uint8_t buf = 11;
     uint8_t *bufP = &buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
-    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_UNSIGNED' do not match.}}
+    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_UNSIGNED, MPI_SUM, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_UNSIGNED' do not match.}}
 
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -525,9 +525,9 @@ void typeMatching7() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == 0) {
-        MPI_Send(bufP, 1, MPI_UINT16_T, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Send(bufP, 1, MPI_UINT16_T, rank + 1, 0, MPI_COMM_WORLD); // expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_UINT16_T' do not match.}}
     } else {
-        MPI_Recv(&buf, 1, MPI_UINT16_T, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type and specified MPI type do not match. }}
+        MPI_Recv(&buf, 1, MPI_UINT16_T, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_UINT16_T' do not match.}}
     }
 
     if (rank == 0) {
@@ -540,8 +540,8 @@ void typeMatching7() {
 void typeMatching8() {
     uint8_t buf = 11;
     uint8_t *bufP = &buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_INT8_T' do not match.}}
+    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_INT8_T, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type 'uint8_t' and specified MPI type 'MPI_INT8_T' do not match.}}
 
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_UINT8_T, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -550,8 +550,8 @@ void typeMatching8() {
 void typeMatching9() {
     char buf = 'a';
     char *bufP = &buf;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type 'char' and specified MPI type 'MPI_INT' do not match.}}
+    MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type 'char' and specified MPI type 'MPI_INT' do not match.}}
 
     MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
     MPI_Reduce(MPI_IN_PLACE, bufP, 1, MPI_CHAR, MPI_SUM, 0, MPI_COMM_WORLD);
@@ -580,17 +580,17 @@ void typeMatching13() {
 
 void typeMatching14() {
     float ***buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
 } // buffer type not dereferenced
 
 void typeMatching15() {
     float *buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, &buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
 } // buffer type is float **
 
 void typeMatching16() {
     float ***buf = NULL;
-    MPI_Reduce(MPI_IN_PLACE, *buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
+    MPI_Reduce(MPI_IN_PLACE, *buf, 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
 } // buffer type not correctly dereferenced
 
 void typeMatching17() {
@@ -600,8 +600,19 @@ void typeMatching17() {
 
 void typeMatching18() {
     float *buf[2];
-    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer type and specified MPI type do not match. }}
-} // pointer to array -> float **
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+}
+
+void typeMatching19() {
+    float *buf[2];
+    MPI_Reduce(MPI_IN_PLACE, buf, 2, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);// expected-warning{{Buffer is not correctly (de)referenced.}}
+}
+
+void typeMatching20() {
+    float *buf = NULL;
+    MPI_Reduce(MPI_IN_PLACE, &buf[0], 1, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&buf[0], 21, MPI_FLOAT, 0, MPI_COMM_WORLD);
+}
 
 void collectiveInBranch() {
     int rank = 0;

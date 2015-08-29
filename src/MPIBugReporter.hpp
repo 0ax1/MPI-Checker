@@ -53,7 +53,11 @@ public:
 
     // ast reports ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
     void reportTypeMismatch(const clang::CallExpr *const,
-                            const std::pair<size_t, size_t> &) const;
+                            const std::pair<size_t, size_t> &, clang::QualType,
+                            std::string) const;
+    void reportIncorrectBufferReferencing(const clang::CallExpr *,
+                                          const std::pair<size_t, size_t> &,
+                                          clang::QualType) const;
     void reportInvalidArgumentType(const clang::CallExpr *const,
                                    const size_t) const;
     void reportCollCallInBranch(const clang::CallExpr *const) const;

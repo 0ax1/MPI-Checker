@@ -42,11 +42,16 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
     if (!funcClassifier_.isNonBlockingType(callEvent.getCalleeIdentifier())) {
         return;
     }
-
     const MemRegion *memRegion =
         callEvent.getArgSVal(callEvent.getNumArgs() - 1).getAsRegion();
+
     // no way to reason about symbolic region
     if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
+    if (const ElementRegion *er =
+            clang::dyn_cast<clang::ento::ElementRegion>(memRegion)) {
+        if (clang::dyn_cast<clang::ento::SymbolicRegion>(er->getSuperRegion()))
+            return;
+    }
 
     ProgramStateRef state = ctx.getState();
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
@@ -99,7 +104,6 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
     llvm::SmallVector<const MemRegion *, 2> &requestRegions,
     const MemRegion *memRegion, const clang::ento::CallEvent &callEvent,
     CheckerContext &ctx) const {
-
     const MemRegion *superRegion{nullptr};
     if (const ElementRegion *er =
             clang::dyn_cast<clang::ento::ElementRegion>(memRegion)) {
@@ -110,12 +114,14 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
     MemRegionManager *regionManager = memRegion->getMemRegionManager();
 
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
-
         // single request passed to waitall
         if (!superRegion) {
             requestRegions.push_back(memRegion);
             return;
         }
+
+        // no way to reason about symbolic region
+        if (clang::dyn_cast<clang::ento::SymbolicRegion>(superRegion)) return;
 
         auto size = ctx.getStoreManager().getSizeInElements(
             state, superRegion,

@@ -65,11 +65,11 @@ void MPIBugReporter::reportNotReachableCall(
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"unreachable call"};
+    std::string bugType{"unreachable call"};
     std::string errorText{
         "Call is not reachable. Schema leads to a deadlock. "};
 
-    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugType,
                                  MPIError, errorText, location, range);
 }
 
@@ -78,21 +78,53 @@ void MPIBugReporter::reportNotReachableCall(
  * @param callExpr
  */
 void MPIBugReporter::reportTypeMismatch(
-    const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair) const {
+    const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair,
+    clang::QualType bufferType, std::string mpiType) const {
     auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
     PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
         callExpr, bugReporter_.getSourceManager(), adc);
 
+    // deref buffer type
+    while (bufferType->isPointerType()) {
+        bufferType = bufferType->getPointeeType();
+    }
+    // remove qualifiers
+    bufferType = bufferType.getUnqualifiedType();
+
     SourceRange callRange = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"type mismatch"};
-    std::string errorText{"Buffer type and specified MPI type do not match. "};
+    std::string bugType{"type mismatch"};
+    std::string errorText{
+        "Buffer type '" + std::string{bufferType.getAsString()} +
+        +"' and specified MPI type '" + mpiType + "' do not match. "};
 
     llvm::SmallVector<SourceRange, 3> sourceRanges;
     sourceRanges.push_back(callRange);
     sourceRanges.push_back(callExpr->getArg(idxPair.first)->getSourceRange());
     sourceRanges.push_back(callExpr->getArg(idxPair.second)->getSourceRange());
 
-    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugType,
+                                 MPIError, errorText, location, sourceRanges);
+}
+
+/**
+ * Reports if a buffer is not passed as a single pointer type.
+ */
+void MPIBugReporter::reportIncorrectBufferReferencing(
+    const CallExpr *callExpr, const std::pair<size_t, size_t> &idxPair,
+    clang::QualType bufferType) const {
+    auto adc = analysisManager_.getAnalysisDeclContext(currentFunctionDecl_);
+    PathDiagnosticLocation location = PathDiagnosticLocation::createBegin(
+        callExpr, bugReporter_.getSourceManager(), adc);
+
+    SourceRange callRange = callExpr->getCallee()->getSourceRange();
+    std::string bugType{"incorrect buffer referencing"};
+    std::string errorText{"Buffer is not correctly (de)referenced. "};
+
+    llvm::SmallVector<SourceRange, 2> sourceRanges;
+    sourceRanges.push_back(callRange);
+    sourceRanges.push_back(callExpr->getArg(idxPair.first)->getSourceRange());
+
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugType,
                                  MPIError, errorText, location, sourceRanges);
 }
 
@@ -107,12 +139,12 @@ void MPIBugReporter::reportCollCallInBranch(
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"collective call inside rank branch"};
+    std::string bugType{"collective call inside rank branch"};
     std::string errorText{
         "Collective calls must be executed by all processes."
         " Move this call out of the rank branch. "};
 
-    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugType,
                                  MPIError, errorText, location, range);
 }
 
@@ -129,10 +161,10 @@ void MPIBugReporter::reportUnmatchedCall(const CallExpr *const callExpr,
         callExpr, bugReporter_.getSourceManager(), adc);
 
     SourceRange range = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"unmatched point to point function"};
+    std::string bugType{"unmatched point to point function"};
     std::string errorText{"No matching " + missingType + " function found. "};
 
-    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugName,
+    bugReporter_.EmitBasicReport(adc->getDecl(), &checkerBase_, bugType,
                                  MPIError, errorText, location, range);
 }
 
@@ -152,14 +184,14 @@ void MPIBugReporter::reportInvalidArgumentType(const CallExpr *const callExpr,
 
     std::string indexAsString{std::to_string(idx)};
     SourceRange callExprRange = callExpr->getCallee()->getSourceRange();
-    std::string bugName{"invalid argument type"};
+    std::string bugType{"invalid argument type"};
     std::string errorText{"The type, argument at index " + indexAsString +
                           " evaluates to, is not an integer type. "};
 
     SmallVector<SourceRange, 3> sourceRanges;
     sourceRanges.push_back(callExprRange);
     sourceRanges.push_back(callExpr->getArg(idx)->getSourceRange());
-    bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugName, MPIError,
+    bugReporter_.EmitBasicReport(d->getDecl(), &checkerBase_, bugType, MPIError,
                                  errorText, location, sourceRanges);
 }
 
@@ -179,9 +211,9 @@ void MPIBugReporter::reportDoubleNonblocking(
     std::string lastUser =
         requestVar.lastUser_->getCalleeIdentifier()->getName();
 
-    std::string errorText{"Request " + requestVar.variableName() +
-                          " is already in use by nonblocking call " + lastUser +
-                          " in line " + lineNo + ". "};
+    std::string errorText{"Request '" + requestVar.variableName() +
+                          "' is already in use by nonblocking call '" +
+                          lastUser + "' in line " + lineNo + ". "};
 
     auto bugReport = llvm::make_unique<BugReport>(*doubleNonblockingBugType_,
                                                   errorText, node);
@@ -205,9 +237,9 @@ void MPIBugReporter::reportDoubleWait(const CallEvent &observedCall,
     std::string lineNo{lineNumber(requestVar.lastUser_)};
     std::string lastUser =
         requestVar.lastUser_->getCalleeIdentifier()->getName();
-    std::string errorText{"Request " + requestVar.variableName() +
-                          " is already waited upon by " + lastUser +
-                          " in line " + lineNo + ". "};
+    std::string errorText{"Request '" + requestVar.variableName() +
+                          "' is already waited upon by '" + lastUser +
+                          "' in line " + lineNo + ". "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*doubleWaitBugType_, errorText, node);
@@ -231,9 +263,9 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
         requestVar.lastUser_->getCalleeIdentifier()->getName();
 
     std::string errorText{
-        lastUser + " in line " + lineNo + ", using request " +
+        "'" + lastUser + "' in line " + lineNo + ", using request '" +
         requestVar.variableName() +
-        ", has no matching wait in the scope of this function. "};
+        "', has no matching wait in the scope of this function. "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*missingWaitBugType_, errorText, node);
@@ -253,8 +285,8 @@ void MPIBugReporter::reportMissingWait(const RequestVar &requestVar,
 void MPIBugReporter::reportUnmatchedWait(
     const CallEvent &callEvent, const clang::ento::MemRegion *requestRegion,
     const ExplodedNode *const node) const {
-    std::string errorText{"Request " + util::variableName(requestRegion) +
-                          " has no matching nonblocking call. "};
+    std::string errorText{"Request '" + util::variableName(requestRegion) +
+                          "' has no matching nonblocking call. "};
 
     auto bugReport =
         llvm::make_unique<BugReport>(*unmatchedWaitBugType_, errorText, node);
