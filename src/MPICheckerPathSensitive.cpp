@@ -102,9 +102,6 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
     ProgramStateRef state = ctx.getState();
     MemRegionManager *regionManager = memRegion->getMemRegionManager();
 
-    // no way to reason about symbolic region
-    if (memRegion->getBaseRegion()->getAs<SymbolicRegion>()) return;
-
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
         const MemRegion *superRegion{nullptr};
         if (const ElementRegion *er = memRegion->getAs<ElementRegion>()) {
