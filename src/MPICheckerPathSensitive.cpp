@@ -46,12 +46,7 @@ void MPICheckerPathSensitive::checkDoubleNonblocking(
         callEvent.getArgSVal(callEvent.getNumArgs() - 1).getAsRegion();
 
     // no way to reason about symbolic region
-    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
-    if (const ElementRegion *er =
-            clang::dyn_cast<clang::ento::ElementRegion>(memRegion)) {
-        if (clang::dyn_cast<clang::ento::SymbolicRegion>(er->getSuperRegion()))
-            return;
-    }
+    if (memRegion->getBaseRegion()->getAs<SymbolicRegion>()) return;
 
     ProgramStateRef state = ctx.getState();
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
@@ -104,24 +99,23 @@ void MPICheckerPathSensitive::collectUsedMemRegions(
     llvm::SmallVector<const MemRegion *, 2> &requestRegions,
     const MemRegion *memRegion, const clang::ento::CallEvent &callEvent,
     CheckerContext &ctx) const {
-    const MemRegion *superRegion{nullptr};
-    if (const ElementRegion *er =
-            clang::dyn_cast<clang::ento::ElementRegion>(memRegion)) {
-        superRegion = er->getSuperRegion();
-    }
-
     ProgramStateRef state = ctx.getState();
     MemRegionManager *regionManager = memRegion->getMemRegionManager();
 
+    // no way to reason about symbolic region
+    if (memRegion->getBaseRegion()->getAs<SymbolicRegion>()) return;
+
     if (funcClassifier_.isMPI_Waitall(callEvent.getCalleeIdentifier())) {
+        const MemRegion *superRegion{nullptr};
+        if (const ElementRegion *er = memRegion->getAs<ElementRegion>()) {
+            superRegion = er->getSuperRegion();
+        }
+
         // single request passed to waitall
         if (!superRegion) {
             requestRegions.push_back(memRegion);
             return;
         }
-
-        // no way to reason about symbolic region
-        if (clang::dyn_cast<clang::ento::SymbolicRegion>(superRegion)) return;
 
         auto size = ctx.getStoreManager().getSizeInElements(
             state, superRegion,
@@ -159,7 +153,7 @@ void MPICheckerPathSensitive::checkWaitUsage(
     if (!memRegion) return;
 
     // no way to reason about symbolic region
-    if (clang::dyn_cast<clang::ento::SymbolicRegion>(memRegion)) return;
+    if (memRegion->getBaseRegion()->getAs<SymbolicRegion>()) return;
 
     ProgramStateRef state = ctx.getState();
     CallEventRef<> callEventRef = callEvent.cloneWithState(state);
@@ -199,11 +193,6 @@ void MPICheckerPathSensitive::checkMissingWaits(CheckerContext &ctx) {
     ExplodedNode *node = ctx.addTransition();
     // at the end of a function immediate calls should be matched with wait
     for (auto &requestVar : requestVars) {
-        if (clang::dyn_cast<clang::ento::SymbolicRegion>(
-                requestVar.second.memRegion_->getBaseRegion())) {
-            // no way to reason about symbolic region
-            continue;
-        }
         if (requestVar.second.lastUser_ &&
             funcClassifier_.isNonBlockingType(
                 requestVar.second.lastUser_->getCalleeIdentifier())) {

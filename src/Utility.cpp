@@ -70,10 +70,6 @@ clang::SourceRange sourceRange(const clang::ento::MemRegion *memRegion) {
     } else if (varRegion) {
         return varRegion->getDecl()->getSourceRange();
     } else {
-        const clang::ento::SymbolicRegion *symRegion =
-            clang::dyn_cast<clang::ento::SymbolicRegion>(
-                memRegion->getBaseRegion());
-        assert(symRegion && "no symbolic region");
         // non valid source range (can be checked by client)
         return clang::SourceRange{};
     }
@@ -86,31 +82,25 @@ std::string variableName(const clang::ento::MemRegion *memRegion) {
     const clang::ento::FieldRegion *fieldRegion =
         clang::dyn_cast<clang::ento::FieldRegion>(memRegion);
 
-    std::string varName;
-    bool isElementInArray;
+    const clang::ento::ElementRegion *elementRegion =
+        memRegion->getAs<clang::ento::ElementRegion>();
 
-    // variable
+    std::string varName{""};
+
+    // members, fields
     if (fieldRegion) {
         varName = varRegion->getDecl()->getNameAsString() + "." +
                   fieldRegion->getDecl()->getNameAsString();
-        isElementInArray = fieldRegion->getValueType()->isArrayType();
     }
-    // members, fields
+    // variable
     else if (varRegion) {
         varName = varRegion->getDecl()->getNameAsString();
-        isElementInArray = varRegion->getValueType()->isArrayType();
     }
-    // symbolic region (points to an unknown memory block)
     else {
-        const clang::ento::SymbolicRegion *symRegion =
-            clang::dyn_cast<clang::ento::SymbolicRegion>(
-                memRegion->getBaseRegion());
-        assert(symRegion && "no symbolic region");
-        return memRegion->getString();
+        // get var-decl-name for symbolic region
     }
 
-    if (isElementInArray) {
-        auto elementRegion = memRegion->getAs<clang::ento::ElementRegion>();
+    if (elementRegion) {
         llvm::APSInt indexInArray;
         indexInArray = elementRegion->getIndex()
                            .getAs<clang::ento::nonloc::ConcreteInt>()
