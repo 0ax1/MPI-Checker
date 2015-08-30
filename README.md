@@ -2,7 +2,7 @@
 A static analysis checker for [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface) code
 written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 
-<img src="https://github.com/0ax1/MPI-Checker/blob/master/screenshots/double_wait.jpg" width="500">
+<img src="https://github.com/0ax1/MPI-Checker/blob/master/screenshots/doublewait.jpg" width="500">
 
 ## Integrated checks
 #### AST-Checks
