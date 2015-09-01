@@ -117,7 +117,7 @@ public:
         return rankConditions_;
     }
 
-    // conditions not fullfilled to enter rank case
+    // conditions not fulfilled to enter rank case
     const llvm::SmallVector<ConditionVisitor, 2> unmatchedConditions_;
     static llvm::SmallVector<MPIRankCase, 8> cases;
 

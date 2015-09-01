@@ -45,16 +45,16 @@ public:
         : funcClassifier_{analysisManager},
           bugReporter_{bugReporter, checkerBase, analysisManager},
           analysisManager_{analysisManager} {
-              initMPITypeContainer();
-          }
+        initMPITypeContainer();
+    }
 
     using IndexPairs = llvm::SmallVector<std::pair<size_t, size_t>, 2>;
 
     void checkPointToPointSchema() const;
     void checkReachbility() const;
     void checkForCollectiveCalls(const MPIRankCase &) const;
-    void checkForInvalidArgs(const MPICall &) const;
-    void checkBufferTypeMatch(const MPICall &mpiCall) const;
+    void checkForInvalidArgs(const clang::CallExpr *const) const;
+    void checkBufferTypeMatch(const clang::CallExpr *const) const;
     IndexPairs bufferDataTypeIndices(const MPICall &) const;
     void setCurrentlyVisitedFunction(const clang::FunctionDecl *const);
     const MPIFunctionClassifier &funcClassifier() { return funcClassifier_; }
@@ -64,7 +64,7 @@ private:
     bool isSendRecvPair(const MPICall &, const MPICall &, const MPIRankCase &,
                         const MPIRankCase &) const;
     bool rankArgsMatch(const MPICall &, const MPICall &, const MPIRankCase &,
-                         const MPIRankCase &) const;
+                       const MPIRankCase &) const;
     bool isFirstLastPair(const MPICall &, const MPICall &, const MPIRankCase &,
                          const MPIRankCase &) const;
     bool areDatatypesEqual(const MPICall &, const MPICall &) const;

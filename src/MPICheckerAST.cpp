@@ -339,30 +339,29 @@ bool MPICheckerAST::isSendRecvPair(const MPICall &sendCall,
  *
  * @param mpiCall call to check type correspondence for
  */
-void MPICheckerAST::checkBufferTypeMatch(const MPICall &mpiCall) const {
+void MPICheckerAST::checkBufferTypeMatch(
+    const clang::CallExpr *const mpiCall) const {
     // one pair consists of {bufferIdx, mpiDatatypeIdx}
     IndexPairs indexPairs = bufferDataTypeIndices(mpiCall);
 
     // for every buffer mpi-data pair in function
     // check if their types match
-    const CallExpr *const callExpr = mpiCall.callExpr();
     for (const auto &idxPair : indexPairs) {
         auto bufferType =
-            callExpr->getArg(idxPair.first)->IgnoreCasts()->getType();
+            mpiCall->getArg(idxPair.first)->IgnoreCasts()->getType();
 
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferType};
 
         // get mpi datatype as string
         StringRef mpiDatatypeString{util::sourceRangeAsStringRef(
-            callExpr->getArg(idxPair.second)->getSourceRange(),
+            mpiCall->getArg(idxPair.second)->getSourceRange(),
             analysisManager_)};
 
         // check if buffer is correctly referenced
         if (typeVisitor.pointerCount() != 1) {
             bugReporter_.reportIncorrectBufferReferencing(
-                mpiCall.callExpr(), idxPair, bufferType,
-                typeVisitor.pointerCount());
+                mpiCall, idxPair, bufferType, typeVisitor.pointerCount());
         }
 
         // MPI_BYTE needs no matching
@@ -610,15 +609,15 @@ bool MPICheckerAST::matchExactWidthType(
  *
  * @param mpiCall to check the arguments for
  */
-void MPICheckerAST::checkForInvalidArgs(const MPICall &mpiCall) const {
+void MPICheckerAST::checkForInvalidArgs(
+    const clang::CallExpr *const mpiCall) const {
     llvm::SmallVector<size_t, 1> indicesToCheck{integerIndices(mpiCall)};
     if (!indicesToCheck.size()) return;
 
     // iterate indices which should not have integer arguments
-    const CallExpr *const callExpr = mpiCall.callExpr();
     for (const size_t idx : indicesToCheck) {
-        if (!callExpr->getArg(idx)->IgnoreCasts()->getType()->isIntegerType()) {
-            bugReporter_.reportInvalidArgumentType(mpiCall.callExpr(), idx);
+        if (!mpiCall->getArg(idx)->IgnoreCasts()->getType()->isIntegerType()) {
+            bugReporter_.reportInvalidArgumentType(mpiCall, idx);
         }
     }
 }

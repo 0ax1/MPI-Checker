@@ -63,7 +63,6 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
     // collect mpi calls in if / else if
     Stmt *stmt = ifStmt;
     while (IfStmt *ifStmt = dyn_cast_or_null<IfStmt>(stmt)) {
-
         MPIRankCase::cases.emplace_back(ifStmt->getThen(), ifStmt->getCond(),
                                         unmatchedConditions,
                                         checkerAST_.funcClassifier());
@@ -91,10 +90,8 @@ bool TranslationUnitVisitor::VisitIfStmt(IfStmt *ifStmt) {
  *
  * @return continue visiting
  */
-bool TranslationUnitVisitor::VisitCallExpr(CallExpr *callExpr) {
-    if (checkerAST_.funcClassifier().isMPIType(util::getIdentInfo(callExpr))) {
-        MPICall mpiCall{callExpr};
-
+bool TranslationUnitVisitor::VisitCallExpr(clang::CallExpr *mpiCall) {
+    if (checkerAST_.funcClassifier().isMPIType(util::getIdentInfo(mpiCall))) {
         checkerAST_.checkBufferTypeMatch(mpiCall);
         checkerAST_.checkForInvalidArgs(mpiCall);
     }
