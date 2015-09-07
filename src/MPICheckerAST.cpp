@@ -348,7 +348,7 @@ void MPICheckerAST::checkBufferTypeMatch(
     // check if their types match
     for (const auto &idxPair : indexPairs) {
         auto bufferType =
-            mpiCall->getArg(idxPair.first)->IgnoreCasts()->getType();
+            mpiCall->getArg(idxPair.first)->IgnoreImpCasts()->getType();
 
         // collect buffer type information
         const mpi::TypeVisitor typeVisitor{bufferType};
@@ -616,7 +616,7 @@ void MPICheckerAST::checkForInvalidArgs(
 
     // iterate indices which should not have integer arguments
     for (const size_t idx : indicesToCheck) {
-        if (!mpiCall->getArg(idx)->IgnoreCasts()->getType()->isIntegerType()) {
+        if (!mpiCall->getArg(idx)->IgnoreImpCasts()->getType()->isIntegerType()) {
             bugReporter_.reportInvalidArgumentType(mpiCall, idx);
         }
     }
