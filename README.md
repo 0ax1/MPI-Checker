@@ -4,6 +4,8 @@ written in C using Clang's [Static Analyzer](http://clang-analyzer.llvm.org/).
 
 <img src="https://github.com/0ax1/MPI-Checker/blob/master/screenshots/doublewait.jpg" width="500">
 
+<br>MPI-Checker is currently in the process of [being merged into Clang](http://reviews.llvm.org/D12761).
+
 ## Integrated checks
 #### AST-Checks
 - `unmatched point-to-point call`: Point-to-point calls without a matching partner.
@@ -53,13 +55,15 @@ Current versions of: `your default compiler`, `zsh`, `svn`, `git`, `cmake`,
 ## Installation
 Download [`fullSetup.sh`]
 (https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh),
-make it executable with `chmod +x` and run it to setup LLVM 3.7 with
-[Clang](http://clang.llvm.org/) and **MPI-Checker**. This will download, config
-and build all components in `./llvm37`. <br><br>In "one line": `wget
+make it executable with `chmod +x` and run it to setup
+[LLVM](http://llvm.org/) 3.7 with [Clang](http://clang.llvm.org/) and MPI-Checker.
+This will download, config and build all components in `./llvm37`. <br><br>In
+"one line": `wget
 https://raw.githubusercontent.com/0ax1/MPI-Checker/master/setup/fullSetup.sh &&
 chmod +x fullSetup.sh && ./fullSetup.sh && rm fullSetup.sh` <br><br>If you want
-libcxx or the compiler-rt to be included you can comment them in, removing
-`#` from `# svn co (libcxx|compiler-rt)` in `fullSetup.sh`.
+[libcxx](http://libcxx.llvm.org/) or the
+[compiler-rt](http://compiler-rt.llvm.org/) to be included you can comment them
+in, removing `#` from `# svn co (libcxx|compiler-rt)` in `fullSetup.sh`.
 
 If you have the LLVM 3.7 source already, `cd` to the top of the repository,
 execute [`addMPI-Checker.sh`]
