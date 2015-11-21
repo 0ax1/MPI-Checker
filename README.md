@@ -42,3 +42,6 @@ different translation unit than they are used in. Regarding the current range of
 checks integrated in MPI-Checker, those memory regions cannot be taken into
 account.  Definitions in header files are conceptually inlined and therefore
 considered during analysis in the translation units that include the headers.
+
+## Paper
+[MPI-Checker – Static Analysis for MPI](https://dl.acm.org/citation.cfm?id=2833157.2833159&coll=DL&dl=GUIDE&CFID=562722438&CFTOKEN=16030439)
