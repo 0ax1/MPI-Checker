@@ -8,6 +8,8 @@ API in C and C++ code, based on Clang’s
 <img src="https://github.com/0ax1/MPI-Checker/blob/master/screenshots/missingwait.jpg" height="450">
 
 <br>MPI-Checker is currently in the process of [being merged into Clang](http://reviews.llvm.org/D12761).
+<br>The path-sensitive checks have been [merged](https://github.com/llvm-mirror/clang/commit/3016fc901ddf543adec9c27bd98b8d33ff1933b5)
+and are available in the LLVM trunk.
 
 ## Integrated checks
 #### Path-Sensitive-Checks
@@ -45,3 +47,6 @@ considered during analysis in the translation units that include the headers.
 
 ## Paper
 [MPI-Checker – Static Analysis for MPI](https://dl.acm.org/citation.cfm?id=2833157.2833159&coll=DL&dl=GUIDE&CFID=562722438&CFTOKEN=16030439)
+
+## Slides
+[The Second Workshop on the LLVM Compiler Infrastructure in HPC](https://llvm-hpc2-workshop.github.io/)

@@ -8,10 +8,6 @@
 BIN_NAME := basic.x
 # Compiler used
 CC = mpicc # default
-ifeq ($(ANALYZE), 1)
-	CC = clang # use clang for analysis
-	LIBS = ompi # used to find definitions for analysis
-endif
 # Extension of source files used in the project
 SRC_EXT = c
 # Path to the source directory, relative to the makefile
