@@ -35,7 +35,7 @@ int f2n() { return 22; }
 int f() { return rand(); }
 
 int rank;
-int buf;
+int *buf;
 int N = 0;
 
 typedef struct {
@@ -49,11 +49,11 @@ void communicate1() {
     MPI_Request req[2];
 
     if (swr.rank == 0) {
-        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
-        MPI_Isend(&buf, 1, MPI_INT, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
+        MPI_Isend(buf, 1, MPI_CHAR, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
+        MPI_Isend(buf, 1, MPI_INT, rank + 1, 1, MPI_COMM_WORLD, &req[0]);
 
     } else if (swr.rank == 1) {
-        MPI_Irecv(&buf, 1, MPI_INT, rank - 1, 1, MPI_COMM_WORLD, &req[1]);
+        MPI_Irecv(&buf, 1, MPI_LONG, rank - 1, 1, MPI_COMM_WORLD, &req[1]);
     }
 
     if (swr.rank == 0 || swr.rank == 1) {
@@ -66,7 +66,7 @@ void communicate2() {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == 0) {
-        MPI_Send(&buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD);
+        MPI_Send(buf, 1, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD);
     } else if (rank == 1) {
         MPI_Recv(&buf, 1, MPI_INT, rank - 1, 2, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
