@@ -26,10 +26,10 @@ Clang Static Analyzer:
 
 Clang-Tidy:
 
-- `run-clang-tidy.py` expects a compilation database in the current working
-  directory:
+- Run `run-clang-tidy.py`:
 ```
 llvm/tools/clang/tools/extra/clang-tidy/tool/run-clang-tidy.py \
+    -p=path/compdb \
     -clang-tidy-binary=/path/to/clang-tidy \
     -checks='-*,mpi-type-mismatch,mpi-buffer-deref'
 ```
