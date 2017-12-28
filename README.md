@@ -55,3 +55,14 @@ translation units that include the headers.
 
 ## Slides
 [The Second Workshop on the LLVM Compiler Infrastructure in HPC](https://llvm-hpc2-workshop.github.io/)
+
+## Code
+#### Path-Sensitive-Checks
+- https://github.com/llvm-mirror/clang/tree/master/lib/StaticAnalyzer/Checkers/MPI-Checker
+- https://github.com/llvm-mirror/clang/blob/master/test/Analysis/mpichecker.cpp
+- https://github.com/llvm-mirror/clang/blob/master/test/Analysis/mpicheckernotes.cpp
+
+#### AST-Checks
+- https://github.com/llvm-mirror/clang-tools-extra/tree/master/clang-tidy/mpi
+- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/mpi-buffer-deref.cpp
+- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/mpi-type-mismatch.cpp
