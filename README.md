@@ -64,5 +64,5 @@ translation units that include the headers.
 
 #### AST-Checks
 - https://github.com/llvm-mirror/clang-tools-extra/tree/master/clang-tidy/mpi
-- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/mpi-buffer-deref.cpp
-- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/mpi-type-mismatch.cpp
+- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/checkers/mpi-buffer-deref.cpp
+- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/checkers/mpi-type-mismatch.cpp
