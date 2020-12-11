@@ -6,7 +6,7 @@ code, with checks based on [Clang’s Static
 Analyzer](http://clang-analyzer.llvm.org/) and
 [Clang-Tidy](http://clang.llvm.org/extra/clang-tidy/).
 
-<img src="https://github.com/0ax1/MPI-Checker/blob/master/screenshots/missingwait.jpg" height="450">
+<img src="https://github.com/0ax1/MPI-Checker/blob/main/screenshots/missingwait.jpg" height="450">
 
 <br>
 
@@ -58,11 +58,11 @@ translation units that include the headers.
 
 ## Code
 #### Path-Sensitive-Checks
-- https://github.com/llvm-mirror/clang/tree/master/lib/StaticAnalyzer/Checkers/MPI-Checker
-- https://github.com/llvm-mirror/clang/blob/master/test/Analysis/mpichecker.cpp
-- https://github.com/llvm-mirror/clang/blob/master/test/Analysis/mpicheckernotes.cpp
+- https://github.com/llvm/llvm-project/tree/main/clang/lib/StaticAnalyzer/Checkers/MPI-Checker
+- https://github.com/llvm/llvm-project/blob/main/clang/test/Analysis/mpichecker.cpp
+- https://github.com/llvm/llvm-project/blob/main/clang/test/Analysis/mpicheckernotes.cpp
 
 #### AST-Checks
-- https://github.com/llvm-mirror/clang-tools-extra/tree/master/clang-tidy/mpi
-- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/checkers/mpi-buffer-deref.cpp
-- https://github.com/llvm-mirror/clang-tools-extra/blob/master/test/clang-tidy/checkers/mpi-type-mismatch.cpp
+- https://github.com/llvm/llvm-project/tree/main/clang-tools-extra/clang-tidy/mpi
+- https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/test/clang-tidy/checkers/mpi-buffer-deref.cpp
+- https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/test/clang-tidy/checkers/mpi-type-mismatch.cpp
