@@ -39,7 +39,7 @@ account, as their array size can be statically determined. Using the Clang Stati
 analysis is limited to the scope of a translation unit.  Analyzing logic across translation units to
 detect bugs is therefore not possible. This includes that there is limited knowledge about memory
 regions returned from functions which are defined in a different translation unit than they are used
-in. Definitions in header files are conceptually inlined and therefore considered during analysis in
+in. Definitions in header files are inlined and therefore considered during analysis in
 the translation units that include the headers.
 
 ## Usage
